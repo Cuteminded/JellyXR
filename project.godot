@@ -1,0 +1,26 @@
+config_version=5
+
+[application]
+config/name="Jellyframe"
+config/icon="res://assets/icon.svg"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+config/description="A Jellyfin cinema for standalone VR."
+
+[display]
+window/size/viewport_width=1440
+window/size/viewport_height=900
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.018, 0.029, 0.046, 1)
+
+[xr]
+openxr/enabled=true
+shaders/enabled=true
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/jellyframe_video/plugin.cfg")

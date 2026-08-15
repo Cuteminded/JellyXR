@@ -1,0 +1,23 @@
+plugins { id 'com.android.library' }
+
+android {
+    namespace 'nu.cuteminded.jellyframe.video'
+    compileSdk 35
+    defaultConfig { minSdk 29 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    compileOnly 'org.godotengine:godot:4.5.1.stable'
+}
+
+tasks.register('stagePlugin', Copy) {
+    dependsOn 'assembleRelease'
+    from layout.buildDirectory.file('outputs/aar/video-release.aar')
+    into '../../addons/jellyframe_video/bin'
+    rename { 'jellyframe-video-release.aar' }
+}
+

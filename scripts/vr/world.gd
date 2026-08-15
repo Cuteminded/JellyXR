@@ -1,0 +1,85 @@
+class_name ViewingWorld
+extends Node3D
+
+signal menu_requested
+var settings: JellyframeSettings
+var camera: Camera3D
+var viewport: SubViewport
+var panel: MeshInstance3D
+var screen: MeshInstance3D
+var material: ShaderMaterial
+var theatre: Node3D
+
+func setup() -> void:
+	var xr := XRServer.find_interface("OpenXR")
+	var immersive := xr != null and xr.is_initialized()
+	var origin := XROrigin3D.new()
+	add_child(origin)
+	if immersive:
+		get_viewport().use_xr = true
+		camera = XRCamera3D.new()
+		origin.add_child(camera)
+	else:
+		camera = Camera3D.new()
+		camera.position.y = 1.6
+		origin.add_child(camera)
+	viewport = SubViewport.new()
+	viewport.size = Vector2i(1536, 960)
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.gui_disable_input = false
+	add_child(viewport)
+	panel = MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(4.4, 2.75)
+	panel.mesh = quad
+	var ui_material := StandardMaterial3D.new()
+	ui_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ui_material.albedo_texture = viewport.get_texture()
+	ui_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	panel.material_override = ui_material
+	add_child(panel)
+	screen = MeshInstance3D.new()
+	material = ShaderMaterial.new()
+	material.shader = load("res://shaders/video.gdshader")
+	screen.material_override = material
+	screen.visible = false
+	add_child(screen)
+	_build_theatre()
+	if immersive:
+		for hand in ["left_hand", "right_hand"]:
+			var pointer := LaserPointer.new()
+			pointer.tracker = hand
+			pointer.pose = "aim"
+			pointer.panel = panel
+			pointer.viewport = viewport
+			pointer.button_pressed.connect(func(action: String):
+				if action in ["menu_button", "ax_button", "by_button"]: menu_requested.emit())
+			origin.add_child(pointer)
+	else:
+		panel.hide()
+		var overlay := CanvasLayer.new()
+		add_child(overlay)
+		var container := SubViewportContainer.new()
+		container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		container.stretch = true
+		overlay.add_child(container)
+		viewport.reparent(container)
+
+func _build_theatre() -> void:
+	theatre = Node3D.new()
+	add_child(theatre)
+	theatre.visible = settings.environment == "Theatre"
+	for index in range(5):
+		var step := MeshInstance3D.new()
+		var shape := BoxMesh.new()
+		shape.size = Vector3(12, 0.2, 1.8)
+		step.mesh = shape
+		step.position = Vector3(0, -0.5 + index * 0.15, 1.5 + index * 1.8)
+		var finish := StandardMaterial3D.new()
+		finish.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		finish.albedo_color = Color(0.025 + index * 0.003, 0.04, 0.055)
+		step.material_override = finish
+		theatre.add_child(step)
+
+

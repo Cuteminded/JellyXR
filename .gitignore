@@ -1,0 +1,15 @@
+.DS_Store
+.vscode/
+.godot/
+.idea/
+.gradle/
+build/
+dist/
+android/build/
+android/.build_version
+native/local.properties
+native/**/build/
+addons/jellyframe_video/bin/
+*.keystore
+*.jks
+export_credentials.cfg
