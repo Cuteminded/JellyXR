@@ -45,6 +45,9 @@ func seek(milliseconds: int) -> void:
 func position_ms() -> int:
 	return bridge.position_ms() if available() else 0
 
+func duration_ms() -> int:
+	return bridge.duration_ms() if available() else 0
+
 func stop() -> void:
 	if available(): bridge.stop_video()
 

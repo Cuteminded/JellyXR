@@ -7,13 +7,14 @@ signal screen_settings
 signal sign_out
 var page: VBoxContainer
 var status: Label
-var controls: HBoxContainer
 var libraries: VBoxContainer
 var home: Button
 var logout: Button
 var heading: Label
 var selected_id := ""
 var buttons: Dictionary = {}
+var rail_background: StyleBoxFlat
+var main_background: StyleBoxFlat
 
 func _ready() -> void:
 	theme = Widgets.theme()
@@ -25,7 +26,8 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 24)
 	var rail := PanelContainer.new()
 	rail.custom_minimum_size.x = 210
-	rail.add_theme_stylebox_override("panel", Widgets.surface(Color("111827"), 24, 14))
+	rail_background = Widgets.surface(Color("111827"), 24, 14)
+	rail.add_theme_stylebox_override("panel", rail_background)
 	add_child(rail)
 	var navigation := VBoxContainer.new()
 	navigation.add_theme_constant_override("separation", 12)
@@ -49,7 +51,8 @@ func _ready() -> void:
 	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
 	var main := PanelContainer.new()
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	main.add_theme_stylebox_override("panel", Widgets.surface(Color("101624"), 24, 28))
+	main_background = Widgets.surface(Color("101624"), 24, 28)
+	main.add_theme_stylebox_override("panel", main_background)
 	add_child(main)
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 18)
@@ -59,9 +62,6 @@ func _ready() -> void:
 	page.add_theme_constant_override("separation", 14)
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(page)
-	controls = HBoxContainer.new()
-	body.add_child(controls)
-	controls.hide()
 	status = Widgets.label("", body, 18)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.add_theme_color_override("font_color", Color("a4aec0"))
@@ -104,3 +104,4 @@ func select(id: String, title: String) -> void:
 	for key in all:
 		var button: Button = all[key]
 		button.add_theme_stylebox_override("normal", Widgets.surface(Color("2b4b50") if key == id else Color("182234"), 12, 16))
+

@@ -26,6 +26,7 @@ public final class JellyframeVideo extends GodotPlugin {
     private Surface surface;
     private MediaPlayer player;
     private volatile int position;
+    private volatile int duration;
     private volatile boolean prepared;
     private int generation;
 
@@ -75,6 +76,7 @@ public final class JellyframeVideo extends GodotPlugin {
             player.setOnPreparedListener(current -> {
                 Log.i("JellyframeVideo", "Decoder prepared: " + current.getVideoWidth() + "x" + current.getVideoHeight());
                 prepared = true;
+                duration = Math.max(0, current.getDuration());
                 if (startMs > 0) current.seekTo(startMs, MediaPlayer.SEEK_CLOSEST);
                 current.start();
                 emitSignal("prepared");
@@ -111,6 +113,7 @@ public final class JellyframeVideo extends GodotPlugin {
     }
 
     @UsedByGodot public int position_ms() { return position; }
+    @UsedByGodot public int duration_ms() { return duration; }
 
     @UsedByGodot public String calibration_url() {
         int resource = getContext().getResources().getIdentifier("stereo_test", "raw", getContext().getPackageName());
@@ -139,6 +142,8 @@ public final class JellyframeVideo extends GodotPlugin {
     private void releasePlayer() {
         generation++;
         prepared = false;
+        position = 0;
+        duration = 0;
         if (player != null) { player.release(); player = null; }
     }
 

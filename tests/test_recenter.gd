@@ -35,6 +35,21 @@ func run_checks() -> void:
 	assert(app.screen.global_transform == movie_transform, "Menu toggling does not reposition the movie")
 	app._recenter()
 	assert(app.panel.global_transform != menu_transform, "Explicit recenter still follows the current viewing position")
+	app.playing = true
+	app.screen.show()
+	var screen_transform: Transform3D = app.screen.global_transform
+	app._toggle_menu()
+	assert(app.player_overlay.is_visible_in_tree() and not app.panel.visible, "Playback toggles the screen overlay instead of the main menu")
+	assert(app.player_overlay.get_parent() == app.screen, "The overlay follows the movie screen")
+	app._toggle_menu()
+	assert(not app.player_overlay.visible and app.screen.global_transform == screen_transform, "Hiding the overlay does not move the movie")
+	app._screen_settings()
+	assert(app.panel.visible and not app.player_overlay.visible, "Settings open in the main window")
+	var menu_material: StandardMaterial3D = app.panel.material_override
+	assert(menu_material.no_depth_test and menu_material.render_priority > 0, "Main-window pages draw over a nearer movie screen")
+	app._show_playback()
+	assert(not app.panel.visible and app.player_overlay.visible, "Returning from settings restores the overlay")
+	app.playing = false
 	root.use_xr = false
 	print("Startup recenter checks: PASS")
 	quit()
