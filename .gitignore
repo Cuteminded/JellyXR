@@ -5,6 +5,7 @@
 .gradle/
 build/
 dist/
+docs/
 android/build/
 android/.build_version
 native/local.properties
