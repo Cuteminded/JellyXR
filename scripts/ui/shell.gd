@@ -32,10 +32,14 @@ func _ready() -> void:
 	var navigation := VBoxContainer.new()
 	navigation.add_theme_constant_override("separation", 12)
 	rail.add_child(navigation)
-	var brand := Widgets.label("JELLYFRAME", navigation, 23)
-	brand.custom_minimum_size.y = 64
-	brand.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	brand.add_theme_color_override("font_color", Color("6de3cf"))
+	var logo := TextureRect.new()
+	logo.texture = preload("res://assets/logo/jellyframe-wordmark.png")
+	logo.custom_minimum_size = Vector2(180, 72)
+	logo.accessibility_name = "Jellyframe"
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	navigation.add_child(logo)
 	home = Widgets.button("Home", func(): navigate.emit("", "Home"), navigation)
 	Widgets.label("LIBRARIES", navigation, 15).add_theme_color_override("font_color", Color("a4aec0"))
 	var scroll := ScrollContainer.new()
