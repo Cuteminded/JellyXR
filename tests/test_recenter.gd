@@ -19,6 +19,11 @@ func run_checks() -> void:
 	assert(calls == 1, "Stable tracking centers once")
 	startup.update_tracking(true, 10.0)
 	assert(calls == 1, "Normal head movement does not keep recentering")
+	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
+	var added_interface := xr == null
+	if added_interface:
+		xr = OpenXRInterface.new()
+		XRServer.add_interface(xr)
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	var menu_transform: Transform3D = app.panel.global_transform
@@ -49,7 +54,18 @@ func run_checks() -> void:
 	assert(menu_material.no_depth_test and menu_material.render_priority > 0, "Main-window pages draw over a nearer movie screen")
 	app._show_playback()
 	assert(not app.panel.visible and app.player_overlay.visible, "Returning from settings restores the overlay")
+	var before_reset: Transform3D = app.screen.global_transform
+	app.camera.position += Vector3(0.5, 0.1, 0.2)
+	app.camera.rotate_y(0.4)
+	xr.pose_recentered.emit()
+	await process_frame
+	await process_frame
+	assert(app.screen.global_transform != before_reset, "Headset recenter moves the movie to the new viewing position")
+	assert(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Headset recenter uses the current viewing direction")
+	assert(app.panel.global_position.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 2.7), "Headset recenter also moves the library menu")
+	assert(not app.panel.visible and app.player_overlay.visible, "Headset recenter preserves menu visibility")
 	app.playing = false
 	root.use_xr = false
+	if added_interface: XRServer.remove_interface(xr)
 	print("Startup recenter checks: PASS")
 	quit()

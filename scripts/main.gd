@@ -67,6 +67,9 @@ func _setup_world() -> void:
 	theatre = world.theatre
 	video.material = material
 	world.menu_requested.connect(_toggle_menu)
+	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
+	if xr:
+		xr.pose_recentered.connect(_recenter, CONNECT_DEFERRED)
 	_recenter()
 	var startup := StartupRecenter.new()
 	startup.ready_to_center.connect(func(): _recenter(); panel.show())
