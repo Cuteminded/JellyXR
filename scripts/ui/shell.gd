@@ -88,6 +88,8 @@ func clear_libraries() -> void:
 func set_libraries(items: Array) -> void:
 	clear_libraries()
 	for item in items:
+		var library_type := str(item.get("CollectionType") if item.get("CollectionType") != null else "").to_lower()
+		if library_type not in ["", "mixed", "movies", "tvshows", "homevideos"]: continue
 		var id := str(item.get("Id", ""))
 		var title := str(item.get("Name", "Library"))
 		var button := Widgets.button(title, func(): navigate.emit(id, title), libraries)
@@ -95,10 +97,23 @@ func set_libraries(items: Array) -> void:
 		button.clip_text = true
 		button.tooltip_text = title
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.icon = _library_icon(library_type)
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", 24)
+		button.add_theme_constant_override("h_separation", 10)
 		button.add_theme_font_size_override("font_size", 20)
 		buttons[id] = button
-	if items.is_empty(): Widgets.label("No libraries found", libraries, 17)
+	if buttons.is_empty():
+		var empty := Widgets.label("No supported libraries", libraries, 17)
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	select(selected_id, heading.text)
+
+func _library_icon(library_type: String) -> Texture2D:
+	match library_type:
+		"movies": return preload("res://assets/icons/movies.svg")
+		"tvshows": return preload("res://assets/icons/tvshows.svg")
+		"homevideos": return preload("res://assets/icons/homevideos.svg")
+	return preload("res://assets/icons/library.svg")
 
 func select(id: String, title: String) -> void:
 	selected_id = id
