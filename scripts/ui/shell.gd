@@ -2,7 +2,6 @@ class_name UiShell
 extends HBoxContainer
 
 signal navigate(id: String, title: String)
-signal recenter
 signal screen_settings
 signal sign_out
 var page: VBoxContainer
@@ -25,7 +24,7 @@ func _ready() -> void:
 	offset_bottom = -24
 	add_theme_constant_override("separation", 24)
 	var rail := PanelContainer.new()
-	rail.custom_minimum_size.x = 210
+	rail.custom_minimum_size.x = 250
 	rail_background = Widgets.surface(Color("111827"), 24, 14)
 	rail.add_theme_stylebox_override("panel", rail_background)
 	add_child(rail)
@@ -41,7 +40,8 @@ func _ready() -> void:
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navigation.add_child(logo)
 	home = Widgets.button("Home", func(): navigate.emit("", "Home"), navigation)
-	Widgets.label("LIBRARIES", navigation, 15).add_theme_color_override("font_color", Color("a4aec0"))
+	home.add_theme_font_size_override("font_size", 18)
+	Widgets.label("LIBRARIES", navigation, 14).add_theme_color_override("font_color", Color("a4aec0"))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -50,9 +50,9 @@ func _ready() -> void:
 	libraries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	libraries.add_theme_constant_override("separation", 10)
 	scroll.add_child(libraries)
-	Widgets.button("Recenter", func(): recenter.emit(), navigation)
-	Widgets.button("Screen settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 19)
+	Widgets.button("Screen settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 18)
 	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
+	logout.add_theme_font_size_override("font_size", 18)
 	var main := PanelContainer.new()
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_background = Widgets.surface(Color("101624"), 24, 28)
@@ -101,7 +101,7 @@ func set_libraries(items: Array) -> void:
 		button.expand_icon = true
 		button.add_theme_constant_override("icon_max_width", 24)
 		button.add_theme_constant_override("h_separation", 10)
-		button.add_theme_font_size_override("font_size", 20)
+		button.add_theme_font_size_override("font_size", 18)
 		buttons[id] = button
 	if buttons.is_empty():
 		var empty := Widgets.label("No supported libraries", libraries, 17)
