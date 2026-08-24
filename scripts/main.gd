@@ -104,7 +104,7 @@ func _field(placeholder: String, secret: bool = false) -> LineEdit:
 func _show_login() -> void:
 	shell.set_signed_in(false)
 	_clear_page()
-	Widgets.label("Your cinema. Your library.", page, 40)
+	Widgets.label("Watch Jellyfin in VR", page, 40)
 	Widgets.label("Connect to your Jellyfin server", page)
 	var address := _field("https://jellyfin.example.com")
 	address.text = settings.server
@@ -142,7 +142,7 @@ func _show_login() -> void:
 			else:
 				api.token = ""
 				api.user_id = ""
-				status.text = "Saved sign-in expired. Please sign in again."
+				status.text = "Your saved session has expired. Sign in again."
 
 func _configure(address: String) -> bool:
 	if not api.configure(address):
@@ -216,7 +216,7 @@ func _load_libraries() -> void:
 		shell.set_libraries(result.data.get("Items", []))
 	else:
 		shell.clear_libraries()
-		Widgets.label("Could not load", shell.libraries, 17)
+		Widgets.label("Could not load libraries", shell.libraries, 17)
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
 func _details(item: Dictionary) -> void:
@@ -249,7 +249,7 @@ func _details(item: Dictionary) -> void:
 
 func _start(item: Dictionary) -> void:
 	if not video.available():
-		status.text = "Install the Android build on Quest to play video. Desktop is an interface preview."
+		status.text = "Install the Android build on Quest to watch videos. Desktop mode only previews the interface."
 		return
 	await _stop(false)
 	calibration = false
@@ -328,7 +328,7 @@ func _screen_settings() -> void:
 	for name_value in ["Void", "Theatre"]:
 		Widgets.button(name_value, func(): settings.environment = name_value; settings.save(); theatre.visible = name_value == "Theatre", environments)
 	Widgets.button("Back", _show_playback if playing else (_show_library if not api.token.is_empty() else _show_login), page)
-	status.text = "3D detection uses explicit metadata or half/full-SBS filenames. Override unlabelled movies here."
+	status.text = "Jellyframe detects 3D mode from metadata or half/full-SBS filename labels. Select a mode here if the video looks wrong."
 
 func _resize_screen() -> void:
 	screen.mesh = Stereo.mesh(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
@@ -489,7 +489,7 @@ func _calibrate() -> void:
 	print("Jellyframe: calibration screen positioned")
 	screen.show()
 	playing = true
-	status.text = "Calibration: LEFT in the left eye, RIGHT in the right eye."
+	status.text = "Close one eye at a time. You should see LEFT in your left eye and RIGHT in your right eye."
 	await video.open(video.bridge.calibration_url(), "", 0)
 	if get_viewport().use_xr: panel.hide()
 

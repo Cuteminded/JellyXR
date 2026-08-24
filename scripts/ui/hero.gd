@@ -31,13 +31,13 @@ func _ready() -> void:
 	margin.add_child(text)
 	var eyebrow := Widgets.label("FROM YOUR LIBRARY", text, 15)
 	eyebrow.add_theme_color_override("font_color", Color("9fe8dc"))
-	var title := Widgets.label(item.get("Name", "Your next movie"), text, 38)
+	var title := Widgets.label(item.get("Name", "Untitled"), text, 38)
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var description := Widgets.label(str(item.get("Overview") if item.get("Overview") else "Choose a title, settle in, and make the screen your own."), text, 20)
+	var description := Widgets.label(str(item.get("Overview") if item.get("Overview") else "No description available."), text, 20)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.max_lines_visible = 2
 	description.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var row := HBoxContainer.new()
 	text.add_child(row)
-	Widgets.accent(Widgets.button("View title", func(): chosen.emit(item), row))
+	Widgets.accent(Widgets.button("View details", func(): chosen.emit(item), row))
