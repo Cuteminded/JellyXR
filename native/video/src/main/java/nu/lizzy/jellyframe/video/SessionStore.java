@@ -1,4 +1,4 @@
-package nu.cuteminded.jellyframe.video;
+package nu.lizzy.jellyframe.video;
 
 import android.content.Context;
 import android.security.keystore.KeyGenParameterSpec;
@@ -50,4 +50,3 @@ final class SessionStore {
         return new String(cipher.doFinal(Base64.decode(data, Base64.NO_WRAP)), StandardCharsets.UTF_8);
     }
 }
-
