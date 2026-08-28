@@ -7,6 +7,19 @@ pick something to watch, and adjust the screen to suit your viewing position.
 It is free and open source. Movies and shows come from your server; Jellyframe
 does not include a media library.
 
+## From JellyQuest to Jellyframe
+
+This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I plan to
+switch to Steam Frame, so I renamed the app to Jellyframe and made Steam Frame
+the primary target for future development. I do not have a Steam Frame yet,
+so testing on the headset will have to wait.
+
+The Quest build will continue under the Jellyframe name. Planned platform support
+includes running the app directly on Steam Frame as a standalone headset, without
+a PC, and running it on a Windows or Linux PC with a SteamVR-compatible headset.
+See the project status and platform instructions below for what you can currently
+test.
+
 ## Project status
 
 Jellyframe is an early prototype. Basic playback, including 3D video, has been
@@ -67,6 +80,23 @@ and choose a title to watch.
 Use Screen settings to adjust your view. Press A or B during playback to show
 or hide the controls. If the screen is in the wrong place, select Recenter.
 
+## Try it on Windows with SteamVR
+
+Open **Actions > Build Windows SteamVR > Run workflow** in the repository.
+After the build succeeds, download `jellyframe-windows-steamvr-<run number>` from
+**Artifacts** and extract the entire ZIP. Keep the executable, PCK, and any DLLs
+together in the same folder.
+
+Install SteamVR, connect your headset, and set SteamVR as the active OpenXR runtime
+in SteamVR's **Settings > OpenXR**. Start SteamVR, then run `jellyframe.exe`.
+Godot uses the active OpenXR runtime, as described in the
+[Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
+
+This build is for testing the VR interface and library browsing. Video playback
+requires the Android plugin and is not available on Windows. SteamVR headset and
+controller behavior still need hardware testing. For a desktop preview, run
+`jellyframe.exe --xr-mode off`.
+
 ## Current limitations
 
 - Steam Frame installation and playback remain untested.
@@ -126,6 +156,20 @@ To build locally:
 The script creates `dist/jellyframe-quest3.apk` for installation on your headset.
 
 ### Preview on a computer
+
+To export Windows locally, install Godot 4.7.2 and its matching export templates,
+then run:
+
+```powershell
+New-Item -ItemType Directory -Force dist/windows
+godot --headless --xr-mode off --path . --editor --import --quit
+godot --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
+```
+
+The Windows workflow runs these import and export steps on a Linux runner, then
+checks that the exported executable starts on a Windows runner with VR disabled. OpenXR
+is disabled for the build commands only; the exported app keeps OpenXR enabled.
+Build artifacts are retained for 14 days. No repository secrets are required.
 
 Import `project.godot` into Godot, or run:
 
