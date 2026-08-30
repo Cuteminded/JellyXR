@@ -1,0 +1,44 @@
+class_name PcVideo
+extends VideoBackend
+
+func available() -> bool:
+	return get_viewport().use_xr and ClassDB.class_exists("JellyframeMpv")
+
+func unavailable_message() -> String:
+	if not get_viewport().use_xr:
+		return "PC playback requires a connected headset and an active OpenXR runtime such as SteamVR. Desktop mode previews the interface only."
+	return "The PC video plugin is missing. Extract the complete SteamVR build, including its DLLs."
+
+func open(url: String, authorization: String, start_ms: int) -> void:
+	if not available():
+		failed.emit(unavailable_message())
+		return
+	if bridge == null:
+		bridge = ClassDB.instantiate("JellyframeMpv")
+		add_child(bridge)
+		bridge.prepared.connect(func(): prepared.emit())
+		bridge.ended.connect(func(): ended.emit())
+		bridge.failed.connect(func(message: String): failed.emit(message))
+		bridge.size_changed.connect(func(w: int, h: int): size_changed.emit(w, h))
+		bridge.texture_changed.connect(func(texture: Texture2D): material.set_shader_parameter("video_texture", texture))
+	paused = false
+	var error: String = bridge.open_video(url, authorization, start_ms)
+	if not error.is_empty(): failed.emit(error)
+
+func toggle_pause() -> void:
+	if bridge != null:
+		paused = not paused
+		bridge.set_paused(paused)
+
+func seek(milliseconds: int) -> void:
+	if bridge != null: bridge.seek_to(maxi(0, milliseconds))
+
+func position_ms() -> int:
+	return bridge.position_ms() if bridge != null else 0
+
+func duration_ms() -> int:
+	return bridge.duration_ms() if bridge != null else 0
+
+func stop() -> void:
+	if bridge != null: bridge.stop_video()
+	paused = false

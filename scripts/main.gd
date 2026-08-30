@@ -3,7 +3,7 @@ extends Node3D
 var settings := JellyframeSettings.new()
 var api := JellyfinClient.new()
 var session := PlaybackSession.new()
-var video := AndroidVideo.new()
+var video: VideoBackend = AndroidVideo.new() if OS.get_name() == "Android" else PcVideo.new()
 var camera: Camera3D
 var panel: MeshInstance3D
 var screen: MeshInstance3D
@@ -47,7 +47,7 @@ func _ready() -> void:
 	video.ended.connect(_ended)
 	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); _resize_screen())
 	_show_login()
-	if video.available() and OS.is_debug_build() and video.bridge.calibration_requested():
+	if video.has_android_services() and OS.is_debug_build() and video.bridge.calibration_requested():
 		await get_tree().create_timer(2).timeout
 		_calibrate()
 
@@ -127,11 +127,11 @@ func _show_login() -> void:
 		else: status.text = result.error)
 	Widgets.button("Quick Connect", func():
 		if _configure(address.text): _quick_connect(), row)
-	if video.available() and OS.is_debug_build():
+	if video.has_android_services() and OS.is_debug_build():
 		Widgets.button("Test 3D playback", _calibrate, row)
 	Widgets.label("HTTP sends credentials without encryption. Use HTTPS outside your home network.", page, 18)
 	status.text = "Sign in to start watching."
-	if video.available():
+	if video.has_android_services():
 		var saved: String = video.bridge.load_session()
 		var data: Variant = JSON.parse_string(saved) if not saved.is_empty() else null
 		if data is Dictionary and data.get("server", "") == settings.server and api.configure(settings.server):
@@ -153,7 +153,7 @@ func _configure(address: String) -> bool:
 func _signed_in() -> void:
 	settings.server = api.server
 	settings.save()
-	if video.available():
+	if video.has_android_services():
 		video.bridge.save_session(JSON.stringify({"server": api.server, "token": api.token, "user_id": api.user_id}))
 	_show_library()
 
@@ -249,7 +249,7 @@ func _details(item: Dictionary) -> void:
 
 func _start(item: Dictionary) -> void:
 	if not video.available():
-		status.text = "Install the Android build on Quest to watch videos. Desktop mode only previews the interface."
+		status.text = video.unavailable_message()
 		return
 	await _stop(false)
 	calibration = false
@@ -457,7 +457,7 @@ func _sign_out() -> void:
 	if not api.token.is_empty(): await api.request("/Sessions/Logout", HTTPClient.METHOD_POST)
 	api.token = ""
 	api.user_id = ""
-	if video.available(): video.bridge.save_session("")
+	if video.has_android_services(): video.bridge.save_session("")
 	_show_login()
 
 func _process(delta: float) -> void:

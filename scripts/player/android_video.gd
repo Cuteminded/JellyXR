@@ -1,14 +1,7 @@
 class_name AndroidVideo
-extends Node
+extends VideoBackend
 
-signal failed(message: String)
-signal prepared
-signal ended
-signal size_changed(width: int, height: int)
-var bridge: Object
 var texture: ExternalTexture
-var paused := false
-var material: ShaderMaterial
 
 func _ready() -> void:
 	if not Engine.has_singleton("JellyframeVideo"): return
@@ -22,10 +15,16 @@ func _ready() -> void:
 func available() -> bool:
 	return bridge != null
 
+func has_android_services() -> bool:
+	return available()
+
+func unavailable_message() -> String:
+	return "Video playback requires the Jellyframe Android plugin."
+
 func open(url: String, authorization: String, start_ms: int) -> void:
 	print("Jellyframe: opening video")
 	if not available():
-		failed.emit("Video playback requires the Android plugin. Desktop mode previews the interface only.")
+		failed.emit(unavailable_message())
 		return
 	material.set_shader_parameter("video_texture", texture)
 	print("Jellyframe: external texture assigned")

@@ -20,7 +20,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		fallback_attempted = false
 	started = false
 	var profile := {
-		"Name": "Jellyframe Android SDR prototype",
+		"Name": "Jellyframe SDR " + OS.get_name(),
 		"MaxStreamingBitrate": 80000000,
 		"DirectPlayProfiles": [] if transcode else [{"Container": "mp4,m4v,mkv,webm", "Type": "Video", "VideoCodec": "h264,hevc,vp9", "AudioCodec": "aac,mp3,opus,vorbis"}],
 		"TranscodingProfiles": [{"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}],
