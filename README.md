@@ -14,7 +14,8 @@ switch to Steam Frame, so I renamed the app to Jellyframe and made Steam Frame
 the primary target for future development. I do not have a Steam Frame yet,
 so testing on the headset will have to wait.
 
-The Quest build will continue under the Jellyframe name. Planned platform support
+The Android/Quest version will continue to be developed under the Jellyframe name.
+Planned platform support
 includes running the app directly on Steam Frame as a standalone headset, without
 a PC, and running it on a Windows or Linux PC with a SteamVR-compatible headset.
 See the project status and platform instructions below for what you can currently
@@ -22,7 +23,7 @@ test.
 
 ## Project status
 
-Jellyframe is an early prototype. Basic playback, including 3D video, has been
+Jellyframe is in active development. Basic playback, including 3D video, has been
 tested on Quest 3, but some features are still missing and playback compatibility
 needs more testing.
 
@@ -32,6 +33,11 @@ Jellyframe does not currently claim Steam Frame support.
 The Windows SteamVR version plays video on the VR cinema screen. Stereo video
 and controller playback controls have been checked with SteamVR. Running without
 VR remains an interface preview and cannot play videos.
+
+Linux x64 and ARM64 builds use the same player through libmpv and OpenXR. The
+Linux workflow builds and tests each architecture separately. Playback and
+authenticated MP4/HLS streaming checks pass in Ubuntu 24.04 containers, with
+ARM64 tested through emulation. Linux headset behavior has not been tested yet.
 
 ## What you can do
 
@@ -55,7 +61,7 @@ the left and right views in Screen settings. These changes are not saved per tit
 
 - A Quest 3 with developer mode and USB debugging enabled.
 - Access to a Jellyfin server and an account on that server.
-- A computer to build and install the prototype.
+- A computer to build and install the app.
 
 The initial Jellyfin compatibility target is version 10.11.6. Use HTTPS when
 connecting to a server outside your home network.
@@ -99,10 +105,36 @@ the same controls as the Quest build. Keep `jellyframe_mpv.dll` and `libmpv-2.dl
 beside the executable. For an interface-only desktop preview, run
 `jellyframe.exe --xr-mode off`.
 
+## Try it on Linux x64 or ARM64
+
+Open **Actions > Build Linux OpenXR > Run workflow**. The workflow produces
+`jellyframe-linux-x86_64-<run number>` and `jellyframe-linux-arm64-<run number>`.
+Download the artifact matching your computer, open its ZIP, and extract the
+`.tar.gz` inside. Keep the executable, PCK, and `.so` file together.
+
+The builds target Ubuntu 24.04 and use the system libmpv runtime. On Ubuntu:
+
+```sh
+sudo apt-get install libmpv2
+tar -xzf jellyframe-linux-x86_64.tar.gz
+./jellyframe.x86_64
+```
+
+For ARM64, use `jellyframe-linux-arm64.tar.gz` and `./jellyframe.arm64` instead.
+Start your OpenXR runtime with the headset connected before opening Jellyframe.
+On x64, set SteamVR as the active OpenXR runtime. ARM64 needs a compatible ARM64
+OpenXR runtime with OpenGL support. An ARM64 build alone does not establish
+SteamVR ARM64 or standalone Steam Frame compatibility.
+
+Sign in and play a title using the same VR controls as Windows. Desktop preview
+with `--xr-mode off` still does not play video. See the
+[Linux package instructions](native/pc/LINUX.md) for runtime requirements.
+
 ## Current limitations
 
 - Steam Frame installation and playback remain untested.
-- PC playback currently targets Windows x64 with SteamVR. Linux is not packaged yet.
+- Linux x64 and ARM64 headset behavior remains untested. The CI playback checks
+  run without a headset and cannot validate tracking, controllers, or stereo output.
 - The PC decoder copies video frames through system memory. High-resolution
   playback needs performance testing on your PC, especially 4K and full-SBS files.
 - Specific 4K HEVC and HDR videos still need testing. HDR videos rely on your
@@ -120,7 +152,8 @@ beside the executable. For an interface-only desktop preview, run
 <details>
 <summary>Developer setup, build instructions, and tests</summary>
 
-Jellyframe uses Godot and OpenXR, with separate Android and Windows video plugins.
+Jellyframe uses Godot and OpenXR, with an Android video plugin and a shared
+libmpv video plugin for Windows and Linux.
 
 ### Build requirements
 
@@ -132,7 +165,7 @@ Jellyframe uses Godot and OpenXR, with separate Android and Windows video plugin
 The Android plugin compiles against Godot's 4.5.1 Android API. The project uses
 the Compatibility renderer because video playback uses an external OpenGL texture.
 Jellyframe declares a fixed Android codec profile rather than checking which
-codecs the headset can decode. There is no native Linux video backend yet.
+codecs the headset can decode. Windows and Linux use libmpv for PC VR playback.
 
 ### Build the Quest APK
 
@@ -209,6 +242,44 @@ godot --path . --xr-mode off
 Connect to your Jellyfin server to browse your library. Desktop sessions are
 not saved, and desktop mode cannot play videos.
 
+### Build Linux x64 or ARM64
+
+Build natively on the target architecture with Godot 4.7.2 and matching export
+templates. On Ubuntu, install the build dependencies:
+
+```sh
+sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev ffmpeg
+bash tools/build-pc-video.sh
+godot --headless --xr-mode off --path . --editor --import --quit
+```
+
+The script detects x64 or ARM64, downloads and verifies the godot-cpp bindings,
+and builds the matching plugin in `addons/jellyframe_mpv`. It uses the system
+libmpv development package. Close Jellyframe before rebuilding its plugin.
+
+For x64:
+
+```sh
+mkdir -p dist/linux-x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64 OpenXR' dist/linux-x86_64/jellyframe.x86_64
+```
+
+For ARM64:
+
+```sh
+mkdir -p dist/linux-arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64 OpenXR' dist/linux-arm64/jellyframe.arm64
+```
+
+**Build Linux OpenXR** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners.
+Each job builds its plugin, checks local and authenticated MP4/HLS playback,
+runs the control regressions, and starts the exported app without VR. The
+artifacts contain tar archives to preserve Linux executable permissions and
+are retained for 14 days. No repository secrets are required.
+
+The same decoder and headset test scripts above work on Linux. Use `python3`
+for the HTTP streaming test and pass the path to your Linux Godot executable.
+
 ### Run the core and HTTP tests
 
 ```powershell
@@ -222,7 +293,7 @@ godot --headless --xr-mode off --path . --script tests/test_http.gd
 - `scripts/jellyfin` handles the server API and requests playback streams.
 - `scripts/vr` handles controller pointing.
 - `scripts/player` selects Android playback or PC VR playback.
-- `native/video` contains the Android decoder; `native/pc` contains the libmpv PC decoder.
+- `native/android` contains the Android decoder; `native/pc` contains the libmpv PC decoder.
 - `scripts/core` contains screen settings and stereo geometry.
 
 </details>
