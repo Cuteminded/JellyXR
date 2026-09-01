@@ -1,0 +1,120 @@
+name: Build Linux
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  build:
+    name: Linux ${{ matrix.arch }} build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            preset: Linux x64 OpenXR
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            preset: Linux ARM64 OpenXR
+    env:
+      ARCH: ${{ matrix.arch }}
+      EXPORT_PRESET: ${{ matrix.preset }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake pkg-config python3 curl unzip libmpv-dev ffmpeg
+
+      - name: Build PC video plugin
+        run: bash tools/build-pc-video.sh
+
+      - name: Install Godot and export templates
+        run: |
+          release="${GODOT_VERSION}-stable"
+          base_url="https://github.com/godotengine/godot-builds/releases/download/${release}"
+          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_linux.${ARCH}.zip" -o "$RUNNER_TEMP/godot.zip"
+          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_export_templates.tpz" -o "$RUNNER_TEMP/templates.tpz"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          mv "$RUNNER_TEMP/godot/Godot_v${release}_linux.${ARCH}" "$RUNNER_TEMP/godot/godot"
+          chmod +x "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$template_dir"
+          unzip -j -q "$RUNNER_TEMP/templates.tpz" \
+            "templates/linux_debug.${ARCH}" "templates/linux_release.${ARCH}" \
+            -d "$template_dir"
+
+      - name: Test playback and authenticated streaming
+        run: |
+          godot --headless --xr-mode off --path . --editor --import --quit
+          for test in test_pc_video test_core test_seek test_recenter test_timeline; do
+            timeout 60s godot --headless --xr-mode off --path . --script "tests/${test}.gd"
+          done
+          mkdir -p build/linux/hls
+          ffmpeg -v error -i native/android/src/main/res/raw/stereo_test.mp4 \
+            -c copy -hls_time 2 -hls_playlist_type vod \
+            -hls_segment_filename 'build/linux/hls/segment%02d.ts' -y build/linux/hls/stream.m3u8
+          python3 tests/test_pc_streaming.py --godot "$(command -v godot)" --hls-directory build/linux/hls
+
+      - name: Export Linux build
+        run: |
+          output="dist/linux-${ARCH}"
+          mkdir -p "$output"
+          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe.${ARCH}"
+          test -s "$output/jellyframe.${ARCH}"
+          test -s "$output/jellyframe.pck"
+          test -s "$output/jellyframe_mpv.linux.${ARCH}.so"
+          chmod +x "$output/jellyframe.${ARCH}"
+          cp -r "build/linux/${ARCH}/licenses" "$output/"
+          cp "build/linux/${ARCH}/build-info.txt" "$output/"
+          cp LICENSE "$output/licenses/jellyframe.txt"
+          cp native/pc/LINUX.md "$output/README.md"
+
+      - name: Check exported application
+        run: |
+          output="dist/linux-${ARCH}"
+          ldd "$output/jellyframe_mpv.linux.${ARCH}.so" | tee "$RUNNER_TEMP/dependencies.log"
+          if grep -q 'not found' "$RUNNER_TEMP/dependencies.log"; then
+            echo 'The exported decoder has missing shared libraries.' >&2
+            exit 1
+          fi
+          timeout 30s "$output/jellyframe.${ARCH}" --headless --xr-mode off --quit-after 10 \
+            --log-file "$RUNNER_TEMP/jellyframe-smoke.log"
+          test -s "$RUNNER_TEMP/jellyframe-smoke.log"
+          cat "$RUNNER_TEMP/jellyframe-smoke.log"
+          if grep -E 'SCRIPT ERROR:|ERROR:' "$RUNNER_TEMP/jellyframe-smoke.log"; then
+            exit 1
+          fi
+
+      - name: Package Linux build
+        run: |
+          tar -czf "dist/jellyframe-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
+
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyframe-linux-${{ matrix.arch }}-${{ github.run_number }}
+          path: dist/jellyframe-linux-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
