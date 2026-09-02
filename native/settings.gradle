@@ -6,5 +6,5 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = 'JellyframeVideo'
-include ':video'
+include ':android'
 
