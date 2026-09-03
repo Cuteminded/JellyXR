@@ -39,7 +39,7 @@ func run_checks() -> void:
 	decoder.failed.connect(func(message: String): errors.append(message))
 	decoder.size_changed.connect(func(w: int, h: int): dimensions = Vector2i(w, h))
 	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
-	var url := ProjectSettings.globalize_path("res://native/video/src/main/res/raw/stereo_test.mp4")
+	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
 	var authorization := ""
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--video="): url = argument.trim_prefix("--video=")
