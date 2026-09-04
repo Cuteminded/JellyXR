@@ -7,10 +7,19 @@ var user_id := ""
 var device_id := ""
 
 func authorization() -> String:
-	var value := 'MediaBrowser Client="Jellyframe", Device="Standalone VR", DeviceId="%s", Version="0.1.0"' % device_id
+	var name := headset_name().replace("\\", "\\\\").replace('"', '\\"').replace("\r", " ").replace("\n", " ")
+	var value := 'MediaBrowser Client="Jellyframe", Device="%s", DeviceId="%s", Version="0.1.0"' % [name, device_id]
 	if not token.is_empty():
 		value += ', Token="%s"' % token
 	return value
+
+func headset_name() -> String:
+	var xr := XRServer.find_interface("OpenXR")
+	if xr and xr.is_initialized():
+		var name := str(xr.get_system_info().get("OpenXRSystemName", "")).strip_edges()
+		if not name.is_empty():
+			return name
+	return "OpenXR"
 
 func configure(address: String) -> bool:
 	var clean := address.strip_edges().trim_suffix("/")
