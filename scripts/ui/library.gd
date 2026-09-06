@@ -15,6 +15,7 @@ var generation := 0
 var busy := false
 var has_more := false
 var scroll: ScrollContainer
+var grid: HFlowContainer
 
 const LOAD_AHEAD_PIXELS := 400.0
 
@@ -50,6 +51,7 @@ func refresh(term: String = "") -> void:
 	scroll.scroll_vertical = 0
 	search = term
 	offset = 0
+	grid = null
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
@@ -113,11 +115,12 @@ func _cards(items: Array, horizontal: bool = false) -> void:
 		holder.add_theme_constant_override("separation", 18)
 		row_scroll.add_child(holder)
 	else:
-		var grid := HFlowContainer.new()
-		grid.add_theme_constant_override("h_separation", 18)
-		grid.add_theme_constant_override("v_separation", 18)
+		if grid == null:
+			grid = HFlowContainer.new()
+			grid.add_theme_constant_override("h_separation", 18)
+			grid.add_theme_constant_override("v_separation", 18)
+			content.add_child(grid)
 		holder = grid
-		content.add_child(holder)
 	for item in items:
 		var card := MediaCard.new()
 		card.item = item

@@ -4,8 +4,8 @@ class FixtureApi extends JellyfinClient:
 	var calls: Array = []
 	var fail_next := false
 	var empty_next := false
-	var total := 60
-	var batch_size := 20
+	var total := 72
+	var batch_size := 24
 
 	func library(term: String = "", start: int = 0, _parent: String = "") -> Dictionary:
 		calls.append([term, start])
@@ -51,29 +51,34 @@ func run_checks() -> void:
 	bar.value = bar.max_value - bar.page - 200
 	for index in range(5): library._check_more()
 	await settle()
-	check(api.calls == [["", 0], ["", 20]], "Approaching the bottom must request the next page exactly once.")
-	check(library.offset == 40, "The next page must append its titles.")
+	check(api.calls == [["", 0], ["", 24]], "Approaching the bottom must request the next page exactly once.")
+	check(library.offset == 48, "The next page must append its titles.")
+	check(library.grid.get_child_count() == 48, "All pages must append to the same poster grid.")
+	var previous_card: Control = library.grid.get_child(23)
+	var next_card: Control = library.grid.get_child(24)
+	check(is_equal_approx(previous_card.position.y, next_card.position.y), "The next page must fill the empty slot in the previous page's last row.")
 	api.fail_next = true
 	bar.value = bar.max_value - bar.page
 	await settle()
-	check(api.calls.size() == 3 and library.offset == 40, "A failed page must stop automatic retries and preserve titles.")
+	check(api.calls.size() == 3 and library.offset == 48, "A failed page must stop automatic retries and preserve titles.")
 	var retry: Button = library.content.get_child(library.content.get_child_count() - 1)
 	check(retry.text == "Retry", "A failed page must offer Retry.")
 	retry.pressed.emit()
 	await settle()
-	check(library.offset == 60 and not library.has_more, "Retry must append the final page and stop pagination.")
+	check(library.offset == 72 and not library.has_more, "Retry must append the final page and stop pagination.")
 	bar.value = bar.max_value - bar.page
 	await settle()
 	check(api.calls.size() == 4, "Scrolling past the final page must not request another page.")
 	library.refresh("old")
 	library.refresh("new")
 	await settle()
-	check(library.search == "new" and library.offset == 20, "Search must discard stale responses and reset pagination.")
+	check(library.search == "new" and library.offset == 24, "Search must discard stale responses and reset pagination.")
+	check(library.grid.get_child_count() == 24, "Search must replace the old poster grid.")
 	check(bar.value == 0, "Search must reset the scroll position.")
 	api.empty_next = true
 	bar.value = bar.max_value - bar.page
 	await settle()
-	check(library.offset == 20 and not library.has_more, "An empty page must stop pagination even if the server reports more titles.")
+	check(library.offset == 24 and not library.has_more, "An empty page must stop pagination even if the server reports more titles.")
 	api.total = 3
 	api.batch_size = 1
 	var calls_before := api.calls.size()
