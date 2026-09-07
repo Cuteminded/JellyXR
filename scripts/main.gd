@@ -11,6 +11,7 @@ var viewport: SubViewport
 var shell: UiShell
 var libraries_loaded := false
 var library_generation := 0
+var page_generation := 0
 var page: VBoxContainer
 var status: Label
 var keyboard: VRKeyboard
@@ -89,6 +90,7 @@ func _setup_ui() -> void:
 	keyboard.hide()
 
 func _clear_page() -> void:
+	page_generation += 1
 	player_overlay.hide()
 	if get_viewport().use_xr: panel.show()
 	keyboard.hide()
@@ -220,32 +222,29 @@ func _load_libraries() -> void:
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
 func _details(item: Dictionary) -> void:
+	page_generation += 1
+	var current := page_generation
 	status.text = "Loading details..."
 	var result := await api.details(item.Id)
+	if current != page_generation: return
 	if not result.ok:
 		status.text = result.error
 		return
 	var detail: Dictionary = result.data
 	_clear_page()
-	Widgets.label(detail.get("Name", "Untitled"), page, 38)
-	var description := Widgets.label(str(detail.get("Overview") if detail.get("Overview") else "No description available."), page, 22)
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.max_lines_visible = 5
+	var view := DetailsView.new()
+	view.item = detail
+	view.api = api
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.play_requested.connect(_start)
+	view.back_requested.connect(_show_library)
+	page.add_child(view)
+	status.text = "Ready."
 	if detail.get("Type", "") == "Series":
 		var episodes := await api.request("/Shows/%s/Episodes" % detail.Id + api.query({"UserId": api.user_id, "Limit": 100, "Fields": "UserData"}))
-		if episodes.ok:
-			var scroll := ScrollContainer.new()
-			scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-			page.add_child(scroll)
-			var list := VBoxContainer.new()
-			scroll.add_child(list)
-			for episode in episodes.data.get("Items", []):
-				Widgets.button("S%s E%s  %s" % [episode.get("ParentIndexNumber", "?"), episode.get("IndexNumber", "?"), episode.get("Name", "Episode")], _start.bind(episode), list)
-		else: status.text = episodes.error
-	else:
-		Widgets.button("Resume" if detail.get("UserData", {}).get("PlaybackPositionTicks", 0) > 0 else "Play", _start.bind(detail), page)
-	Widgets.button("Back to library", _show_library, page)
-	status.text = "Ready."
+		if not is_instance_valid(view) or not view.is_inside_tree(): return
+		view.set_episodes(episodes.data.get("Items", []) if episodes.ok else [], "Could not load episodes. Return to the library and try again." if not episodes.ok else "")
+		if not episodes.ok: status.text = episodes.error
 
 func _start(item: Dictionary) -> void:
 	if not video.available():
