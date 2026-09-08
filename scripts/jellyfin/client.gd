@@ -94,6 +94,12 @@ func resume_items() -> Dictionary:
 func details(id: String) -> Dictionary:
 	return await request("/Users/%s/Items/%s" % [user_id, id.uri_encode()])
 
+func seasons(series_id: String) -> Dictionary:
+	return await request("/Shows/%s/Seasons" % series_id.uri_encode() + query({"UserId": user_id, "Fields": "Overview,UserData", "EnableUserData": "true"}))
+
+func episodes(series_id: String, season_id: String, offset: int = 0) -> Dictionary:
+	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "SeasonId": season_id, "StartIndex": offset, "Limit": 100, "Fields": "Overview,UserData", "EnableUserData": "true", "IsMissing": "false"}))
+
 func image_url(item: Dictionary, backdrop: bool = false) -> String:
 	var kind := "Backdrop/0" if backdrop else "Primary"
 	var tags: Array = item.get("BackdropImageTags", []) if item.get("BackdropImageTags") else []

@@ -9,7 +9,7 @@ var api: JellyfinClient
 var artwork: ArtworkLoader
 var scroll: ScrollContainer
 var body: VBoxContainer
-var episode_list: VBoxContainer
+var series_browser: SeriesBrowser
 var play_button: Button
 var back_button: Button
 var title_label: Label
@@ -38,11 +38,13 @@ func _ready() -> void:
 	_build_header()
 	_build_information()
 	if item.get("Type", "") == "Series":
-		Widgets.label("Episodes", body, 28)
-		episode_list = VBoxContainer.new()
-		episode_list.add_theme_constant_override("separation", 12)
-		body.add_child(episode_list)
-		Widgets.label("Loading episodes...", episode_list, 22)
+		series_browser = SeriesBrowser.new()
+		series_browser.api = api
+		series_browser.artwork = artwork
+		series_browser.series_id = str(item.Id)
+		series_browser.play_requested.connect(func(episode: Dictionary): play_requested.emit(episode))
+		series_browser.section_changed.connect(_scroll_to_series)
+		body.add_child(series_browser)
 	_build_people()
 
 func _build_header() -> void:
@@ -103,7 +105,6 @@ func _build_header() -> void:
 
 func _build_playback(parent: VBoxContainer) -> void:
 	if item.get("Type", "") == "Series":
-		_muted("Choose an episode below to start watching.", parent)
 		return
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var position := int(user.get("PlaybackPositionTicks", 0))
@@ -162,19 +163,6 @@ func _build_people() -> void:
 		var role := str(person.get("Role") if person.get("Role") else person.get("Type", ""))
 		_wrapped(str(person.Name) + ("  /  " + role if not role.is_empty() else ""), names, 22)
 
-func set_episodes(items: Array, error: String = "") -> void:
-	for child in episode_list.get_children():
-		episode_list.remove_child(child)
-		child.queue_free()
-	if not error.is_empty():
-		_wrapped(error, episode_list)
-		return
-	if items.is_empty():
-		_muted("No episodes available.", episode_list)
-	for episode in items:
-		var button := Widgets.button("S%s E%s  %s" % [episode.get("ParentIndexNumber", "?"), episode.get("IndexNumber", "?"), episode.get("Name", "Episode")], func(): play_requested.emit(episode), episode_list)
-		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-
 func _image(parent: Node) -> TextureRect:
 	var image := TextureRect.new()
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -182,6 +170,11 @@ func _image(parent: Node) -> TextureRect:
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(image)
 	return image
+
+func _scroll_to_series() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_inside_tree(): scroll.scroll_vertical = int(series_browser.position.y)
 
 func _wrapped(text: String, parent: Node, font_size: int = 22) -> Label:
 	var label := Widgets.label(text, parent, font_size)

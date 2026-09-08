@@ -1,5 +1,9 @@
 extends SceneTree
 
+class FixtureApi extends JellyfinClient:
+	func seasons(_series_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
 var failures := 0
 var selected: Array = []
 var back_count := 0
@@ -33,7 +37,7 @@ func show_details(shell: UiShell, item: Dictionary) -> DetailsView:
 		shell.page.remove_child(child)
 		child.queue_free()
 	var view := DetailsView.new()
-	view.api = JellyfinClient.new()
+	view.api = FixtureApi.new()
 	view.add_child(view.api)
 	view.item = item
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -81,11 +85,7 @@ func run_checks() -> void:
 	view = show_details(shell, {"Id": "series", "Name": "Example series", "Type": "Series"})
 	await settle()
 	check(view.play_button == null, "Series must select episodes instead of playing the series itself.")
-	var episode := {"Id": "episode", "Name": "Pilot", "ParentIndexNumber": 1, "IndexNumber": 1}
-	view.set_episodes([episode])
-	view.episode_list.get_child(0).pressed.emit()
-	check(selected.back() == episode, "Episode selection must open the chosen episode.")
-	view.set_episodes([], "Could not load episodes.")
-	check(view.episode_list.get_child(0).text == "Could not load episodes.", "Episode failures must remain visible.")
+	check(view.series_browser != null, "Series must show a season browser.")
+	check(view.series_browser.season_grid.get_child(0).text == "No seasons available.", "An empty series must have a readable fallback.")
 	print("Details checks: ", "PASS" if failures == 0 else str(failures) + " failures")
 	quit(1 if failures else 0)
