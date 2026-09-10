@@ -78,9 +78,11 @@ func _process(delta: float) -> void:
 	if not input.trigger_down: _scroll(point, delta)
 
 func _scroll(point: Vector2, delta: float) -> void:
-	var scroll := get_vector2("primary").y
-	if absf(scroll) <= 0.5: return
-	input.scroll(point, scroll * delta * 12.0)
+	var stick := get_vector2("primary")
+	if absf(stick.x) > absf(stick.y):
+		if absf(stick.x) > 0.5: input.scroll(point, stick.x * delta * 12.0, true)
+	elif absf(stick.y) > 0.5:
+		input.scroll(point, stick.y * delta * 12.0)
 
 func _cancel() -> void:
 	beam.hide()
