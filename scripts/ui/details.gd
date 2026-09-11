@@ -16,6 +16,7 @@ var title_label: Label
 var overview_label: Label
 var poster: TextureRect
 var backdrop: TextureRect
+var cast_carousel: CastCarousel
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 18)
@@ -154,14 +155,10 @@ func _build_information() -> void:
 func _build_people() -> void:
 	var people: Array = item.get("People", []) if item.get("People") else []
 	if people.is_empty(): return
-	Widgets.label("Cast & crew", body, 28)
-	var names := VBoxContainer.new()
-	names.add_theme_constant_override("separation", 12)
-	body.add_child(names)
-	for person in people:
-		if not person.get("Name"): continue
-		var role := str(person.get("Role") if person.get("Role") else person.get("Type", ""))
-		_wrapped(str(person.Name) + ("  /  " + role if not role.is_empty() else ""), names, 22)
+	cast_carousel = CastCarousel.new()
+	cast_carousel.people = people
+	cast_carousel.artwork = artwork
+	body.add_child(cast_carousel)
 
 func _image(parent: Node) -> TextureRect:
 	var image := TextureRect.new()
