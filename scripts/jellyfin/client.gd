@@ -81,6 +81,9 @@ func query(values: Dictionary) -> String:
 
 func library(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
 	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": "SortName", "SortOrder": "Ascending"}
+	if search.is_empty() and parent_id.is_empty():
+		values["SortBy"] = "DateCreated"
+		values["SortOrder"] = "Descending"
 	if not search.is_empty(): values["SearchTerm"] = search
 	if not parent_id.is_empty(): values["ParentId"] = parent_id
 	return await request("/Items" + query(values))

@@ -86,5 +86,20 @@ func run_checks() -> void:
 	await settle()
 	check(library.offset == 3 and not library.has_more, "Pages that do not fill the viewport must load automatically until the final page.")
 	check(api.calls.size() == calls_before + 3, "A short library must request each page once.")
+	api.batch_size = 3
+	library.refresh()
+	await settle()
+	var first_hero: LibraryHero = library.content.get_child(0)
+	var first_hero_id: String = first_hero.item.Id
+	library.refresh()
+	await settle()
+	var next_hero: LibraryHero = library.content.get_child(0)
+	check(next_hero.item.Id != first_hero_id, "Reloading must choose a different hero when other titles are available.")
+	check(library.grid.get_child(0).item.Id == "0", "Choosing a hero must preserve the media grid order.")
+	api.total = 1
+	library.refresh()
+	await settle()
+	var only_hero: LibraryHero = library.content.get_child(0)
+	check(only_hero.item.Id == "0", "A single-title library must still display its hero.")
 	print("Library pagination failures: ", failures)
 	quit(1 if failures else 0)
