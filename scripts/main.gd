@@ -189,7 +189,9 @@ func _quick_connect() -> void:
 	status.text = "The code expired. Cancel and request a new code."
 
 func _show_library() -> void:
-	_open_library(shell.selected_id, shell.heading.text if not shell.selected_id.is_empty() else "Home")
+	var title := "Home"
+	if shell.buttons.has(shell.selected_id): title = shell.buttons[shell.selected_id].text
+	_open_library(shell.selected_id, title)
 
 func _open_library(id: String, title: String) -> void:
 	_clear_page()
@@ -199,6 +201,8 @@ func _open_library(id: String, title: String) -> void:
 	library.api = api
 	library.library_id = id
 	library.library_name = title
+	api.library_sort_by = settings.library_sort_by
+	api.library_sort_order = settings.library_sort_order
 	library.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	library.status.connect(func(message: String): status.text = message)
 	library.selected.connect(_details)
@@ -297,32 +301,24 @@ func _player_action(action: String) -> void:
 
 func _screen_settings() -> void:
 	_clear_page()
-	Widgets.label("Screen and viewing position", page, 32)
-	var options := HBoxContainer.new()
-	page.add_child(options)
-	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS]]:
-		Widgets.button(entry[0], func(): mode = entry[1]; _resize_screen(), options)
-	Widgets.button("Swap eyes", func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")), options)
-	for entry in [["Width", "width", 1.5, 7.0], ["Distance", "distance", 1.5, 8.0], ["Height", "height", -2.0, 2.0], ["Curvature", "curvature", 0.0, 1.2]]:
-		var row := HBoxContainer.new()
-		page.add_child(row)
-		var label := Widgets.label(entry[0], row)
-		label.custom_minimum_size.x = 170
-		var slider := HSlider.new()
-		slider.custom_minimum_size = Vector2(500, 48)
-		slider.min_value = entry[2]
-		slider.max_value = entry[3]
-		slider.step = 0.05
-		slider.value = settings.get(entry[1])
-		row.add_child(slider)
-		slider.value_changed.connect(func(value: float): settings.set(entry[1], value); _resize_screen(); _position_screen())
-		slider.drag_ended.connect(func(_changed: bool): settings.save())
-	var environments := HBoxContainer.new()
-	page.add_child(environments)
-	for name_value in ["Void", "Theatre"]:
-		Widgets.button(name_value, func(): settings.environment = name_value; settings.save(); theatre.visible = name_value == "Theatre", environments)
-	Widgets.button("Back", _show_playback if playing else (_show_library if not api.token.is_empty() else _show_login), page)
-	status.text = "Jellyframe detects 3D mode from metadata or half/full-SBS filename labels. Select a mode here if the video looks wrong."
+	var previous_heading := shell.heading.text if shell.heading.text != "Settings" else "Home"
+	shell.heading.text = "Settings"
+	var view := SettingsView.new()
+	view.settings = settings
+	view.stereo_mode = mode
+	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.screen_changed.connect(func(): _resize_screen(); _position_screen(); theatre.visible = settings.environment == "Theatre")
+	view.stereo_selected.connect(func(value: int): mode = value; _resize_screen())
+	view.eyes_swapped.connect(func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")))
+	view.status.connect(func(message: String): status.text = message)
+	view.back_requested.connect(func():
+		shell.heading.text = previous_heading
+		if playing: _show_playback()
+		elif not api.token.is_empty(): _show_library()
+		else: _show_login())
+	page.add_child(view)
+	status.text = "Changes apply immediately."
 
 func _resize_screen() -> void:
 	screen.mesh = Stereo.mesh(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
@@ -451,6 +447,8 @@ func _sign_out() -> void:
 	if not api.token.is_empty(): await api.request("/Sessions/Logout", HTTPClient.METHOD_POST)
 	api.token = ""
 	api.user_id = ""
+	api.random_library_ids.clear()
+	api.random_library_generation.clear()
 	if video.has_android_services(): video.bridge.save_session("")
 	_show_login()
 

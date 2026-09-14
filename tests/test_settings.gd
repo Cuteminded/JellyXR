@@ -1,0 +1,121 @@
+extends SceneTree
+
+class FixtureSettings extends JellyframeSettings:
+	var saves := 0
+	func save(_path: String = PATH) -> Error:
+		saves += 1
+		return OK
+
+class FixtureApi extends JellyfinClient:
+	var requests: Array[String] = []
+	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
+		requests.append(path)
+		var values := {}
+		for pair in path.split("?")[1].split("&"):
+			var parts := pair.split("=")
+			values[parts[0]] = parts[1].uri_decode()
+		var items := []
+		if values.has("Ids"):
+			for id in str(values.Ids).split(","):
+				items.push_front({"Id": id, "Name": "Movie " + id})
+		elif values.get("SortBy") == "Random":
+			for index in range(52): items.append({"Id": str(51 - index)})
+		return {"ok": true, "data": {"Items": items, "TotalRecordCount": 52}}
+
+var failures := 0
+
+func _initialize() -> void:
+	call_deferred("run_checks")
+
+func check(condition: bool, message: String) -> void:
+	if not condition:
+		failures += 1
+		push_error(message)
+
+func run_checks() -> void:
+	var settings := JellyframeSettings.new()
+	settings.device_id = "test-device"
+	settings.library_sort_by = "PremiereDate"
+	settings.library_sort_order = "Descending"
+	var path := "res://dist/settings-test.cfg"
+	check(settings.save(path) == OK, "Settings can be saved.")
+	var restored := JellyframeSettings.new()
+	restored.load_settings(path)
+	check(restored.library_sort_by == "PremiereDate" and restored.library_sort_order == "Descending", "Sorting survives a restart.")
+	var config := ConfigFile.new()
+	config.load(path)
+	config.set_value("library", "sort_by", "Invalid")
+	config.set_value("library", "sort_order", "Invalid")
+	config.save(path)
+	restored.load_settings(path)
+	check(restored.library_sort_by == "SortName" and restored.library_sort_order == "Ascending", "Invalid sorting preferences use safe defaults.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var api := FixtureApi.new()
+	root.add_child(api)
+	api.library_sort_by = "PremiereDate"
+	api.library_sort_order = "Descending"
+	await api.library("", 0, "movies")
+	check("SortBy=PremiereDate" in api.requests.back() and "SortOrder=Descending" in api.requests.back(), "Libraries send the saved sort field and order.")
+	await api.library()
+	check("SortBy=DateCreated" in api.requests.back() and "SortOrder=Descending" in api.requests.back(), "Home stays sorted by newest additions.")
+	api.library_sort_by = "Random"
+	var first := await api.library("", 0, "movies")
+	var second := await api.library("", 25, "movies")
+	var last := await api.library("", 50, "movies")
+	var ids := []
+	for result in [first, second, last]:
+		for item in result.data.Items: ids.append(item.Id)
+	var expected := []
+	for index in range(52): expected.append(str(51 - index))
+	check(ids == expected, "Random pages preserve the original shuffled sequence without repeats or omissions.")
+	check(api.requests.size() == 6, "Random scrolling reuses one catalog snapshot.")
+	api.queue_free()
+	var shell := UiShell.new()
+	root.add_child(shell)
+	shell.set_signed_in(true)
+	shell.heading.text = "Settings"
+	var view := SettingsView.new()
+	var fixture := FixtureSettings.new()
+	view.settings = fixture
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shell.page.add_child(view)
+	await process_frame
+	var release_date: CheckBox = view.sort_choices.get_child(8)
+	release_date.button_pressed = true
+	release_date.pressed.emit()
+	check(fixture.library_sort_by == "PremiereDate" and fixture.saves == 1, "Selecting a sort field updates and saves the preference.")
+	var descending: CheckBox = view.sections[0].get_child(2).get_child(1)
+	descending.button_pressed = true
+	descending.pressed.emit()
+	check(fixture.library_sort_order == "Descending" and fixture.saves == 2, "Selecting sort order updates and saves the preference.")
+	check(view.sections[0].visible and not view.sections[1].visible, "Library sorting is the default section.")
+	if "--capture" in OS.get_cmdline_user_args():
+		await capture("settings-library")
+	var screen_tab: Button = view.get_child(0).get_child(1)
+	screen_tab.button_pressed = true
+	screen_tab.pressed.emit()
+	check(not view.sections[0].visible and view.sections[1].visible, "Screen settings are reachable through the section selector.")
+	var changes := []
+	view.screen_changed.connect(func(): changes.append("screen"))
+	var width_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
+	width_slider.value = 4.0
+	check(is_equal_approx(fixture.width, 4.0) and changes == ["screen"] and fixture.saves == 3, "Screen adjustments apply and save from keyboard or pointer input.")
+	if "--capture" in OS.get_cmdline_user_args():
+		await capture("settings-screen")
+		shell.custom_minimum_size = Vector2(760, 850)
+		root.size = Vector2i(800, 900)
+		var library_tab: Button = view.get_child(0).get_child(0)
+		library_tab.button_pressed = true
+		library_tab.pressed.emit()
+		await capture("settings-narrow")
+		check(view.sort_choices.columns == 1, "Narrow settings use a single column.")
+		check(shell.get_global_rect().end.x <= root.size.x, "Narrow settings must fit within the viewport.")
+		view.scroll.scroll_vertical = 10000
+		await capture("settings-narrow-bottom")
+	print("Settings failures: ", failures)
+	quit(1 if failures else 0)
+
+func capture(filename: String) -> void:
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://dist/" + filename + ".png")

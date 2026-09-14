@@ -40,7 +40,7 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	body.add_child(row)
-	for entry in [["Pause", "pause"], ["Back 10 seconds", "back"], ["Forward 30 seconds", "forward"], ["Stop", "stop"], ["Screen settings", "settings"], ["Library", "library"], ["Hide controls", "hide"]]:
+	for entry in [["Pause", "pause"], ["Back 10 seconds", "back"], ["Forward 30 seconds", "forward"], ["Stop", "stop"], ["Settings", "settings"], ["Library", "library"], ["Hide controls", "hide"]]:
 		var button := Widgets.button("", func(): action.emit(entry[1]), row)
 		button.icon = load("res://assets/icons/%s.svg" % entry[1])
 		button.tooltip_text = entry[0]

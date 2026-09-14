@@ -6,9 +6,12 @@ static func duration(ticks: int) -> String:
 	if minutes < 60: return "%d min" % minutes
 	return "%dh %02dm" % [int(minutes / 60.0), minutes % 60]
 
+static func year(item: Dictionary) -> String:
+	return str(int(item.ProductionYear)) if item.get("ProductionYear") else ""
+
 static func facts(item: Dictionary) -> Array[String]:
 	var values: Array[String] = []
-	if item.get("ProductionYear"): values.append(str(item.ProductionYear))
+	if item.get("ProductionYear"): values.append(year(item))
 	if item.get("RunTimeTicks"): values.append(duration(int(item.RunTimeTicks)))
 	if item.get("OfficialRating"): values.append(str(item.OfficialRating))
 	if item.get("CommunityRating"): values.append("Rating %.1f / 10" % float(item.CommunityRating))
