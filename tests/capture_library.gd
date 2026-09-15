@@ -6,7 +6,7 @@ class FixtureApi extends JellyfinClient:
 	func library(_term: String = "", _offset: int = 0, _parent: String = "") -> Dictionary:
 		var items := []
 		for title in ["The long way home", "Northern lights", "Beyond the horizon", "The last voyage", "Wild coast", "A quiet place"]:
-			items.append({"Id": title, "Name": title, "ProductionYear": 2025, "Type": "Movie", "Overview": "A journey through unfamiliar places, and the people who make them feel like home.", "ImageTags": {}})
+			items.append({"Id": title, "Name": title, "ProductionYear": 2025, "Type": "Movie", "Overview": "A journey through unfamiliar places, and the people who make them feel like home.", "ImageTags": {}, "UserData": {"Played": title == "The long way home"}})
 		return {"ok": true, "data": {"Items": items, "TotalRecordCount": items.size()}}
 
 func _initialize() -> void:
