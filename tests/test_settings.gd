@@ -100,6 +100,22 @@ func run_checks() -> void:
 	var width_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	width_slider.value = 4.0
 	check(is_equal_approx(fixture.width, 4.0) and changes == ["screen"] and fixture.saves == 3, "Screen adjustments apply and save from keyboard or pointer input.")
+	fixture.distance = 6.0
+	fixture.height = 1.0
+	fixture.curvature = 0.8
+	fixture.environment = "Theatre"
+	fixture.server = "https://example.com"
+	var half_sbs: CheckBox = view.sections[1].get_child(5).get_child(1)
+	half_sbs.button_pressed = true
+	half_sbs.pressed.emit()
+	var reset: Button = view.sections[1].get_child(0).get_child(1)
+	reset.pressed.emit()
+	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Void", "Reset restores all persistent screen defaults.")
+	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")
+	check(fixture.saves == 4 and changes == ["screen", "screen"], "Reset applies immediately and saves once.")
+	var restored_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
+	var restored_format: CheckBox = view.sections[1].get_child(5).get_child(1)
+	check(is_equal_approx(restored_slider.value, 3.6) and restored_format.button_pressed, "Reset updates displayed values and preserves the current video format.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-screen")
 		shell.custom_minimum_size = Vector2(760, 850)
