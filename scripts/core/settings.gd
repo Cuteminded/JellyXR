@@ -2,7 +2,7 @@ class_name JellyframeSettings
 extends RefCounted
 
 const PATH := "user://settings.cfg"
-const SCREEN_KEYS := ["width", "distance", "height", "curvature", "environment"]
+const SCREEN_KEYS := ["width", "distance", "height", "curvature"]
 const LIBRARY_SORT_OPTIONS := [
 	["Name", "SortName"], ["Random", "Random"],
 	["Community rating", "CommunityRating"], ["Critics rating", "CriticRating"],
@@ -49,6 +49,7 @@ func save(path: String = PATH) -> Error:
 	var config := ConfigFile.new()
 	for key in SCREEN_KEYS:
 		config.set_value("screen", key, get(key))
+	config.set_value("screen", "environment", environment)
 	config.set_value("connection", "server", server)
 	config.set_value("connection", "device_id", device_id)
 	config.set_value("library", "sort_by", library_sort_by)
