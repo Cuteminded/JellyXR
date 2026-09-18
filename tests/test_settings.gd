@@ -37,18 +37,22 @@ func run_checks() -> void:
 	settings.device_id = "test-device"
 	settings.library_sort_by = "PremiereDate"
 	settings.library_sort_order = "Descending"
+	settings.environment = "Passthrough"
 	var path := "res://dist/settings-test.cfg"
 	check(settings.save(path) == OK, "Settings can be saved.")
 	var restored := JellyframeSettings.new()
 	restored.load_settings(path)
 	check(restored.library_sort_by == "PremiereDate" and restored.library_sort_order == "Descending", "Sorting survives a restart.")
+	check(restored.environment == "Passthrough", "Passthrough preference survives a restart.")
 	var config := ConfigFile.new()
 	config.load(path)
 	config.set_value("library", "sort_by", "Invalid")
 	config.set_value("library", "sort_order", "Invalid")
+	config.set_value("screen", "environment", "Invalid")
 	config.save(path)
 	restored.load_settings(path)
 	check(restored.library_sort_by == "SortName" and restored.library_sort_order == "Ascending", "Invalid sorting preferences use safe defaults.")
+	check(restored.environment == "Void", "Invalid environments fall back to Void.")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var api := FixtureApi.new()
 	root.add_child(api)
@@ -127,6 +131,17 @@ func run_checks() -> void:
 	theatre_choice.pressed.emit()
 	var theatre_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	check(not theatre_slider.editable, "Fixed Theatre projection disables Void screen positioning.")
+	var passthrough_choice: CheckBox = view.sections[2].get_child(2).get_child(2)
+	check(passthrough_choice.disabled, "Unsupported devices cannot select Passthrough.")
+	passthrough_choice.disabled = false
+	passthrough_choice.button_pressed = true
+	passthrough_choice.pressed.emit()
+	check(fixture.environment == "Passthrough", "Passthrough selection updates the saved environment.")
+	var passthrough_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
+	check(passthrough_slider.editable, "Passthrough uses adjustable screen controls.")
+	theatre_choice.button_pressed = true
+	theatre_choice.pressed.emit()
+	passthrough_choice.disabled = true
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-environment")
 		shell.custom_minimum_size = Vector2(760, 850)

@@ -39,4 +39,6 @@ environment/defaults/default_clear_color=Color(0.018, 0.029, 0.046, 1)
 [xr]
 
 openxr/enabled=true
+openxr/extensions/meta/passthrough=true
+openxr/extensions/hand_tracking=false
 shaders/enabled=true

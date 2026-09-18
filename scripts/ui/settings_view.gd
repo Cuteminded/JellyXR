@@ -11,6 +11,7 @@ signal status(message: String)
 var settings: JellyframeSettings
 var stereo_mode := Stereo.Mode.MONO
 var swap_eyes := false
+var passthrough_supported := false
 var sort_choices: GridContainer
 var screen_dimensions: GridContainer
 var sections: Array[VBoxContainer] = []
@@ -114,8 +115,8 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(header)
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
-	reset.tooltip_text = "Restore the Void screen size, distance, height and curvature."
-	_hint("Theatre uses its fixed front screen. Switch to Void in Environment to adjust screen position." if settings.environment == "Theatre" else "Adjust your Void screen. Position changes apply immediately and are saved automatically.", parent)
+	reset.tooltip_text = "Restore the movable screen size, distance, height and curvature."
+	_hint("Theatre uses its fixed front screen. Switch to Void or Passthrough in Environment to adjust screen position." if settings.environment == "Theatre" else "Adjust your screen. Position changes apply immediately and are saved automatically.", parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
 	screen_dimensions.add_theme_constant_override("h_separation", 24)
@@ -141,17 +142,23 @@ func _build_screen(parent: VBoxContainer) -> void:
 func _build_environment(parent: VBoxContainer) -> void:
 	Widgets.label("Environment", parent, 26)
 	_hint("Choose where you watch. Your selection applies immediately and is saved automatically.", parent)
-	var environments := HBoxContainer.new()
-	environments.add_theme_constant_override("separation", 12)
+	var environments := HFlowContainer.new()
+	environments.add_theme_constant_override("h_separation", 12)
+	environments.add_theme_constant_override("v_separation", 12)
 	parent.add_child(environments)
 	var environment_group := ButtonGroup.new()
-	for value in ["Void", "Theatre"]:
-		_choice(value, value == settings.environment, environment_group, environments,
+	for value in ["Void", "Theatre", "Passthrough"]:
+		var choice := _choice(value, value == settings.environment, environment_group, environments,
 			func(): settings.environment = value; _rebuild_screen(); environment_changed.emit(); _save())
+		if value == "Passthrough" and not passthrough_supported:
+			choice.disabled = true
+			choice.tooltip_text = "Passthrough is unavailable on this device."
 	Widgets.label("Void", parent, 24)
 	_hint("A dark space with a movable screen. Set its size, distance, height and curvature on the Screen page.", parent)
 	Widgets.label("Theatre", parent, 24)
 	_hint("A cinema with a fixed front screen. Video fits the screen automatically, with black bars when needed to preserve its proportions. Recenter to align the cinema with your viewing direction.", parent)
+	Widgets.label("Passthrough", parent, 24)
+	_hint("Watch on a movable screen with your room visible around you. Adjust the screen on the Screen page." if passthrough_supported else "Unavailable on this device. Use a headset with supported OpenXR passthrough.", parent)
 
 func _reset_screen() -> void:
 	settings.reset_screen()

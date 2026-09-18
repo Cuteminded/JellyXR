@@ -87,11 +87,11 @@ and choose a title to watch.
 Use Settings to adjust your view. Library sorting lets you choose the sort field
 and ascending or descending order for your libraries. These preferences are saved
 automatically; Home continues to show the newest additions first.
-The Environment page switches between Void and Theatre. Theatre plays video on
+The Environment page switches between Void, Theatre and Passthrough. Theatre plays video on
 the fixed front screen and preserves its proportions with black bars as needed.
-The screen position controls apply to Void; resetting them preserves your environment choice.
-Press A or B during playback to show or hide the controls. If the screen is in the
-wrong place, select Recenter.
+Passthrough shows your room around a movable video screen on supported headsets.
+The option is disabled when the OpenXR runtime does not support passthrough.
+The screen position controls apply to Void and Passthrough; resetting them preserves your environment choice.
 
 ## Try it on Windows with SteamVR
 
