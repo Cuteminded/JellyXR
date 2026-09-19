@@ -36,7 +36,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		failed.emit(result.error)
 		return
 	if result.data.get("MediaSources", []).is_empty():
-		failed.emit("Jellyfin did not return a playable source. Check this user's playback permissions.")
+		failed.emit("Jellyfin could not provide a video stream. Check your account's playback permissions.")
 		return
 	source = result.data.MediaSources[0]
 	session_id = result.data.get("PlaySessionId", "")
@@ -49,7 +49,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		method = "Transcode"
 		var path: String = source.get("TranscodingUrl", "")
 		if path.is_empty():
-			failed.emit("This file needs transcoding, but Jellyfin did not provide a stream.")
+			failed.emit("Jellyfin needs to convert this video but did not provide a stream.")
 			return
 		url = api.stream_url(path)
 		if url.is_empty():
@@ -60,7 +60,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 
 func retry_transcode() -> void:
 	if fallback_attempted or method == "Transcode":
-		failed.emit("Playback failed with transcoding. Check whether your Jellyfin server can transcode this file.")
+		failed.emit("Playback failed after Jellyfin tried to convert the video. Check the server's transcoding settings and logs.")
 		return
 	fallback_attempted = true
 	await report("Stopped")

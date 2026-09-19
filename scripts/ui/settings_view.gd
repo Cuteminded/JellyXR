@@ -66,7 +66,7 @@ func _hint(message: String, parent: Node) -> void:
 	label.add_theme_color_override("font_color", Color("a4aec0"))
 
 func _build_library(parent: VBoxContainer) -> void:
-	_hint("Choose how titles are ordered in your libraries. Home stays sorted by date added, newest first. Changes are saved automatically.", parent)
+	_hint("Choose how to sort your libraries. Home always shows the newest additions first.", parent)
 	Widgets.label("Sort by", parent, 26)
 	sort_choices = GridContainer.new()
 	sort_choices.columns = 2
@@ -87,7 +87,7 @@ func _build_library(parent: VBoxContainer) -> void:
 			func(): settings.library_sort_order = value; _save())
 	parent.move_child(order_heading, 1)
 	parent.move_child(order, 2)
-	_hint("Ascending shows A to Z, lowest to highest, or oldest first. Descending reverses the order. Random ignores sort order.", parent)
+	_hint("Ascending sorts A to Z, low to high or oldest first. Descending reverses that order. Sort order does not affect Random.", parent)
 
 func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, action: Callable) -> CheckBox:
 	var choice := CheckBox.new()
@@ -115,8 +115,8 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(header)
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
-	reset.tooltip_text = "Restore the movable screen size, distance, height and curvature."
-	_hint("Theatre uses its fixed front screen. Switch to Void or Passthrough in Environment to adjust screen position." if settings.environment == "Theatre" else "Adjust your screen. Position changes apply immediately and are saved automatically.", parent)
+	reset.tooltip_text = "Reset screen size and position. Keep your environment and video format."
+	_hint("Theatre has a fixed screen. Choose Void or Passthrough on the Environment page to adjust it." if settings.environment == "Theatre" else "Set the screen size, distance, height and curve.", parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
 	screen_dimensions.add_theme_constant_override("h_separation", 24)
@@ -125,7 +125,7 @@ func _build_screen(parent: VBoxContainer) -> void:
 	for entry in [["Width", "width", 1.5, 7.0, " m"], ["Distance", "distance", 1.5, 8.0, " m"], ["Height", "height", -2.0, 2.0, " m"], ["Curvature", "curvature", 0.0, 1.2, ""]]:
 		_slider(entry, screen_dimensions)
 	Widgets.label("Video format", parent, 26)
-	_hint("3D format is detected automatically. Override it here if the video looks wrong.", parent)
+	_hint("Jellyframe detects the 3D format. Choose a different format if the picture looks wrong.", parent)
 	var formats := HFlowContainer.new()
 	formats.add_theme_constant_override("h_separation", 12)
 	parent.add_child(formats)
@@ -141,7 +141,7 @@ func _build_screen(parent: VBoxContainer) -> void:
 
 func _build_environment(parent: VBoxContainer) -> void:
 	Widgets.label("Environment", parent, 26)
-	_hint("Choose where you watch. Your selection applies immediately and is saved automatically.", parent)
+	_hint("Choose a background for your video screen.", parent)
 	var environments := HFlowContainer.new()
 	environments.add_theme_constant_override("h_separation", 12)
 	environments.add_theme_constant_override("v_separation", 12)
@@ -152,13 +152,13 @@ func _build_environment(parent: VBoxContainer) -> void:
 			func(): settings.environment = value; _rebuild_screen(); environment_changed.emit(); _save())
 		if value == "Passthrough" and not passthrough_supported:
 			choice.disabled = true
-			choice.tooltip_text = "Passthrough is unavailable on this device."
+			choice.tooltip_text = "This device does not support passthrough."
 	Widgets.label("Void", parent, 24)
-	_hint("A dark space with a movable screen. Set its size, distance, height and curvature on the Screen page.", parent)
+	_hint("A dark background with an adjustable screen. Use the Screen page to change its size and position.", parent)
 	Widgets.label("Theatre", parent, 24)
-	_hint("A cinema with a fixed front screen. Video fits the screen automatically, with black bars when needed to preserve its proportions. Recenter to align the cinema with your viewing direction.", parent)
+	_hint("A cinema with a fixed screen. Black bars keep the picture in proportion. Recenter to face the screen.", parent)
 	Widgets.label("Passthrough", parent, 24)
-	_hint("Watch on a movable screen with your room visible around you. Adjust the screen on the Screen page." if passthrough_supported else "Unavailable on this device. Use a headset with supported OpenXR passthrough.", parent)
+	_hint("Your room surrounds an adjustable screen. Use the Screen page to change its size and position." if passthrough_supported else "This device does not support passthrough.", parent)
 
 func _reset_screen() -> void:
 	settings.reset_screen()
