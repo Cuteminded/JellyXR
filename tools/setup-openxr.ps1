@@ -5,8 +5,9 @@ $expectedHash = '6A838DBDF4115549E4511EBEE0DA9A5DCC8F9F6258D4CC2F2EE57A907A3E291
 $cache = Join-Path $projectRoot 'build/openxr'
 $destination = Join-Path $projectRoot 'addons/godotopenxrvendors'
 $marker = Join-Path $destination 'installed-version.txt'
-if ((Test-Path $marker) -and (Get-Content $marker -Raw).Trim() -eq $version) { return }
 New-Item -ItemType Directory -Force $cache | Out-Null
+New-Item -ItemType File -Force (Join-Path $projectRoot 'build/.gdignore') | Out-Null
+if ((Test-Path $marker) -and (Get-Content $marker -Raw).Trim() -eq $version) { return }
 $archive = Join-Path $cache 'vendors.zip'
 if (-not (Test-Path $archive)) {
     Invoke-WebRequest "https://github.com/GodotVR/godot_openxr_vendors/releases/download/$version/godotopenxrvendorsaddon.zip" -OutFile $archive

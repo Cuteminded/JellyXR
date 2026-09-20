@@ -182,7 +182,7 @@ To build locally:
   -AndroidSdk 'C:/tools/android-sdk' -JavaHome 'C:/tools/jdk-17'
 ```
 
-The script creates `dist/jellyframe-quest3.apk` for installation on your headset.
+The script creates `dist/jellyframe-android.apk` for installation on your headset.
 It also downloads Godot OpenXR Vendors 5.1.0 for Quest passthrough support,
 checks the archive's SHA-256 checksum, and includes the vendor licences in the APK.
 The downloaded addon stays in the ignored `addons/godotopenxrvendors` directory.
