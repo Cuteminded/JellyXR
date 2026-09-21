@@ -14,6 +14,7 @@ public:
     void seek_to(int64_t milliseconds);
     int64_t position_ms() const;
     int64_t duration_ms() const;
+    bool is_buffering() const;
     void stop_video();
     void _process(double delta) override;
 

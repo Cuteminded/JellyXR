@@ -253,6 +253,10 @@ func _start(item: Dictionary) -> void:
 	await _stop(false)
 	calibration = false
 	status.text = "Preparing playback..."
+	playing = true
+	screen.show()
+	_show_playback()
+	player_overlay.title.text = item.get("Name", "Now playing")
 	await session.open(item)
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
@@ -330,6 +334,7 @@ func _resize_screen() -> void:
 	screen.mesh = Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
+	world.player_loading.fit_screen(dimensions.x, curvature)
 
 func _change_environment() -> void:
 	world.apply_environment()
@@ -372,6 +377,7 @@ func _duration_ms() -> int:
 
 func _update_timeline() -> void:
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
+	world.player_loading.visible = playing and (not decoder_ready or seeking or video.is_buffering())
 
 func _seek_to(milliseconds: int) -> void:
 	if not playing or seeking or not decoder_ready: return
@@ -383,6 +389,7 @@ func _seek_to(milliseconds: int) -> void:
 	seek_paused = video.paused
 	decoder_ready = false
 	var generation := countdown_generation
+	_update_timeline()
 	session.position_ticks = transcode_offset + video.position_ms() * 10000
 	video.stop()
 	status.text = "Seeking..."
@@ -393,6 +400,7 @@ func _seek_to(milliseconds: int) -> void:
 
 func _stop(show_library: bool = true) -> void:
 	countdown_generation += 1
+	world.player_loading.hide()
 	player_overlay.hide()
 	seeking = false
 	decoder_ready = false
@@ -441,11 +449,14 @@ func _video_failed(message: String) -> void:
 		_error(message)
 		return
 	if video.available() and playing:
+		decoder_ready = false
+		_update_timeline()
 		session.position_ticks = transcode_offset + video.position_ms() * 10000
 		video.stop()
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	world.player_loading.hide()
 	player_overlay.hide()
 	seeking = false
 	decoder_ready = false
@@ -499,6 +510,7 @@ func _calibrate() -> void:
 	screen.show()
 	playing = true
 	status.text = "Close one eye at a time. Check that LEFT appears in your left eye and RIGHT in your right eye."
+	_update_timeline()
 	await video.open(video.bridge.calibration_url(), "", 0)
 	if get_viewport().use_xr: panel.hide()
 

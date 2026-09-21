@@ -11,6 +11,7 @@ var material: ShaderMaterial
 var theatre: TheatreEnvironment
 var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
+var player_loading: PlayerLoading
 var pointers: Array[LaserPointer] = []
 
 func setup() -> void:
@@ -61,6 +62,8 @@ func setup() -> void:
 	add_child(screen)
 	player_overlay = PlayerOverlay.new()
 	screen.add_child(player_overlay)
+	player_loading = PlayerLoading.new()
+	screen.add_child(player_loading)
 	_build_theatre()
 	if immersive:
 		for hand in ["left_hand", "right_hand"]:

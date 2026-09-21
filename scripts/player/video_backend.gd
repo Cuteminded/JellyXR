@@ -34,5 +34,8 @@ func position_ms() -> int:
 func duration_ms() -> int:
 	return 0
 
+func is_buffering() -> bool:
+	return bridge != null and bridge.has_method("is_buffering") and bridge.is_buffering()
+
 func stop() -> void:
 	pass
