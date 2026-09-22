@@ -62,7 +62,7 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 18)
 	main.add_child(body)
-	heading = Widgets.label("Welcome", body, 34)
+	heading = Widgets.label("", body, 34)
 	page = VBoxContainer.new()
 	page.add_theme_constant_override("separation", 14)
 	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -77,7 +77,7 @@ func set_signed_in(value: bool) -> void:
 	home.disabled = not value
 	logout.visible = value
 	if not value:
-		heading.text = "Welcome"
+		heading.text = ""
 		clear_libraries()
 		Widgets.label("Sign in to browse", libraries, 17)
 

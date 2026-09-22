@@ -26,6 +26,7 @@ var elapsed := 0.0
 var transcode_offset := 0
 var quick_generation := 0
 var countdown_generation := 0
+var autoplay_pending := false
 var calibration := false
 var seeking := false
 var seek_paused := false
@@ -65,6 +66,7 @@ func _setup_world() -> void:
 	player_overlay = world.player_overlay
 	player_overlay.action.connect(_player_action)
 	player_overlay.seek_requested.connect(_seek_to)
+	world.player_loading.cancelled.connect(_show_library)
 	material = world.material
 	theatre = world.theatre
 	video.material = material
@@ -92,6 +94,9 @@ func _setup_ui() -> void:
 
 func _clear_page() -> void:
 	page_generation += 1
+	countdown_generation += 1
+	_cancel_countdown()
+	shell.heading.show()
 	player_overlay.hide()
 	if get_viewport().use_xr: panel.show()
 	keyboard.hide()
@@ -107,7 +112,7 @@ func _field(placeholder: String, secret: bool = false) -> LineEdit:
 func _show_login() -> void:
 	shell.set_signed_in(false)
 	_clear_page()
-	Widgets.label("Watch Jellyfin in VR", page, 40)
+	shell.heading.hide()
 	Widgets.label("Connect to your Jellyfin server", page)
 	var address := _field("https://jellyfin.example.com")
 	address.text = settings.server
@@ -359,6 +364,9 @@ func _position_screen() -> void:
 
 func _toggle_menu() -> void:
 	if not get_viewport().use_xr: return
+	if autoplay_pending:
+		_show_library()
+		return
 	if playing:
 		if player_overlay.visible: player_overlay.hide()
 		else: _show_playback()
@@ -376,8 +384,12 @@ func _duration_ms() -> int:
 	return duration + int(transcode_offset / 10000) if duration > 0 else 0
 
 func _update_timeline() -> void:
+	if autoplay_pending: return
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
-	world.player_loading.visible = playing and (not decoder_ready or seeking or video.is_buffering())
+	if playing and (not decoder_ready or seeking or video.is_buffering()):
+		world.player_loading.show_loading()
+	else:
+		world.player_loading.hide()
 
 func _seek_to(milliseconds: int) -> void:
 	if not playing or seeking or not decoder_ready: return
@@ -398,14 +410,16 @@ func _seek_to(milliseconds: int) -> void:
 	session.position_ticks = target * 10000
 	await session.open(session.item, true)
 
-func _stop(show_library: bool = true) -> void:
+func _stop(show_library: bool = true, completed: bool = false) -> void:
 	countdown_generation += 1
+	_cancel_countdown()
 	world.player_loading.hide()
 	player_overlay.hide()
 	seeking = false
 	decoder_ready = false
 	if playing:
 		session.position_ticks = transcode_offset + video.position_ms() * 10000
+		if completed: session.position_ticks = maxi(session.position_ticks, _duration_ms() * 10000)
 		video.stop()
 		playing = false
 		await session.report("Stopped")
@@ -413,6 +427,7 @@ func _stop(show_library: bool = true) -> void:
 	if show_library and not api.token.is_empty(): _show_library()
 
 func _ended() -> void:
+	if not playing: return
 	if calibration:
 		await _stop(false)
 		calibration = false
@@ -420,28 +435,41 @@ func _ended() -> void:
 		if get_viewport().use_xr: panel.show()
 		return
 	var previous := session.item.duplicate(true)
-	await _stop(false)
+	var generation := countdown_generation + 1
+	await _stop(false, true)
+	if generation != countdown_generation: return
 	if get_viewport().use_xr: panel.show()
 	if previous.get("Type", "") != "Episode":
 		_show_library()
 		return
-	var result := await api.request("/Shows/NextUp" + api.query({"UserId": api.user_id, "SeriesId": previous.get("SeriesId", ""), "Limit": 1}))
-	if not result.ok or result.data.get("Items", []).is_empty():
+	var result := await api.next_episode(previous)
+	if generation != countdown_generation: return
+	if not result.ok:
+		_show_library()
+		status.text = "Could not load the next episode. " + result.error
+		return
+	if result.data.is_empty():
 		_show_library()
 		return
-	var next: Dictionary = result.data.Items[0]
-	if next.Id == previous.Id:
-		_show_library()
-		return
+	await _countdown(result.data)
+
+func _countdown(next: Dictionary) -> void:
 	_clear_page()
-	var label := Widgets.label("", page, 36)
+	autoplay_pending = true
+	panel.hide()
+	screen.show()
 	var generation := countdown_generation
-	Widgets.button("Cancel autoplay", func(): countdown_generation += 1; _show_library(), page)
-	for seconds in range(10, 0, -1):
+	for seconds in range(5, 0, -1):
 		if generation != countdown_generation: return
-		label.text = "%s starts in %d seconds" % [next.get("Name", "Next episode"), seconds]
+		world.player_loading.show_countdown(next.get("Name", "Next episode"), seconds)
 		await get_tree().create_timer(1).timeout
 	if generation == countdown_generation: _start(next)
+
+func _cancel_countdown() -> void:
+	if not autoplay_pending: return
+	autoplay_pending = false
+	world.player_loading.hide()
+	screen.hide()
 
 func _video_failed(message: String) -> void:
 	status.text = message
@@ -456,6 +484,8 @@ func _video_failed(message: String) -> void:
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	countdown_generation += 1
+	_cancel_countdown()
 	world.player_loading.hide()
 	player_overlay.hide()
 	seeking = false
@@ -513,6 +543,3 @@ func _calibrate() -> void:
 	_update_timeline()
 	await video.open(video.bridge.calibration_url(), "", 0)
 	if get_viewport().use_xr: panel.hide()
-
-
-

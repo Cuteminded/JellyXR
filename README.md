@@ -38,7 +38,9 @@ ARM64 tested through emulation. Linux headset behavior has not been fully tested
 - Recenter the screen in your viewing direction.
 - Watch against a dark background, in a cinema, or with your room visible through passthrough.
 - Use your controllers to select titles, type, pause, and skip through a video.
-- Select episodes and cancel the countdown before the next episode starts.
+- Select episodes. After an episode ends, a 5-second countdown on the video
+  screen starts the next available episode in series order, including across
+  seasons. Cancel autoplay to return to your library.
 
 Jellyframe saves your screen settings and can remember your sign-in on Quest.
 It supports one server and one user at a time. It does not save your password.
@@ -280,6 +282,7 @@ for the HTTP streaming test and pass the path to your Linux Godot executable.
 godot --headless --xr-mode off --path . --editor --import --quit
 godot --headless --xr-mode off --path . --script tests/test_core.gd
 godot --headless --xr-mode off --path . --script tests/test_http.gd
+godot --headless --xr-mode off --path . --script tests/test_autoplay.gd
 ```
 
 ### Code layout
