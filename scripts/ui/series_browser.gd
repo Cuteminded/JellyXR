@@ -91,7 +91,11 @@ func open_season(season: Dictionary) -> void:
 	if items.is_empty(): _label("No episodes available in this season.", episode_list, 22)
 	for episode in items:
 		var card := EpisodeCard.new()
-		card.item = episode
+		card.item = episode.duplicate(true)
+		card.item["Type"] = "Episode"
+		card.item["SeriesId"] = series_id
+		if card.item.get("ParentIndexNumber") == null:
+			card.item["ParentIndexNumber"] = season.get("IndexNumber")
 		card.artwork = artwork
 		card.chosen.connect(func(chosen: Dictionary): play_requested.emit(chosen))
 		episode_list.add_child(card)

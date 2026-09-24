@@ -69,6 +69,7 @@ func run_checks() -> void:
 	check(api.calls == [["agatha", "one", 0], ["agatha", "one", 2]], "All episode pages must stay in the chosen season.")
 	check(browser.episode_list.get_child_count() == 4, "Every episode page must appear in the list.")
 	var first: EpisodeCard = browser.episode_list.get_child(0)
+	check(first.title_label.text == "S01 E01 Seekest Thou the Road", "Episode titles show padded season and episode numbers before the title.")
 	check(first.play_button.text == "Resume episode", "Started episodes must offer Resume.")
 	first.play_button.pressed.emit()
 	check(selected.back().Id == "one0", "Playback must receive the selected episode, not the series or season.")
@@ -85,6 +86,7 @@ func run_checks() -> void:
 	browser.open_season(api.season_items[1])
 	await settle()
 	check(browser.episode_list.get_child(0).item.Id == "two0", "Changing season must ignore an older episode response.")
+	check(browser.episode_list.get_child(0).title_label.text == "S02 E01 Seekest Thou the Road", "Episode titles use the selected season when the response lacks a season number.")
 	api.fail_episodes = true
 	browser.open_season(api.season_items[0])
 	await settle()

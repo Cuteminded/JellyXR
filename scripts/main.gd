@@ -261,7 +261,7 @@ func _start(item: Dictionary) -> void:
 	playing = true
 	screen.show()
 	_show_playback()
-	player_overlay.title.text = item.get("Name", "Now playing")
+	player_overlay.title.text = DetailsMetadata.title(item, "Now playing")
 	await session.open(item)
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
@@ -292,7 +292,7 @@ func _video_prepared() -> void:
 func _show_playback() -> void:
 	keyboard.hide()
 	panel.hide()
-	player_overlay.title.text = session.item.get("Name", "Now playing")
+	player_overlay.title.text = DetailsMetadata.title(session.item, "Now playing")
 	player_overlay.show()
 	_update_timeline()
 
@@ -461,7 +461,7 @@ func _countdown(next: Dictionary) -> void:
 	var generation := countdown_generation
 	for seconds in range(5, 0, -1):
 		if generation != countdown_generation: return
-		world.player_loading.show_countdown(next.get("Name", "Next episode"), seconds)
+		world.player_loading.show_countdown(DetailsMetadata.title(next, "Next episode"), seconds)
 		await get_tree().create_timer(1).timeout
 	if generation == countdown_generation: _start(next)
 

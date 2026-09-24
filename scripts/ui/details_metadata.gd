@@ -1,6 +1,13 @@
 class_name DetailsMetadata
 extends RefCounted
 
+static func title(item: Dictionary, fallback: String = "Untitled") -> String:
+	var name := str(item.get("Name", fallback))
+	if item.get("Type", "") != "Episode": return name
+	var episode := "%02d" % int(item.IndexNumber) if item.get("IndexNumber") != null else "??"
+	var season := "%02d" % int(item.ParentIndexNumber) if item.get("ParentIndexNumber") != null else "??"
+	return "S%s E%s %s" % [season, episode, name]
+
 static func duration(ticks: int) -> String:
 	var minutes := int(ticks / 600000000.0)
 	if minutes < 60: return "%d min" % minutes

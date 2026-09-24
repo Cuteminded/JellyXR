@@ -49,7 +49,7 @@ func run_checks() -> void:
 		await create_timer(0.5).timeout
 		await RenderingServer.frame_post_draw
 		indicator.viewport.get_texture().get_image().save_png("res://dist/player-loading-preview.png")
-		indicator.show_countdown("The next episode", 5)
+		indicator.show_countdown("S02 E03 The next episode", 5)
 		await create_timer(0.2).timeout
 		await RenderingServer.frame_post_draw
 		indicator.viewport.get_texture().get_image().save_png("res://dist/episode-countdown-preview.png")
