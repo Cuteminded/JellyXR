@@ -23,4 +23,7 @@ func capture() -> void:
 	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://dist/player-preview.png")
+	app.player_overlay._show_tooltip(app.player_overlay.pause_button)
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-controls-preview.png")
 	quit()

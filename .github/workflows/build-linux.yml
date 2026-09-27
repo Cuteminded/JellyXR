@@ -68,7 +68,7 @@ jobs:
       - name: Test playback and authenticated streaming
         run: |
           godot --headless --xr-mode off --path . --editor --import --quit
-          for test in test_pc_video test_core test_seek test_recenter test_timeline test_autoplay test_player_return; do
+          for test in test_pc_video test_core test_seek test_recenter test_timeline test_autoplay test_player_return test_player_tooltips; do
             timeout 60s godot --headless --xr-mode off --path . --script "tests/${test}.gd"
           done
           mkdir -p build/linux/hls

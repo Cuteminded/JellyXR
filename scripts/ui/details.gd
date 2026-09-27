@@ -115,7 +115,7 @@ func _build_playback(parent: VBoxContainer) -> void:
 	parent.add_child(actions)
 	play_button = Widgets.button("Resume" if position > 0 else "Play movie", func(): play_requested.emit(item), actions)
 	play_button.custom_minimum_size = Vector2(200, 64)
-	play_button.icon = preload("res://assets/icons/play.svg")
+	play_button.icon = preload("res://assets/icons/material/play_arrow.svg")
 	play_button.add_theme_constant_override("icon_max_width", 28)
 	play_button.add_theme_constant_override("h_separation", 12)
 	for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:

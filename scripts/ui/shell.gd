@@ -8,6 +8,7 @@ var page: VBoxContainer
 var status: Label
 var libraries: VBoxContainer
 var home: Button
+var settings_button: Button
 var logout: Button
 var heading: Label
 var rail: PanelContainer
@@ -41,7 +42,7 @@ func _ready() -> void:
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navigation.add_child(logo)
 	home = Widgets.button("Home", func(): navigate.emit("", "Home"), navigation)
-	home.add_theme_font_size_override("font_size", 18)
+	_style_navigation_button(home, preload("res://assets/icons/material/home.svg"))
 	Widgets.label("LIBRARIES", navigation, 14).add_theme_color_override("font_color", Color("a4aec0"))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -51,9 +52,10 @@ func _ready() -> void:
 	libraries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	libraries.add_theme_constant_override("separation", 10)
 	scroll.add_child(libraries)
-	Widgets.button("Settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 18)
+	settings_button = Widgets.button("Settings", func(): screen_settings.emit(), navigation)
+	_style_navigation_button(settings_button, preload("res://assets/icons/material/settings.svg"))
 	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
-	logout.add_theme_font_size_override("font_size", 18)
+	_style_navigation_button(logout, preload("res://assets/icons/material/logout.svg"))
 	var main := PanelContainer.new()
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_background = Widgets.surface(Color("101624"), 24, 28)
@@ -98,24 +100,27 @@ func set_libraries(items: Array) -> void:
 		button.custom_minimum_size.x = 0
 		button.clip_text = true
 		button.tooltip_text = title
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.icon = _library_icon(library_type)
-		button.expand_icon = true
-		button.add_theme_constant_override("icon_max_width", 24)
-		button.add_theme_constant_override("h_separation", 10)
-		button.add_theme_font_size_override("font_size", 18)
+		_style_navigation_button(button, _library_icon(library_type))
 		buttons[id] = button
 	if buttons.is_empty():
 		var empty := Widgets.label("No supported libraries", libraries, 17)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	select(selected_id, heading.text)
 
+func _style_navigation_button(button: Button, icon: Texture2D) -> void:
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.icon = icon
+	button.expand_icon = true
+	button.add_theme_constant_override("icon_max_width", 24)
+	button.add_theme_constant_override("h_separation", 10)
+	button.add_theme_font_size_override("font_size", 18)
+
 func _library_icon(library_type: String) -> Texture2D:
 	match library_type:
-		"movies": return preload("res://assets/icons/movies.svg")
-		"tvshows": return preload("res://assets/icons/tvshows.svg")
-		"homevideos": return preload("res://assets/icons/homevideos.svg")
-	return preload("res://assets/icons/library.svg")
+		"movies": return preload("res://assets/icons/material/movie.svg")
+		"tvshows": return preload("res://assets/icons/material/tv.svg")
+		"homevideos": return preload("res://assets/icons/material/videocam.svg")
+	return preload("res://assets/icons/material/video_library.svg")
 
 func select(id: String, title: String) -> void:
 	selected_id = id

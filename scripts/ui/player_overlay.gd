@@ -10,10 +10,12 @@ var pause_button: Button
 var panel_size := Vector2(3.4, 0.75)
 var play_icon: Texture2D
 var pause_icon: Texture2D
+var tooltip: Label
+var hovered_control: Control
 
 func _ready() -> void:
-	play_icon = load("res://assets/icons/play.svg")
-	pause_icon = load("res://assets/icons/pause.svg")
+	play_icon = load("res://assets/icons/material/play_arrow.svg")
+	pause_icon = load("res://assets/icons/material/pause.svg")
 	viewport = SubViewport.new()
 	viewport.size = Vector2i(1400, 300)
 	viewport.transparent_bg = true
@@ -37,19 +39,48 @@ func _ready() -> void:
 	timeline = PlaybackTimeline.new()
 	body.add_child(timeline)
 	timeline.seek_requested.connect(func(value: int): seek_requested.emit(value))
+	timeline.slider.tooltip_text = ""
+	timeline.slider.accessibility_name = "Seek to a time"
+	timeline.slider.mouse_entered.connect(_show_tooltip.bind(timeline.slider))
+	timeline.slider.mouse_exited.connect(_hide_tooltip.bind(timeline.slider))
+	timeline.slider.focus_entered.connect(_show_tooltip.bind(timeline.slider))
+	timeline.slider.focus_exited.connect(_hide_tooltip.bind(timeline.slider))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	body.add_child(row)
-	for entry in [["Pause", "pause"], ["Back 10 seconds", "back"], ["Forward 30 seconds", "forward"], ["Stop", "stop"], ["Settings", "settings"], ["Library", "library"], ["Hide controls", "hide"]]:
+	for entry in [["Pause", "pause", "pause"], ["Stop", "stop", "stop"], ["Back 10 seconds", "back", "replay_10"], ["Forward 30 seconds", "forward", "forward_30"], ["Settings", "settings", "settings"], ["Library", "library", "video_library"], ["Hide controls", "hide", "visibility_off"]]:
 		var button := Widgets.button("", func(): action.emit(entry[1]), row)
-		button.icon = load("res://assets/icons/%s.svg" % entry[1])
-		button.tooltip_text = entry[0]
+		button.icon = load("res://assets/icons/material/%s.svg" % entry[2])
 		button.accessibility_name = entry[0]
 		button.custom_minimum_size = Vector2(140, 72)
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.add_theme_constant_override("icon_max_width", 44)
+		button.mouse_entered.connect(_show_tooltip.bind(button))
+		button.mouse_exited.connect(_hide_tooltip.bind(button))
+		button.focus_entered.connect(_show_tooltip.bind(button))
+		button.focus_exited.connect(_hide_tooltip.bind(button))
 		if entry[1] == "pause": pause_button = button
+	tooltip = Widgets.label("", body, 20)
+	tooltip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tooltip.custom_minimum_size.y = 28
 	hide()
+
+func _show_tooltip(control: Control) -> void:
+	hovered_control = control
+	tooltip.text = control.accessibility_name
+
+func _hide_tooltip(control: Control) -> void:
+	if hovered_control != control: return
+	hovered_control = null
+	tooltip.text = ""
+
+func _process(_delta: float) -> void:
+	if not is_visible_in_tree():
+		hovered_control = null
+		tooltip.text = ""
+	elif is_instance_valid(hovered_control):
+		tooltip.text = hovered_control.accessibility_name
 
 func fit_screen(width: float, aspect: float, curvature: float) -> void:
 	panel_size = Vector2(width * 0.94, width * 0.94 * 300.0 / 1400.0)
@@ -62,5 +93,5 @@ func fit_screen(width: float, aspect: float, curvature: float) -> void:
 func update_time(position_ms: int, duration_ms: int, ready: bool, paused: bool) -> void:
 	timeline.update_time(position_ms, duration_ms, ready)
 	pause_button.icon = play_icon if paused else pause_icon
-	pause_button.tooltip_text = "Play" if paused else "Pause"
-	pause_button.accessibility_name = pause_button.tooltip_text
+	pause_button.accessibility_name = "Play" if paused else "Pause"
+	if hovered_control == pause_button: tooltip.text = pause_button.accessibility_name

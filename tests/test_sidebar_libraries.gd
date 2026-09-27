@@ -17,6 +17,7 @@ func run_checks() -> void:
 	for id in ["movies", "tvshows", "homevideos", "mixed", "missing", "null"]:
 		assert(shell.buttons.has(id))
 		assert(shell.buttons[id].icon != null, "Each library has a leading icon")
+		assert("assets/icons/material/" in shell.buttons[id].icon.resource_path, "Each library uses a Material Symbols icon")
 	var selected: Array = []
 	shell.navigate.connect(func(id: String, title: String): selected.append([id, title]))
 	shell.buttons["movies"].pressed.emit()
