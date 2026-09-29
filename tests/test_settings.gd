@@ -53,6 +53,16 @@ func run_checks() -> void:
 	restored.load_settings(path)
 	check(restored.library_sort_by == "SortName" and restored.library_sort_order == "Ascending", "Invalid sorting preferences use safe defaults.")
 	check(restored.environment == "Void", "Invalid environments fall back to Void.")
+	for names in [["Theatre", "Cinema"], ["Theatre LowRes", "Theatre"]]:
+		if config.has_section_key("screen", "environment_version"):
+			config.erase_section_key("screen", "environment_version")
+		config.set_value("screen", "environment", names[0])
+		check(config.save(path) == OK, "Legacy environment fixture can be saved.")
+		restored.load_settings(path)
+		check(restored.environment == names[1], "Renaming preserves the selected legacy environment.")
+		check(restored.save(path) == OK, "Migrated environment can be saved.")
+		restored.load_settings(path)
+		check(restored.environment == names[1], "Migrated environment names stay stable after another restart.")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var api := FixtureApi.new()
 	root.add_child(api)
@@ -107,14 +117,14 @@ func run_checks() -> void:
 	fixture.distance = 6.0
 	fixture.height = 1.0
 	fixture.curvature = 0.8
-	fixture.environment = "Theatre"
+	fixture.environment = "Cinema"
 	fixture.server = "https://example.com"
 	var half_sbs: CheckBox = view.sections[1].get_child(5).get_child(1)
 	half_sbs.button_pressed = true
 	half_sbs.pressed.emit()
 	var reset: Button = view.sections[1].get_child(0).get_child(1)
 	reset.pressed.emit()
-	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Theatre", "Reset restores screen defaults while preserving the separate environment selection.")
+	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Cinema", "Reset restores screen defaults while preserving the separate environment selection.")
 	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")
 	check(fixture.saves == 4 and changes == ["screen", "screen"], "Reset applies immediately and saves once.")
 	var restored_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
@@ -131,7 +141,20 @@ func run_checks() -> void:
 	theatre_choice.pressed.emit()
 	var theatre_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	check(not theatre_slider.editable, "Fixed Theatre projection disables Void screen positioning.")
-	var passthrough_choice: CheckBox = view.sections[2].get_child(2).get_child(2)
+	var low_res_choice: CheckBox = view.sections[2].get_child(2).get_child(2)
+	low_res_choice.button_pressed = true
+	low_res_choice.pressed.emit()
+	check(fixture.environment == "Theatre" and fixture.is_theatre(), "LowRes is a separate theatre option.")
+	check(not (view.screen_dimensions.get_child(0).get_child(1) as HSlider).editable, "LowRes has a fixed screen.")
+	var saved := JellyframeSettings.new()
+	saved.device_id = "test-device"
+	saved.environment = "Theatre"
+	var low_res_path := "res://dist/settings-lowres-test.cfg"
+	check(saved.save(low_res_path) == OK, "LowRes selection can be saved.")
+	var restored_low_res := JellyframeSettings.new()
+	restored_low_res.load_settings(low_res_path)
+	check(restored_low_res.environment == "Theatre", "LowRes selection survives restarting the app.")
+	var passthrough_choice: CheckBox = view.sections[2].get_child(2).get_child(3)
 	check(passthrough_choice.disabled, "Unsupported devices cannot select Passthrough.")
 	passthrough_choice.disabled = false
 	passthrough_choice.button_pressed = true
