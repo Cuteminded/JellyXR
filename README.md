@@ -1,5 +1,4 @@
-# Jellyframe
-
+<img src="assets/logo/jellyframe-wordmark.png" alt="Jellyframe" style="width:400px;"/>
 Watch your Jellyfin movies and shows on a virtual screen in VR.
 
 Jellyframe connects to your Jellyfin server. Browse your library, choose a title,
