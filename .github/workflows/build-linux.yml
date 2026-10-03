@@ -2,6 +2,7 @@ name: Build Linux
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -35,6 +36,10 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date '+%d-%m-%Y')" >> $GITHUB_OUTPUT
+        
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -89,7 +94,7 @@ jobs:
           cp -r "build/linux/${ARCH}/licenses" "$output/"
           cp "build/linux/${ARCH}/build-info.txt" "$output/"
           cp LICENSE "$output/licenses/jellyframe.txt"
-          cp native/pc/LINUX.md "$output/README.md"
+          cp INSTALLATION.md "$output/README.md"
 
       - name: Check exported application
         run: |
@@ -114,7 +119,7 @@ jobs:
       - name: Upload Linux build
         uses: actions/upload-artifact@v7
         with:
-          name: jellyframe-linux-${{ matrix.arch }}-${{ github.run_number }}
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}
           path: dist/jellyframe-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 14
