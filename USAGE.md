@@ -16,8 +16,15 @@
   video screen before the next available episode starts. Autoplay follows series
   order, including across seasons. Cancel the countdown to return to your library.
 
-Jellyframe saves your screen settings and can remember your sign-in on Quest.
+Jellyframe saves your screen settings and remembers your sign-in.
 It supports one server and one user at a time. It does not save your password.
+On PC, the sign-in token is stored in `session.cfg` in Godot's local user-data folder.
+
+Default PC session locations:
+| Platform | File |
+| --- | --- |
+| Windows | `%APPDATA%\Godot\app_userdata\Jellyframe\session.cfg` |
+| Linux | `~/.local/share/godot/app_userdata/Jellyframe/session.cfg` |
 
 For 3D video, Jellyframe reads the format from Jellyfin's metadata or the filename.
 If a video looks wrong, you can select half or full side-by-side mode and swap
