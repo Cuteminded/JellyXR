@@ -5,6 +5,7 @@
 - Sign in with your Jellyfin username and password or Quick Connect.
 - Browse and search your libraries, view title details, and continue watching.
 - Watch 2D movies and side-by-side 3D videos.
+- Watch equirectangular 360° videos in 2D, side-by-side 3D, or top-bottom 3D.
 - Resize the screen and adjust its distance, height, and curvature.
 - Recenter the screen in your viewing direction.
 - Watch against a dark background, in a cinema, or with your room visible through passthrough.
@@ -28,7 +29,27 @@ Default PC session locations:
 
 For 3D video, Jellyframe reads the format from Jellyfin's metadata or the filename.
 If a video looks wrong, you can select half or full side-by-side mode and swap
-the left and right views in Settings. These changes are not saved per title.
+the left and right views in Settings. Top-bottom uses the upper half for the left
+eye and the lower half for the right eye. These changes are not saved per title.
+
+## 360° videos
+
+Start a video, open Settings > Screen, and choose **360°** under Video projection.
+Choose **2D**, **Half-SBS**, **Full-SBS**, or **Top-bottom** under Video format to
+match the file. Look around with your headset to see the whole scene. Use your
+headset's recenter command to set the forward direction. Press A or B to show
+the playback controls in front of you.
+
+Jellyframe selects 360° automatically for filenames with a separate `360`,
+`360deg`, or `VR360` marker, such as `Beach.360.mp4`. It does not infer the
+projection from video dimensions. Files with a separate `TB`, `OU`,
+`top-bottom`, or `over-under` marker select top-bottom 3D.
+
+360° mode supports equirectangular video only. Cubemap, fisheye, and 180° video
+are not supported. During playback, the video replaces the chosen environment.
+Screen size and position controls do not affect it. Select **Screen** to return
+to the virtual screen. Projection overrides apply to the current playback and
+are not saved per title. A new title uses automatic detection again.
 
 ## Settings and environments
 

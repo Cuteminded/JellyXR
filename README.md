@@ -15,9 +15,9 @@ under the Jellyframe name.
 
 ## What you can do
 
-Browse and search your Jellyfin libraries, watch 2D and side-by-side 3D video,
-and adjust your virtual screen. Point with your controllers to select titles and
-control playback. Choose a dark background, a cinema, or passthrough on supported
+Browse and search your Jellyfin libraries, watch 2D, side-by-side 3D, and 360° video
+Point with your controllers to select titles and control playback. 
+Choose a dark background, a cinema, or passthrough on supported
 devices. Episodes can play automatically in series order.
 
 See [Using Jellyframe](USAGE.md) for controls, screen settings, environments,
@@ -42,6 +42,7 @@ a build, install the app, and sign in.
 
 ## Current limitations
 
+- 360° projection and top-bottom 3D still need headset validation.
 - Steam Frame installation and playback remain untested.
 - Linux x64 and ARM64 headset behaviour remains untested. The CI playback checks
   run without a headset and cannot validate tracking, controllers, or stereo output.

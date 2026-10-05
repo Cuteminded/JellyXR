@@ -119,7 +119,7 @@ func run_checks() -> void:
 	fixture.curvature = 0.8
 	fixture.environment = "Cinema"
 	fixture.server = "https://example.com"
-	var half_sbs: CheckBox = view.sections[1].get_child(5).get_child(1)
+	var half_sbs: CheckBox = view.stereo_choices.get_child(1)
 	half_sbs.button_pressed = true
 	half_sbs.pressed.emit()
 	var reset: Button = view.sections[1].get_child(0).get_child(1)
@@ -128,7 +128,7 @@ func run_checks() -> void:
 	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")
 	check(fixture.saves == 4 and changes == ["screen", "screen"], "Reset applies immediately and saves once.")
 	var restored_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
-	var restored_format: CheckBox = view.sections[1].get_child(5).get_child(1)
+	var restored_format: CheckBox = view.stereo_choices.get_child(1)
 	check(is_equal_approx(restored_slider.value, 3.6) and restored_format.button_pressed, "Reset updates displayed values and preserves the current video format.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-screen")

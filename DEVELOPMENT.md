@@ -136,11 +136,24 @@ to your Linux Godot executable.
 ```powershell
 godot --headless --xr-mode off --path . --editor --import --quit
 godot --headless --xr-mode off --path . --script tests/test_core.gd
+godot --headless --xr-mode off --path . --script tests/test_360_video.gd
 godot --headless --xr-mode off --path . --script tests/test_http.gd
 godot --headless --xr-mode off --path . --script tests/test_autoplay.gd
 godot --headless --xr-mode off --path . --script tests/test_player_return.gd
 godot --headless --xr-mode off --path . --script tests/test_player_tooltips.gd
 ```
+
+## Check 360° rendering
+
+To render a synthetic 360° grid and check top-bottom eye selection on desktop:
+
+```powershell
+godot --xr-mode off --path . --script tests/capture_360.gd
+```
+
+The check saves panorama and settings previews in `dist`. It tests the PC shader
+with a generated texture. It does not enable desktop video playback or validate
+headset tracking, Android textures, or stereo output in a headset.
 
 ## Code layout
 

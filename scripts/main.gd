@@ -21,6 +21,9 @@ var theatre: TheatreEnvironment
 var world: ViewingWorld
 var player_overlay: PlayerOverlay
 var mode := Stereo.Mode.MONO
+var stereo_overridden := false
+var projection_mode := VideoProjection.Mode.SCREEN
+var projection_overridden := false
 var video_size := Vector2i(1920, 1080)
 var playing := false
 var elapsed := 0.0
@@ -297,6 +300,11 @@ func _start(item: Dictionary) -> void:
 		return
 	await _stop(false)
 	calibration = false
+	projection_overridden = false
+	stereo_overridden = false
+	projection_mode = VideoProjection.Mode.SCREEN
+	world.set_panoramic(false)
+	_recenter()
 	status.text = "Preparing playback..."
 	playing = true
 	screen.show()
@@ -306,7 +314,10 @@ func _start(item: Dictionary) -> void:
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	decoder_ready = false
-	if not seeking: mode = Stereo.detect(source)
+	if not seeking and not stereo_overridden: mode = Stereo.detect(source)
+	if not seeking and not projection_overridden:
+		projection_mode = VideoProjection.detect(source)
+		world.set_panoramic(projection_mode == VideoProjection.Mode.EQUIRECTANGULAR)
 	for stream in source.get("MediaStreams", []):
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
@@ -378,11 +389,13 @@ func _screen_settings() -> void:
 	view.settings = settings
 	view.passthrough_supported = world.passthrough.is_supported()
 	view.stereo_mode = mode
+	view.projection_mode = projection_mode
 	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.screen_changed.connect(func(): _resize_screen(); _position_screen())
 	view.environment_changed.connect(_change_environment)
-	view.stereo_selected.connect(func(value: int): mode = value; _resize_screen())
+	view.stereo_selected.connect(_select_stereo)
+	view.projection_selected.connect(_select_projection)
 	view.eyes_swapped.connect(func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")))
 	view.status.connect(func(message: String): status.text = message)
 	view.back_requested.connect(func():
@@ -394,13 +407,29 @@ func _screen_settings() -> void:
 	status.text = "Changes take effect as you make them."
 
 func _resize_screen() -> void:
-	var aspect_ratio := Stereo.aspect(video_size.x, video_size.y, mode)
-	var dimensions := theatre.video_size(aspect_ratio) if settings.is_theatre() else Vector2(settings.width, settings.width / aspect_ratio)
-	var curvature := 0.0 if settings.is_theatre() else settings.curvature
-	screen.mesh = Stereo.mesh(dimensions.x, aspect_ratio, curvature)
+	var panoramic := projection_mode == VideoProjection.Mode.EQUIRECTANGULAR
+	var aspect_ratio := 16.0 / 9.0 if panoramic else Stereo.aspect(video_size.x, video_size.y, mode)
+	var fixed_screen := settings.is_theatre() and not panoramic
+	var dimensions := Vector2(settings.width, settings.width / aspect_ratio)
+	if panoramic: dimensions = Vector2(3.6, 3.6 / aspect_ratio)
+	elif fixed_screen: dimensions = theatre.video_size(aspect_ratio)
+	var curvature := 0.0 if fixed_screen or panoramic else settings.curvature
+	screen.mesh = null if panoramic else Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
+	material.set_shader_parameter("top_bottom", mode == Stereo.Mode.TOP_BOTTOM)
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
 	world.player_loading.fit_screen(dimensions.x, curvature)
+
+func _select_projection(value: int) -> void:
+	projection_mode = value
+	projection_overridden = true
+	world.set_panoramic(value == VideoProjection.Mode.EQUIRECTANGULAR)
+	_recenter()
+
+func _select_stereo(value: int) -> void:
+	mode = value
+	stereo_overridden = true
+	_resize_screen()
 
 func _change_environment() -> void:
 	world.apply_environment()
@@ -413,11 +442,16 @@ func _recenter() -> void:
 	panel.position += -camera.global_basis.z * 2.7
 	screen.global_basis = camera.global_basis
 	theatre.recenter(camera.global_transform)
+	if world.panoramic:
+		world.panorama.global_position = camera.global_position
+		world.panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
 	_position_screen()
 	_resize_screen()
 
 func _position_screen() -> void:
-	if settings.is_theatre():
+	if projection_mode == VideoProjection.Mode.EQUIRECTANGULAR:
+		screen.global_position = camera.global_position - screen.global_basis.z * 3.0
+	elif settings.is_theatre():
 		screen.global_transform = theatre.projection_transform()
 	else:
 		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height
