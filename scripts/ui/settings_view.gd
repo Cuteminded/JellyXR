@@ -135,8 +135,8 @@ func _build_screen_position(parent: VBoxContainer) -> void:
 		_slider(entry, screen_dimensions)
 
 func _screen_position_hint() -> String:
-	if projection_mode == VideoProjection.Mode.EQUIRECTANGULAR:
-		return "Screen position does not affect 360° video. Recenter to change your forward direction."
+	if projection_mode != VideoProjection.Mode.SCREEN:
+		return "Screen position does not affect 180° or 360° video. Recenter to change your forward direction."
 	if settings.is_theatre():
 		return "Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it."
 	return "Set the screen size, distance, height and curve."
@@ -159,12 +159,12 @@ func _build_video_format(parent: VBoxContainer) -> void:
 
 func _build_projection(parent: VBoxContainer) -> void:
 	Widgets.label("Video projection", parent, 26)
-	_hint("360° wraps an equirectangular video around you and hides the environment during playback. Other 360° layouts are not supported.", parent)
+	_hint("180° fills the view in front of you. 360° surrounds you. Both use equirectangular video and hide the environment during playback. Fisheye and cubemap layouts are not supported.", parent)
 	var choices := HBoxContainer.new()
 	choices.add_theme_constant_override("separation", 12)
 	parent.add_child(choices)
 	var group := ButtonGroup.new()
-	for entry in [["Screen", VideoProjection.Mode.SCREEN], ["360°", VideoProjection.Mode.EQUIRECTANGULAR]]:
+	for entry in [["Screen", VideoProjection.Mode.SCREEN], ["180°", VideoProjection.Mode.EQUIRECTANGULAR_180], ["360°", VideoProjection.Mode.EQUIRECTANGULAR]]:
 		_choice(entry[0], entry[1] == projection_mode, group, choices, func():
 			projection_mode = entry[1]
 			projection_selected.emit(entry[1])
