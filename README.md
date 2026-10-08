@@ -1,36 +1,23 @@
 <img src="assets/logo/jellyframe-wordmark.png" alt="Jellyframe" style="width:400px;"/>
 Watch your Jellyfin movies and shows on a virtual screen in VR.
 
-Jellyframe connects to your Jellyfin server. Browse your library, choose a title,
-and position the screen where you want it. The app is free and open source.
-Your server supplies the movies and shows.
+Jellyframe is a free, open source app that connects to your Jellyfin server so you can browse your library, choose a title, and position the screen where you want it. Your server supplies the movies and shows.
 
 ## From JellyQuest to Jellyframe
 
-This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I plan to
-switch to Steam Frame, so I renamed the app to Jellyframe and made Steam Frame
-the primary target for future development. I do not have a Steam Frame yet,
-so I cannot test it on the headset. I am still developing the Quest version
-under the Jellyframe name.
+This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I renamed it Jellyframe because I plan to switch to Steam Frame, which is now the main target for future development. I do not have a Steam Frame yet, so I cannot test it on the headset, but I am still developing the Quest version under the Jellyframe name.
 
 ## What you can do
 
-Browse and search your Jellyfin libraries, watch 2D, side-by-side 3D, and 360° video
-Point with your controllers to select titles and control playback. 
-Choose a dark background, a cinema, or passthrough on supported
-devices. Episodes can play automatically in series order.
+Browse and search your Jellyfin libraries, watch 2D, side-by-side 3D, 180° and 360° video, and use your controllers to select titles and control playback. Choose a dark background, a cinema, or passthrough on supported devices, and let episodes play automatically in series order.
 
-See [Using Jellyframe](USAGE.md) for controls, screen settings, environments,
-and sign-in behaviour.
+See [Using Jellyframe](USAGE.md) for controls, screen settings, environments, and sign-in behaviour.
 
 ## Get started
 
-You need a Jellyfin server and an account on that server. The initial Jellyfin
-compatibility target is version 10.11.6.
+You need a Jellyfin server and an account on that server; the initial compatibility target is Jellyfin 10.11.6.
 
-Follow the [installation guide](INSTALLATION.md) for Quest 3, Windows
-with SteamVR, or Linux x64 and ARM64 with OpenXR. It explains how to download
-a build, install the app, and sign in.
+Follow the [installation guide](INSTALLATION.md) to download a build, install the app, and sign in on Quest 3, Windows with SteamVR, or Linux x64 and ARM64 with OpenXR.
 
 ## Documentation
 
@@ -42,21 +29,15 @@ a build, install the app, and sign in.
 
 ## Current limitations
 
-- 360° projection and top-bottom 3D still need headset validation.
+- 180° projection and top-bottom 3D still need headset validation.
 - Steam Frame installation and playback remain untested.
-- Linux x64 and ARM64 headset behaviour remains untested. The CI playback checks
-  run without a headset and cannot validate tracking, controllers, or stereo output.
-- The PC decoder copies video frames through system memory. High-resolution
-  playback needs performance testing, especially 4K and full-SBS files.
-- Specific 4K HEVC and HDR videos still need testing. HDR videos rely on your
-  Jellyfin server to convert them to standard dynamic range with correct colours.
-- Some files may need your Jellyfin server to convert the video during playback.
-  Playback can fail if the server cannot handle that conversion.
+- Linux x64 and ARM64 headset behaviour remains untested; the CI playback checks run without a headset and cannot validate tracking, controllers, or stereo output.
+- The PC decoder copies video frames through system memory, so high-resolution playback needs performance testing, especially with 4K and full-SBS files.
+- Specific 4K HEVC and HDR videos still need testing; HDR playback relies on your Jellyfin server to convert the video to standard dynamic range with correct colours.
+- Some files need your Jellyfin server to convert the video during playback, which can fail if the server cannot handle the conversion.
 - Audio and subtitle selection, favourites, and collections are not available yet.
-- Marking titles as watched manually and hiding playback controls automatically
-  are planned but not available yet.
+- Marking titles as watched manually and hiding playback controls automatically are planned but not available yet.
 
 ## Licence
 
-Jellyframe uses GPL-3.0-only.
-See [Licence and attribution](LICENSING.md) for licence terms and third-party credits.
+Jellyframe uses GPL-3.0-only; see [Licence and attribution](LICENSING.md) for licence terms and third-party credits.
