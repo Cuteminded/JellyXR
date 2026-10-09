@@ -22,6 +22,7 @@ func _connect_button(node: Node) -> void:
 	if not button.pressed.is_connected(_play): button.pressed.connect(_play)
 
 func _play() -> void:
+	if OS.is_debug_build() and OS.get_name() == "Android": print("Jellyframe input: button activated")
 	player.play()
 
 func _click_sound() -> AudioStreamWAV:

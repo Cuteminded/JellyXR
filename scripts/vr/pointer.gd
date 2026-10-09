@@ -7,6 +7,7 @@ var panel_size := Vector2(4.4, 2.75)
 var beam: MeshInstance3D
 var dot: MeshInstance3D
 var input := PointerInput.new()
+var aim := PointerAim.new()
 static var active_pointer: LaserPointer
 
 func _ready() -> void:
@@ -15,6 +16,9 @@ func _ready() -> void:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_color = Color("6de3cf")
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.no_depth_test = true
+	material.render_priority = 127
 	beam = MeshInstance3D.new()
 	var shape := CylinderMesh.new()
 	shape.top_radius = 0.002
@@ -32,13 +36,21 @@ func _ready() -> void:
 	dot.material_override = material
 	add_child(dot)
 
+func set_target(target: Node3D, target_viewport: SubViewport, target_size: Vector2) -> void:
+	if panel != target:
+		_cancel()
+		panel = target
+		viewport = target_viewport
+		input.viewport = viewport
+	panel_size = target_size
+
 func _process(delta: float) -> void:
 	input.sample_trigger(get_float("trigger"))
 	if input.just_pressed and get_is_active():
 		if is_instance_valid(active_pointer) and active_pointer != self:
 			active_pointer._cancel()
 		active_pointer = self
-	if (is_instance_valid(active_pointer) and active_pointer != self) or not get_is_active() or not panel.visible:
+	if (is_instance_valid(active_pointer) and active_pointer != self) or not get_is_active() or not panel.is_visible_in_tree():
 		_cancel()
 		return
 	var inverse := panel.global_transform.affine_inverse()
@@ -50,24 +62,28 @@ func _process(delta: float) -> void:
 	beam.visible = inside
 	dot.visible = inside
 	var point := Vector2(hit.x / panel_size.x + 0.5, 0.5 - hit.y / panel_size.y) * Vector2(viewport.size)
-	input.aim(point, inside)
-	if not inside: return
-	beam.scale.y = distance
-	beam.position.z = -distance / 2
-	dot.position.z = -distance + 0.012
+	if not inside:
+		input.aim(point, false)
+		aim.reset()
+		return
+	point = aim.update(point, delta, input.just_pressed)
+	input.aim(point, true)
+	var uv := point / Vector2(viewport.size)
+	var destination := panel.to_global(Vector3((uv.x - 0.5) * panel_size.x, (0.5 - uv.y) * panel_size.y, 0.008))
+	dot.global_position = destination
+	var direction_to_dot := destination - global_position
+	var up := Vector3.FORWARD if absf(direction_to_dot.normalized().dot(Vector3.UP)) > 0.99 else Vector3.UP
+	beam.global_transform = Transform3D(Basis.looking_at(direction_to_dot, up) * Basis(Vector3.RIGHT, PI / 2), (global_position + destination) / 2)
+	beam.scale.y = direction_to_dot.length()
 	if not input.trigger_down: _scroll(point, delta)
 
 func _scroll(point: Vector2, delta: float) -> void:
 	var scroll := get_vector2("primary").y
 	if absf(scroll) <= 0.5: return
-	var wheel := InputEventMouseButton.new()
-	wheel.button_index = MOUSE_BUTTON_WHEEL_UP if scroll > 0 else MOUSE_BUTTON_WHEEL_DOWN
-	wheel.pressed = true
-	wheel.position = point
-	wheel.factor = absf(scroll) * delta * 12.0
-	viewport.push_input(wheel, true)
+	input.scroll(point, scroll * delta * 12.0)
 
 func _cancel() -> void:
 	beam.hide()
 	dot.hide()
 	input.cancel()
+	aim.reset()

@@ -23,6 +23,10 @@ This test uses a bundled H.264 file, so it does not verify network streaming or 
    while aiming off the panel. Check the pointer dot marks the target.
    Hide the menu, turn your head, and show it again. Its world position and the
    movie position should stay unchanged until you explicitly select Recenter.
+   During playback, the controller button should toggle the compact overlay at
+   the bottom of the movie screen. Test its progress bar, pause, skip, and stop
+   controls. Library and Screen settings should open the solid main window;
+   returning to playback should restore the overlay. Repeat with a curved screen.
 3. Sign in with a password, sign out, then test Quick Connect.
 4. Restart the app and verify that the saved session is restored.
 5. Select each server library in the left menu. Confirm search and Load more
@@ -32,6 +36,10 @@ This test uses a bundled H.264 file, so it does not verify network streaming or 
 7. Play known half-SBS and full-SBS calibration files. Verify each eye sees only
    its own view, proportions are correct, orientation is upright, and swap works.
 8. Pause, seek, stop, resume, and inspect Continue Watching in another client.
+   Check elapsed time and full movie duration on the progress bar. Select a time
+   with the controller, then try again while paused. For transcoded playback,
+   test seeking before the resume point. A new stream should load at that time
+   without moving the screen or closing the menu.
 9. Try an incompatible source and verify one transcoding fallback, followed by
    a useful error if the server cannot transcode.
 10. Test an HDR source with server tone mapping. Compare colours with an SDR reference.
@@ -82,3 +90,16 @@ hardware decoding, HDR tone mapping, or physical comfort.
 - Menu toggle tests preserve both window and movie transforms after head movement.
 - Pointer tests cover trigger hysteresis, off-panel entry, cancelled presses,
   controller handoff, and one sound per accepted button activation.
+- Timeline tests cover time formatting, unknown duration, playback updates without
+  seeking, and one seek per controller interaction. Seek-routing checks cover
+  direct playback and absolute timestamps for restarted transcodes.
+- The translucent menu and timeline were inspected in a desktop render. Actual
+  headset legibility and decoder seeking still require device testing.
+- Playback controls now use a separate transparent viewport attached to the movie
+  screen. Controller input switches between this overlay and the main window.
+  Regression checks cover overlay toggling, stable movie placement, and return
+  from settings. The flat control strip sits in front of curved screen geometry.
+- A device report identified clicks failing after thumbstick scrolling. A desktop
+  reproduction confirmed zero Home activations after scrolling. Pairing synthetic
+  wheel presses with releases restored the activation; `test_scroll_input.gd`
+  covers this sequence. Pointer entry/exit and aim stabilization are also enabled.

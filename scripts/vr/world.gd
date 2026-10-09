@@ -9,6 +9,8 @@ var panel: MeshInstance3D
 var screen: MeshInstance3D
 var material: ShaderMaterial
 var theatre: Node3D
+var player_overlay: PlayerOverlay
+var pointers: Array[LaserPointer] = []
 
 func setup() -> void:
 	var xr := XRServer.find_interface("OpenXR")
@@ -37,6 +39,8 @@ func setup() -> void:
 	ui_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	ui_material.albedo_texture = viewport.get_texture()
 	ui_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ui_material.no_depth_test = true
+	ui_material.render_priority = 100
 	panel.material_override = ui_material
 	add_child(panel)
 	screen = MeshInstance3D.new()
@@ -45,6 +49,8 @@ func setup() -> void:
 	screen.material_override = material
 	screen.visible = false
 	add_child(screen)
+	player_overlay = PlayerOverlay.new()
+	screen.add_child(player_overlay)
 	_build_theatre()
 	if immersive:
 		for hand in ["left_hand", "right_hand"]:
@@ -56,6 +62,7 @@ func setup() -> void:
 			pointer.button_pressed.connect(func(action: String):
 				if action in ["menu_button", "ax_button", "by_button"]: menu_requested.emit())
 			origin.add_child(pointer)
+			pointers.append(pointer)
 	else:
 		panel.hide()
 		var overlay := CanvasLayer.new()
@@ -65,6 +72,14 @@ func setup() -> void:
 		container.stretch = true
 		overlay.add_child(container)
 		viewport.reparent(container)
+
+func _process(_delta: float) -> void:
+	if not player_overlay: return
+	for pointer in pointers:
+		if player_overlay.is_visible_in_tree():
+			pointer.set_target(player_overlay, player_overlay.viewport, player_overlay.panel_size)
+		else:
+			pointer.set_target(panel, viewport, Vector2(4.4, 2.75))
 
 func _build_theatre() -> void:
 	theatre = Node3D.new()

@@ -16,7 +16,7 @@ var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
 var theatre: Node3D
-var controls: HBoxContainer
+var player_overlay: PlayerOverlay
 var mode := Stereo.Mode.MONO
 var video_size := Vector2i(1920, 1080)
 var playing := false
@@ -25,6 +25,10 @@ var transcode_offset := 0
 var quick_generation := 0
 var countdown_generation := 0
 var calibration := false
+var seeking := false
+var seek_paused := false
+var timeline_elapsed := 0.0
+var decoder_ready := false
 
 func _ready() -> void:
 	settings.load_settings()
@@ -56,6 +60,9 @@ func _setup_world() -> void:
 	viewport = world.viewport
 	panel = world.panel
 	screen = world.screen
+	player_overlay = world.player_overlay
+	player_overlay.action.connect(_player_action)
+	player_overlay.seek_requested.connect(_seek_to)
 	material = world.material
 	theatre = world.theatre
 	video.material = material
@@ -71,21 +78,17 @@ func _setup_ui() -> void:
 	viewport.add_child(shell)
 	page = shell.page
 	status = shell.status
-	controls = shell.controls
 	shell.navigate.connect(_open_library)
 	shell.recenter.connect(_recenter)
 	shell.screen_settings.connect(_screen_settings)
 	shell.sign_out.connect(_sign_out)
-	Widgets.button("Pause / Play", func(): video.toggle_pause(); session.report("Progress", video.paused), controls)
-	Widgets.button("-10s", _skip.bind(-10000), controls)
-	Widgets.button("+30s", _skip.bind(30000), controls)
-	Widgets.button("Stop", _stop, controls)
-	Widgets.button("Hide menu", _toggle_menu, controls)
 	keyboard = VRKeyboard.new()
 	viewport.add_child(keyboard)
 	keyboard.hide()
 
 func _clear_page() -> void:
+	player_overlay.hide()
+	if get_viewport().use_xr: panel.show()
 	keyboard.hide()
 	for child in page.get_children():
 		page.remove_child(child)
@@ -252,30 +255,49 @@ func _start(item: Dictionary) -> void:
 	await session.open(item)
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
-	mode = Stereo.detect(source)
+	decoder_ready = false
+	if not seeking: mode = Stereo.detect(source)
 	for stream in source.get("MediaStreams", []):
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
 	transcode_offset = session.position_ticks if session.method == "Transcode" else 0
-	_recenter()
+	if not seeking: _recenter()
 	screen.show()
 	playing = true
-	controls.show()
-	_show_playback()
+	if not seeking: _show_playback()
+	_update_timeline()
 	await video.open(url, api.authorization(), start_ms)
 
 func _video_prepared() -> void:
-	session.report("Playing")
+	decoder_ready = true
+	if seeking and seek_paused: video.toggle_pause()
+	session.report("Playing", video.paused)
 	status.text = "Playing. Press A or B to show the controls."
-	if get_viewport().use_xr: panel.hide()
+	if get_viewport().use_xr and not seeking:
+		panel.hide()
+		player_overlay.hide()
+	seeking = false
+	_update_timeline()
 
 func _show_playback() -> void:
-	_clear_page()
-	Widgets.label(session.item.get("Name", "Now playing"), page, 38)
-	Widgets.label("Press A or B to show or hide playback controls.", page)
-	Widgets.button("Return to movie", _toggle_menu, page)
-	Widgets.button("Screen and 3D settings", _screen_settings, page)
-	Widgets.button("Browse library", _show_library, page)
+	keyboard.hide()
+	panel.hide()
+	player_overlay.title.text = session.item.get("Name", "Now playing")
+	player_overlay.show()
+	_update_timeline()
+
+func _player_action(action: String) -> void:
+	match action:
+		"pause":
+			video.toggle_pause()
+			session.report("Progress", video.paused)
+			_update_timeline()
+		"back": _skip(-10000)
+		"forward": _skip(30000)
+		"stop": _stop()
+		"settings": _screen_settings()
+		"library": _show_library()
+		"hide": player_overlay.hide()
 
 func _screen_settings() -> void:
 	_clear_page()
@@ -303,12 +325,13 @@ func _screen_settings() -> void:
 	page.add_child(environments)
 	for name_value in ["Void", "Theatre"]:
 		Widgets.button(name_value, func(): settings.environment = name_value; settings.save(); theatre.visible = name_value == "Theatre", environments)
-	Widgets.button("Back", _show_library if not api.token.is_empty() else _show_login, page)
+	Widgets.button("Back", _show_playback if playing else (_show_library if not api.token.is_empty() else _show_login), page)
 	status.text = "3D detection uses explicit metadata or half/full-SBS filenames. Override unlabelled movies here."
 
 func _resize_screen() -> void:
 	screen.mesh = Stereo.mesh(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
+	player_overlay.fit_screen(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
 
 func _recenter() -> void:
 	panel.global_transform = camera.global_transform
@@ -322,20 +345,54 @@ func _position_screen() -> void:
 
 func _toggle_menu() -> void:
 	if not get_viewport().use_xr: return
-	panel.visible = not panel.visible
+	if playing:
+		if player_overlay.visible: player_overlay.hide()
+		else: _show_playback()
+	else: panel.visible = not panel.visible
 
 func _skip(amount: int) -> void:
-	video.seek(video.position_ms() + amount)
+	_seek_to(int(transcode_offset / 10000) + video.position_ms() + amount)
+
+func _duration_ms() -> int:
+	if calibration: return video.duration_ms()
+	var ticks := int(session.source.get("RunTimeTicks", 0))
+	if ticks <= 0: ticks = int(session.item.get("RunTimeTicks", 0))
+	if ticks > 0: return int(ticks / 10000)
+	var duration := video.duration_ms()
+	return duration + int(transcode_offset / 10000) if duration > 0 else 0
+
+func _update_timeline() -> void:
+	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
+
+func _seek_to(milliseconds: int) -> void:
+	if not playing or seeking or not decoder_ready: return
+	var target := clampi(milliseconds, 0, maxi(0, _duration_ms() - 1000))
+	if calibration or session.method != "Transcode":
+		video.seek(target)
+		return
+	seeking = true
+	seek_paused = video.paused
+	decoder_ready = false
+	var generation := countdown_generation
+	session.position_ticks = transcode_offset + video.position_ms() * 10000
+	video.stop()
+	status.text = "Seeking..."
+	await session.report("Stopped")
+	if generation != countdown_generation: return
+	session.position_ticks = target * 10000
+	await session.open(session.item, true)
 
 func _stop(show_library: bool = true) -> void:
 	countdown_generation += 1
+	player_overlay.hide()
+	seeking = false
+	decoder_ready = false
 	if playing:
 		session.position_ticks = transcode_offset + video.position_ms() * 10000
 		video.stop()
 		playing = false
 		await session.report("Stopped")
 	screen.hide()
-	controls.hide()
 	if show_library and not api.token.is_empty(): _show_library()
 
 func _ended() -> void:
@@ -380,11 +437,13 @@ func _video_failed(message: String) -> void:
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	player_overlay.hide()
+	seeking = false
+	decoder_ready = false
 	status.text = message
 	playing = false
 	video.stop()
 	screen.hide()
-	controls.hide()
 	if get_viewport().use_xr: panel.show()
 
 func _sign_out() -> void:
@@ -401,6 +460,11 @@ func _sign_out() -> void:
 
 func _process(delta: float) -> void:
 	if not playing: return
+	timeline_elapsed += delta
+	if timeline_elapsed >= 0.25:
+		timeline_elapsed = 0.0
+		_update_timeline()
+	if seeking: return
 	elapsed += delta
 	if elapsed >= 10:
 		elapsed = 0
@@ -412,6 +476,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _calibrate() -> void:
+	transcode_offset = 0
+	decoder_ready = false
 	print("Jellyframe: calibration requested")
 	calibration = true
 	mode = Stereo.Mode.HALF_SBS
@@ -421,9 +487,9 @@ func _calibrate() -> void:
 	print("Jellyframe: calibration screen positioned")
 	screen.show()
 	playing = true
-	controls.show()
 	status.text = "Calibration: LEFT in the left eye, RIGHT in the right eye."
 	await video.open(video.bridge.calibration_url(), "", 0)
 	if get_viewport().use_xr: panel.hide()
+
 
 
