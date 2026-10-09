@@ -10,6 +10,7 @@ var libraries: VBoxContainer
 var home: Button
 var logout: Button
 var heading: Label
+var rail: PanelContainer
 var selected_id := ""
 var buttons: Dictionary = {}
 var rail_background: StyleBoxFlat
@@ -23,7 +24,7 @@ func _ready() -> void:
 	offset_top = 24
 	offset_bottom = -24
 	add_theme_constant_override("separation", 24)
-	var rail := PanelContainer.new()
+	rail = PanelContainer.new()
 	rail.custom_minimum_size.x = 250
 	rail_background = Widgets.surface(Color("111827"), 24, 14)
 	rail.add_theme_stylebox_override("panel", rail_background)
@@ -72,6 +73,7 @@ func _ready() -> void:
 	set_signed_in(false)
 
 func set_signed_in(value: bool) -> void:
+	rail.visible = value
 	home.disabled = not value
 	logout.visible = value
 	if not value:
