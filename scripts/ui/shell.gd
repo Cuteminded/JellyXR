@@ -1,0 +1,106 @@
+class_name UiShell
+extends HBoxContainer
+
+signal navigate(id: String, title: String)
+signal recenter
+signal screen_settings
+signal sign_out
+var page: VBoxContainer
+var status: Label
+var controls: HBoxContainer
+var libraries: VBoxContainer
+var home: Button
+var logout: Button
+var heading: Label
+var selected_id := ""
+var buttons: Dictionary = {}
+
+func _ready() -> void:
+	theme = Widgets.theme()
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	offset_left = 24
+	offset_right = -24
+	offset_top = 24
+	offset_bottom = -24
+	add_theme_constant_override("separation", 24)
+	var rail := PanelContainer.new()
+	rail.custom_minimum_size.x = 210
+	rail.add_theme_stylebox_override("panel", Widgets.surface(Color("111827"), 24, 14))
+	add_child(rail)
+	var navigation := VBoxContainer.new()
+	navigation.add_theme_constant_override("separation", 12)
+	rail.add_child(navigation)
+	var brand := Widgets.label("JELLYFRAME", navigation, 23)
+	brand.custom_minimum_size.y = 64
+	brand.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	brand.add_theme_color_override("font_color", Color("6de3cf"))
+	home = Widgets.button("Home", func(): navigate.emit("", "Home"), navigation)
+	Widgets.label("LIBRARIES", navigation, 15).add_theme_color_override("font_color", Color("a4aec0"))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	navigation.add_child(scroll)
+	libraries = VBoxContainer.new()
+	libraries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	libraries.add_theme_constant_override("separation", 10)
+	scroll.add_child(libraries)
+	Widgets.button("Recenter", func(): recenter.emit(), navigation)
+	Widgets.button("Screen settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 19)
+	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
+	var main := PanelContainer.new()
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main.add_theme_stylebox_override("panel", Widgets.surface(Color("101624"), 24, 28))
+	add_child(main)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 18)
+	main.add_child(body)
+	heading = Widgets.label("Welcome", body, 34)
+	page = VBoxContainer.new()
+	page.add_theme_constant_override("separation", 14)
+	page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(page)
+	controls = HBoxContainer.new()
+	body.add_child(controls)
+	controls.hide()
+	status = Widgets.label("", body, 18)
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.add_theme_color_override("font_color", Color("a4aec0"))
+	set_signed_in(false)
+
+func set_signed_in(value: bool) -> void:
+	home.disabled = not value
+	logout.visible = value
+	if not value:
+		heading.text = "Welcome"
+		clear_libraries()
+		Widgets.label("Sign in to browse", libraries, 17)
+
+func clear_libraries() -> void:
+	buttons.clear()
+	for child in libraries.get_children():
+		libraries.remove_child(child)
+		child.queue_free()
+
+func set_libraries(items: Array) -> void:
+	clear_libraries()
+	for item in items:
+		var id := str(item.get("Id", ""))
+		var title := str(item.get("Name", "Library"))
+		var button := Widgets.button(title, func(): navigate.emit(id, title), libraries)
+		button.custom_minimum_size.x = 0
+		button.clip_text = true
+		button.tooltip_text = title
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size", 20)
+		buttons[id] = button
+	if items.is_empty(): Widgets.label("No libraries found", libraries, 17)
+	select(selected_id, heading.text)
+
+func select(id: String, title: String) -> void:
+	selected_id = id
+	heading.text = title
+	var all := buttons.duplicate()
+	all[""] = home
+	for key in all:
+		var button: Button = all[key]
+		button.add_theme_stylebox_override("normal", Widgets.surface(Color("2b4b50") if key == id else Color("182234"), 12, 16))
