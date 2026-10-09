@@ -82,7 +82,6 @@ func _setup_ui() -> void:
 	page = shell.page
 	status = shell.status
 	shell.navigate.connect(_open_library)
-	shell.recenter.connect(_recenter)
 	shell.screen_settings.connect(_screen_settings)
 	shell.sign_out.connect(_sign_out)
 	keyboard = VRKeyboard.new()
