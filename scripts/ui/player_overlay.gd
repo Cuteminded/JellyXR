@@ -8,8 +8,12 @@ var title: Label
 var timeline: PlaybackTimeline
 var pause_button: Button
 var panel_size := Vector2(3.4, 0.75)
+var play_icon: Texture2D
+var pause_icon: Texture2D
 
 func _ready() -> void:
+	play_icon = load("res://assets/icons/play.svg")
+	pause_icon = load("res://assets/icons/pause.svg")
 	viewport = SubViewport.new()
 	viewport.size = Vector2i(1400, 300)
 	viewport.transparent_bg = true
@@ -36,8 +40,14 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	body.add_child(row)
-	for entry in [["Pause", "pause"], ["-10s", "back"], ["+30s", "forward"], ["Stop", "stop"], ["Screen settings", "settings"], ["Library", "library"], ["Hide", "hide"]]:
-		var button := Widgets.button(entry[0], func(): action.emit(entry[1]), row)
+	for entry in [["Pause", "pause"], ["Back 10 seconds", "back"], ["Forward 30 seconds", "forward"], ["Stop", "stop"], ["Screen settings", "settings"], ["Library", "library"], ["Hide controls", "hide"]]:
+		var button := Widgets.button("", func(): action.emit(entry[1]), row)
+		button.icon = load("res://assets/icons/%s.svg" % entry[1])
+		button.tooltip_text = entry[0]
+		button.accessibility_name = entry[0]
+		button.custom_minimum_size = Vector2(140, 72)
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.add_theme_constant_override("icon_max_width", 44)
 		if entry[1] == "pause": pause_button = button
 	hide()
 
@@ -51,4 +61,6 @@ func fit_screen(width: float, aspect: float, curvature: float) -> void:
 
 func update_time(position_ms: int, duration_ms: int, ready: bool, paused: bool) -> void:
 	timeline.update_time(position_ms, duration_ms, ready)
-	pause_button.text = "Play" if paused else "Pause"
+	pause_button.icon = play_icon if paused else pause_icon
+	pause_button.tooltip_text = "Play" if paused else "Pause"
+	pause_button.accessibility_name = pause_button.tooltip_text
