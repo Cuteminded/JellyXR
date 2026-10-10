@@ -26,12 +26,15 @@ jobs:
           - arch: x86_64
             runner: ubuntu-24.04
             preset: Linux x64 OpenXR
+            vulkan_preset: Linux x64 Vulkan
           - arch: arm64
             runner: ubuntu-24.04-arm
             preset: Linux ARM64 OpenXR
+            vulkan_preset: Linux ARM64 Vulkan
     env:
       ARCH: ${{ matrix.arch }}
       EXPORT_PRESET: ${{ matrix.preset }}
+      VULKAN_EXPORT_PRESET: ${{ matrix.vulkan_preset }}
     defaults:
       run:
         shell: bash
@@ -86,11 +89,12 @@ jobs:
         run: |
           output="dist/linux-${ARCH}"
           mkdir -p "$output"
-          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe.${ARCH}"
-          test -s "$output/jellyframe.${ARCH}"
-          test -s "$output/jellyframe.pck"
+          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe-opengl.${ARCH}"
+          godot --headless --xr-mode off --path . --export-release "$VULKAN_EXPORT_PRESET" "$output/jellyframe-vulkan.${ARCH}"
+          test -s "$output/jellyframe-opengl.${ARCH}"
+          test -s "$output/jellyframe-vulkan.${ARCH}"
           test -s "$output/jellyframe_mpv.linux.${ARCH}.so"
-          chmod +x "$output/jellyframe.${ARCH}"
+          chmod +x "$output/jellyframe-opengl.${ARCH}" "$output/jellyframe-vulkan.${ARCH}"
           cp -r "build/linux/${ARCH}/licenses" "$output/"
           cp "build/linux/${ARCH}/build-info.txt" "$output/"
           cp LICENSE "$output/licenses/jellyframe.txt"
@@ -104,13 +108,18 @@ jobs:
             echo 'The exported decoder has missing shared libraries.' >&2
             exit 1
           fi
-          timeout 30s "$output/jellyframe.${ARCH}" --headless --xr-mode off --quit-after 10 \
-            --log-file "$RUNNER_TEMP/jellyframe-smoke.log"
-          test -s "$RUNNER_TEMP/jellyframe-smoke.log"
-          cat "$RUNNER_TEMP/jellyframe-smoke.log"
-          if grep -E 'SCRIPT ERROR:|ERROR:' "$RUNNER_TEMP/jellyframe-smoke.log"; then
-            exit 1
-          fi
+          for renderer in opengl vulkan; do
+            binary="$output/jellyframe-${renderer}.${ARCH}"
+            log="$RUNNER_TEMP/jellyframe-${renderer}-smoke.log"
+            timeout 30s "$binary" --headless --xr-mode off --quit-after 10 --log-file "$log"
+            test -s "$log"
+            cat "$log"
+            if grep -E 'SCRIPT ERROR:|ERROR:' "$log"; then
+              exit 1
+            fi
+            timeout 30s "$binary" --headless --xr-mode off \
+              --script "$GITHUB_WORKSPACE/tests/test_export_renderer.gd" -- "$renderer"
+          done
 
       - name: Package Linux build
         run: |

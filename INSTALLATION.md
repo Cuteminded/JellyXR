@@ -31,16 +31,18 @@ Sign in to Jellyfin and select a title to play it in VR, using the same pause, s
 
 ## Try it on Linux x64 or ARM64
 
-Open **Actions > Build Linux > Run workflow** to produce `jellyframe-linux-x86_64-<run number>` and `jellyframe-linux-arm64-<run number>`. Download the artifact for your computer's architecture, open its ZIP, and extract the `.tar.gz` inside, keeping the executable, PCK, and `.so` file together.
+Open **Actions > Build Linux > Run workflow** and download the artifact for your computer's architecture. Open its ZIP and extract the `.tar.gz` inside. Each package contains separate OpenGL and Vulkan executables with their resources embedded. Keep the executables and the `.so` file together.
 
 The builds target Ubuntu 24.04 and use the system libmpv runtime. On Ubuntu, install libmpv and start the x64 build with:
 
 ```sh
 sudo apt-get install libmpv2
 tar -xzf jellyframe-linux-x86_64.tar.gz
-./jellyframe.x86_64
+./jellyframe-opengl.x86_64
 ```
 
-For ARM64, use `jellyframe-linux-arm64.tar.gz` and `./jellyframe.arm64` instead. Start your OpenXR runtime with the headset connected before opening Jellyframe, and set SteamVR as the active runtime on x64. ARM64 needs a compatible ARM64 OpenXR runtime with OpenGL support; SteamVR on ARM64 and standalone Steam Frame support still need headset testing.
+If OpenGL shows a black screen, start `./jellyframe-vulkan.x86_64` instead. This executable selects Vulkan with Godot's Mobile renderer without extra launch options. On SteamOS, use the Vulkan executable when adding Jellyframe to Steam. Video playback still requires `libmpv.so.2` to be available to the app.
+
+For ARM64, use `jellyframe-linux-arm64.tar.gz` and choose `./jellyframe-opengl.arm64` or `./jellyframe-vulkan.arm64`. Start your OpenXR runtime with the headset connected before opening Jellyframe, and set SteamVR as the active runtime on x64. The runtime must support the selected graphics API. SteamVR on ARM64 and standalone Steam Frame support still need headset testing.
 
 Sign in and play a title using the same VR controls as Windows; desktop preview with `--xr-mode off` does not play video.

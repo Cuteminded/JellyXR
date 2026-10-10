@@ -86,17 +86,21 @@ For x64:
 
 ```sh
 mkdir -p dist/linux-x86_64
-godot --headless --xr-mode off --path . --export-release 'Linux x64 OpenXR' dist/linux-x86_64/jellyframe.x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64 OpenXR' dist/linux-x86_64/jellyframe-opengl.x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64 Vulkan' dist/linux-x86_64/jellyframe-vulkan.x86_64
 ```
 
 For ARM64:
 
 ```sh
 mkdir -p dist/linux-arm64
-godot --headless --xr-mode off --path . --export-release 'Linux ARM64 OpenXR' dist/linux-arm64/jellyframe.arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64 OpenXR' dist/linux-arm64/jellyframe-opengl.arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64 Vulkan' dist/linux-arm64/jellyframe-vulkan.arm64
 ```
 
-**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, checks local and authenticated MP4/HLS playback, runs the control tests, and starts the exported app without VR. The artifacts contain tar archives that preserve Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
+The OpenXR presets select OpenGL Compatibility. The Vulkan presets select the Mobile renderer and Vulkan through custom feature tags. Both executables embed their own resources and share the native decoder library in the output folder.
+
+**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, checks local and authenticated MP4/HLS playback, runs the control tests, and starts both exported apps without VR. It also checks the renderer settings in each export; these headless checks do not validate graphics output or headset behavior. The artifacts contain tar archives that preserve Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
 
 The decoder and headset tests in [Build and test on Windows](#build-and-test-on-windows) also work on Linux, where you should use `python3` for the HTTP streaming test and pass the path to your Linux Godot executable.
 

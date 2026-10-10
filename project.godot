@@ -33,6 +33,9 @@ enabled=PackedStringArray("res://addons/jellyframe_video/plugin.cfg")
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.linux_opengl="gl_compatibility"
+renderer/rendering_method.linux_vulkan="mobile"
+rendering_device/driver.linux_vulkan="vulkan"
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.018, 0.029, 0.046, 1)
 
