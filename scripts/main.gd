@@ -240,11 +240,6 @@ func _details(item: Dictionary) -> void:
 	view.back_requested.connect(_show_library)
 	page.add_child(view)
 	status.text = "Ready."
-	if detail.get("Type", "") == "Series":
-		var episodes := await api.request("/Shows/%s/Episodes" % detail.Id + api.query({"UserId": api.user_id, "Limit": 100, "Fields": "UserData"}))
-		if not is_instance_valid(view) or not view.is_inside_tree(): return
-		view.set_episodes(episodes.data.get("Items", []) if episodes.ok else [], "Could not load episodes. Return to the library and try again." if not episodes.ok else "")
-		if not episodes.ok: status.text = episodes.error
 
 func _start(item: Dictionary) -> void:
 	if not video.available():
