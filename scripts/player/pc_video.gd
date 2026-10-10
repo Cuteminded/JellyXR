@@ -7,6 +7,8 @@ func available() -> bool:
 func unavailable_message() -> String:
 	if not get_viewport().use_xr:
 		return "PC playback requires a connected headset and an active OpenXR runtime such as SteamVR. Desktop mode previews the interface only."
+	if OS.get_name() == "Linux":
+		return "The PC video plugin could not load. Extract the complete build for your architecture and install libmpv2 from your distribution."
 	return "The PC video plugin is missing. Extract the complete SteamVR build, including its DLLs."
 
 func open(url: String, authorization: String, start_ms: int) -> void:

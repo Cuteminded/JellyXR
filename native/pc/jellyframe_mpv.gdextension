@@ -5,6 +5,8 @@ reloadable = false
 
 [libraries]
 windows.x86_64 = "res://addons/jellyframe_mpv/bin/jellyframe_mpv.dll"
+linux.x86_64 = "res://addons/jellyframe_mpv/bin/jellyframe_mpv.linux.x86_64.so"
+linux.arm64 = "res://addons/jellyframe_mpv/bin/jellyframe_mpv.linux.arm64.so"
 
 [dependencies]
 windows.x86_64 = { "res://addons/jellyframe_mpv/bin/libmpv-2.dll": "" }

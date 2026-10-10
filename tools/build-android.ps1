@@ -11,7 +11,7 @@ $env:ANDROID_HOME = $AndroidSdk
 $env:ANDROID_SDK_ROOT = $AndroidSdk
 Push-Location $projectRoot
 try {
-    & $Gradle -p native :video:stagePlugin
+    & $Gradle -p native :android:stagePlugin
     if ($LASTEXITCODE -ne 0) { throw 'Android video plugin compilation failed.' }
     New-Item -ItemType Directory -Force -Path dist | Out-Null
     & $Godot --headless --xr-mode off --path . --editor --import --quit
