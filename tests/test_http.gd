@@ -53,6 +53,7 @@ func run_checks() -> void:
 	check("SearchTerm=hello%20%26%20world" in last_request, "Search escaping survives HTTP")
 	check('Token="fixture-token"' in last_request, "Authenticated calls send the token header")
 	check("StartIndex=24" in last_request, "Library pagination is sent")
+	check("Limit=25" in last_request, "Library pages request 25 titles")
 	await api.library("space", 48, "movies-id")
 	check("ParentId=movies-id" in last_request and "StartIndex=48" in last_request and "SearchTerm=space" in last_request, "Search and pagination stay inside the selected library")
 	await api.views()
