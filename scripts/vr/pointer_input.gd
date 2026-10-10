@@ -31,9 +31,12 @@ func aim(point: Vector2, inside: bool) -> void:
 		mouse_down = false
 		_button(false)
 
-func scroll(point: Vector2, amount: float) -> void:
+func scroll(point: Vector2, amount: float, horizontal: bool = false) -> void:
 	var wheel := InputEventMouseButton.new()
-	wheel.button_index = MOUSE_BUTTON_WHEEL_UP if amount > 0 else MOUSE_BUTTON_WHEEL_DOWN
+	if horizontal:
+		wheel.button_index = MOUSE_BUTTON_WHEEL_RIGHT if amount > 0 else MOUSE_BUTTON_WHEEL_LEFT
+	else:
+		wheel.button_index = MOUSE_BUTTON_WHEEL_UP if amount > 0 else MOUSE_BUTTON_WHEEL_DOWN
 	wheel.pressed = true
 	wheel.position = point
 	wheel.global_position = point
