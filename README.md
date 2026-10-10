@@ -55,7 +55,7 @@ It supports one server and one user at a time. It does not save your password.
 
 For 3D video, Jellyframe reads the format from Jellyfin's metadata or the filename.
 If a video looks wrong, you can select half or full side-by-side mode and swap
-the left and right views in Screen settings. These changes are not saved per title.
+the left and right views in Settings. These changes are not saved per title.
 
 ## What you need
 
@@ -84,8 +84,11 @@ Open Jellyframe from Unknown Sources in your headset. Enter your Jellyfin server
 address, then sign in with your account or use Quick Connect. Select a library
 and choose a title to watch.
 
-Use Screen settings to adjust your view. Press A or B during playback to show
-or hide the controls. If the screen is in the wrong place, select Recenter.
+Use Settings to adjust your view. Library sorting lets you choose the sort field
+and ascending or descending order for your libraries. These preferences are saved
+automatically; Home continues to show the newest additions first.
+Press A or B during playback to show or hide the controls. If the screen is in the
+wrong place, select Recenter.
 
 ## Try it on Windows with SteamVR
 

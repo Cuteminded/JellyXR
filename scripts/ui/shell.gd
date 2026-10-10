@@ -51,7 +51,7 @@ func _ready() -> void:
 	libraries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	libraries.add_theme_constant_override("separation", 10)
 	scroll.add_child(libraries)
-	Widgets.button("Screen settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 18)
+	Widgets.button("Settings", func(): screen_settings.emit(), navigation).add_theme_font_size_override("font_size", 18)
 	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
 	logout.add_theme_font_size_override("font_size", 18)
 	var main := PanelContainer.new()

@@ -5,6 +5,10 @@ var server := ""
 var token := ""
 var user_id := ""
 var device_id := ""
+var library_sort_by := "SortName"
+var library_sort_order := "Ascending"
+var random_library_ids: Dictionary = {}
+var random_library_generation: Dictionary = {}
 
 func authorization() -> String:
 	var name := headset_name().replace("\\", "\\\\").replace('"', '\\"').replace("\r", " ").replace("\n", " ")
@@ -80,13 +84,45 @@ func query(values: Dictionary) -> String:
 	return "?" + "&".join(pairs)
 
 func library(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
-	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": "SortName", "SortOrder": "Ascending"}
+	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
 	if search.is_empty() and parent_id.is_empty():
 		values["SortBy"] = "DateCreated"
 		values["SortOrder"] = "Descending"
 	if not search.is_empty(): values["SearchTerm"] = search
 	if not parent_id.is_empty(): values["ParentId"] = parent_id
+	if values["SortBy"] == "Random":
+		return await _random_library(values, offset)
 	return await request("/Items" + query(values))
+
+func _random_library(values: Dictionary, offset: int) -> Dictionary:
+	var key := JSON.stringify([server, user_id, values.get("ParentId", ""), values.get("SearchTerm", "")])
+	var ids: Array = random_library_ids.get(key, [])
+	if offset == 0 or not random_library_ids.has(key):
+		var generation := int(random_library_generation.get(key, 0)) + 1
+		random_library_generation[key] = generation
+		var catalog := values.duplicate()
+		for field in ["Limit", "StartIndex", "Fields"]: catalog.erase(field)
+		catalog["EnableImages"] = "false"
+		catalog["EnableUserData"] = "false"
+		var snapshot := await request("/Items" + query(catalog))
+		if not snapshot.ok: return snapshot
+		ids = snapshot.data.get("Items", []).map(func(item: Dictionary): return str(item.Id))
+		if int(random_library_generation.get(key, 0)) == generation:
+			random_library_ids[key] = ids
+	var page_ids := ids.slice(offset, offset + 25)
+	if page_ids.is_empty():
+		return {"ok": true, "data": {"Items": [], "TotalRecordCount": ids.size()}}
+	var page_values := values.duplicate()
+	for field in ["SortBy", "SortOrder", "StartIndex"]: page_values.erase(field)
+	page_values["Ids"] = ",".join(page_ids)
+	var result := await request("/Items" + query(page_values))
+	if not result.ok: return result
+	var by_id := {}
+	for item in result.data.get("Items", []): by_id[str(item.Id)] = item
+	var items := []
+	for id in page_ids:
+		if by_id.has(id): items.append(by_id[id])
+	return {"ok": true, "data": {"Items": items, "TotalRecordCount": ids.size()}}
 
 func views() -> Dictionary:
 	return await request("/UserViews" + query({"UserId": user_id, "IncludeHidden": "false"}))

@@ -40,9 +40,11 @@ func _ready() -> void:
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var user_data: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
-	var detail := str(item.get("ProductionYear", ""))
-	if user_data.get("Played", false): detail += "  /  Watched"
-	elif item.get("Type", "") == "Series": detail += "  /  Series"
+	var detail := DetailsMetadata.year(item)
+	if user_data.get("Played", false):
+		_watched_badge(image_frame)
+		accessibility_name = tooltip_text + ", watched"
+	if item.get("Type", "") == "Series": detail += "  /  Series"
 	var subtitle := Widgets.label(detail.trim_prefix("  /  "), body, 16)
 	subtitle.add_theme_color_override("font_color", Color("b0bbce"))
 	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -56,3 +58,19 @@ func _ready() -> void:
 		bar.add_theme_stylebox_override("background", Widgets.surface(Color("29374b"), 2))
 		bar.add_theme_stylebox_override("fill", Widgets.surface(Color("6de3cf"), 2))
 		body.add_child(bar)
+
+func _watched_badge(image_frame: PanelContainer) -> void:
+	var overlay := Control.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_frame.add_child(overlay)
+	var badge := TextureRect.new()
+	badge.texture = preload("res://assets/icons/watched.svg")
+	badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(badge)
+	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -36
+	badge.offset_top = 8
+	badge.offset_right = -8
+	badge.offset_bottom = 36
