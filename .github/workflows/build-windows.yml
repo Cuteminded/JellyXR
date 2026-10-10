@@ -16,39 +16,61 @@ env:
 jobs:
   build:
     name: Windows x64 OpenXR build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
-        shell: bash
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build PC video plugin
+        run: ./tools/build-pc-video.ps1 -Python (Get-Command python).Source
+
       - name: Install Godot and export templates
         run: |
-          release="${GODOT_VERSION}-stable"
-          base_url="https://github.com/godotengine/godot-builds/releases/download/${release}"
-          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
-          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_export_templates.tpz" -o "$RUNNER_TEMP/templates.tpz"
-          mkdir -p "$RUNNER_TEMP/godot" "$HOME/.local/share/godot/export_templates"
-          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
-          mv "$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64" "$RUNNER_TEMP/godot/godot"
-          chmod +x "$RUNNER_TEMP/godot/godot"
-          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
-          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
-          mv "$RUNNER_TEMP/export-templates/templates" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          $release = "$env:GODOT_VERSION-stable"
+          $baseUrl = "https://github.com/godotengine/godot-builds/releases/download/$release"
+          Invoke-WebRequest "$baseUrl/Godot_v${release}_win64.exe.zip" -OutFile "$env:RUNNER_TEMP/godot.zip"
+          Invoke-WebRequest "$baseUrl/Godot_v${release}_export_templates.tpz" -OutFile "$env:RUNNER_TEMP/templates.zip"
+          Expand-Archive "$env:RUNNER_TEMP/godot.zip" "$env:RUNNER_TEMP/godot"
+          Expand-Archive "$env:RUNNER_TEMP/templates.zip" "$env:RUNNER_TEMP/templates"
+          $templateDirectory = "$env:APPDATA/Godot/export_templates/$env:GODOT_VERSION.stable"
+          New-Item -ItemType Directory -Force $templateDirectory | Out-Null
+          Copy-Item "$env:RUNNER_TEMP/templates/templates/*" $templateDirectory -Recurse
+          "GODOT=$env:RUNNER_TEMP/godot/Godot_v${release}_win64_console.exe" >> $env:GITHUB_ENV
 
       - name: Import project
-        run: godot --headless --xr-mode off --path . --editor --import --quit
+        run: |
+          & $env:GODOT --headless --xr-mode off --path . --editor --import --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed.' }
+
+      - name: Test PC playback and controls
+        run: |
+          foreach ($test in 'test_pc_video', 'test_core', 'test_seek', 'test_recenter', 'test_timeline') {
+            & $env:GODOT --headless --xr-mode off --path . --script "tests/$test.gd"
+            if ($LASTEXITCODE -ne 0) { throw "$test failed." }
+          }
+          python tests/test_pc_streaming.py --godot $env:GODOT
+          if ($LASTEXITCODE -ne 0) { throw 'Authenticated PC streaming failed.' }
 
       - name: Export Windows build
         run: |
-          mkdir -p dist/windows
-          godot --headless --xr-mode off --path . --export-release "Windows SteamVR" dist/windows/jellyframe.exe
-          test -s dist/windows/jellyframe.exe
-          test -s dist/windows/jellyframe.pck
+          New-Item -ItemType Directory -Force dist/windows | Out-Null
+          & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Windows export failed.' }
+          foreach ($file in 'jellyframe.exe', 'jellyframe.pck', 'jellyframe_mpv.dll', 'libmpv-2.dll') {
+            if (-not (Test-Path "dist/windows/$file")) { throw "Export is missing $file." }
+          }
+          New-Item -ItemType Directory -Force dist/windows/licenses | Out-Null
+          Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.txt
+          Copy-Item native/pc/THIRD_PARTY.md dist/windows/licenses/
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4

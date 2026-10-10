@@ -29,8 +29,9 @@ needs more testing.
 Steam Frame is the intended target headset. It has not been tested yet, so
 Jellyframe does not currently claim Steam Frame support.
 
-The desktop version lets you preview the interface and browse your library.
-It cannot play videos.
+The Windows SteamVR version plays video on the VR cinema screen. Stereo video
+and controller playback controls have been checked with SteamVR. Running without
+VR remains an interface preview and cannot play videos.
 
 ## What you can do
 
@@ -92,14 +93,18 @@ in SteamVR's **Settings > OpenXR**. Start SteamVR, then run `jellyframe.exe`.
 Godot uses the active OpenXR runtime, as described in the
 [Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
 
-This build is for testing the VR interface and library browsing. Video playback
-requires the Android plugin and is not available on Windows. SteamVR headset and
-controller behavior still need hardware testing. For a desktop preview, run
+This build includes the PC video decoder. Sign in to Jellyfin and select a title
+to play it on the VR cinema screen. Pause, seeking, resume, and side-by-side 3D use
+the same controls as the Quest build. Keep `jellyframe_mpv.dll` and `libmpv-2.dll`
+beside the executable. For an interface-only desktop preview, run
 `jellyframe.exe --xr-mode off`.
 
 ## Current limitations
 
 - Steam Frame installation and playback remain untested.
+- PC playback currently targets Windows x64 with SteamVR. Linux is not packaged yet.
+- The PC decoder copies video frames through system memory. High-resolution
+  playback needs performance testing on your PC, especially 4K and full-SBS files.
 - Specific 4K HEVC and HDR videos still need testing. HDR videos rely on your
   Jellyfin server to convert them to standard dynamic range with correct colours.
 - Some files may need your Jellyfin server to convert the video during playback.
@@ -115,7 +120,7 @@ controller behavior still need hardware testing. For a desktop preview, run
 <details>
 <summary>Developer setup, build instructions, and tests</summary>
 
-Jellyframe uses Godot and OpenXR, with an Android plugin for video playback.
+Jellyframe uses Godot and OpenXR, with separate Android and Windows video plugins.
 
 ### Build requirements
 
@@ -157,19 +162,43 @@ The script creates `dist/jellyframe-quest3.apk` for installation on your headset
 
 ### Preview on a computer
 
-To export Windows locally, install Godot 4.7.2 and its matching export templates,
-then run:
+To build Windows SteamVR locally, install Godot 4.7.2 with matching export templates
+and Python 3.12. Build the PC plugin before importing or exporting the project:
 
 ```powershell
+./tools/build-pc-video.ps1 -Python 'C:/path/to/python.exe'
 New-Item -ItemType Directory -Force dist/windows
 godot --headless --xr-mode off --path . --editor --import --quit
 godot --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
 ```
 
-The Windows workflow runs these import and export steps on a Linux runner, then
-checks that the exported executable starts on a Windows runner with VR disabled. OpenXR
-is disabled for the build commands only; the exported app keeps OpenXR enabled.
+The plugin build script downloads pinned CMake, LLVM-MinGW, godot-cpp, and libmpv
+archives into `build/desktop`, verifies their checksums, and generates
+`addons/jellyframe_mpv`. Close running Jellyframe instances before rebuilding.
+No system-wide compiler installation is required. The generated plugin is ignored
+by Git and excluded from Android exports.
+
+The Windows workflow builds the plugin, tests decoding and controls, exports the
+app, and checks that the exported executable starts with VR disabled. OpenXR
+is disabled for build commands only; the exported app keeps OpenXR enabled.
 Build artifacts are retained for 14 days. No repository secrets are required.
+
+After building the PC plugin, run its decoder tests without a headset:
+
+```powershell
+godot --headless --xr-mode off --path . --script tests/test_pc_video.gd
+python tests/test_pc_streaming.py --godot 'C:/path/to/godot_console.exe'
+```
+
+With SteamVR and your headset running, test the stereo screen and controllers:
+
+```powershell
+godot --path . --script tests/test_steamvr_video.gd
+```
+
+The headset test loops a labelled stereo clip for two minutes. Close one eye at a
+time to check the LEFT and RIGHT labels. Press A or B to open the playback controls.
+The decoder tests cover resume, pause, seeking, completion, reopening, and errors.
 
 Import `project.godot` into Godot, or run:
 
@@ -192,7 +221,8 @@ godot --headless --xr-mode off --path . --script tests/test_http.gd
 
 - `scripts/jellyfin` handles the server API and requests playback streams.
 - `scripts/vr` handles controller pointing.
-- `scripts/player` connects Godot to the Android plugin in `native/video`.
+- `scripts/player` selects Android playback or PC VR playback.
+- `native/video` contains the Android decoder; `native/pc` contains the libmpv PC decoder.
 - `scripts/core` contains screen settings and stereo geometry.
 
 </details>

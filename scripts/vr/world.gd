@@ -45,7 +45,7 @@ func setup() -> void:
 	add_child(panel)
 	screen = MeshInstance3D.new()
 	material = ShaderMaterial.new()
-	material.shader = load("res://shaders/video.gdshader")
+	material.shader = load("res://shaders/video.gdshader" if OS.get_name() == "Android" else "res://shaders/pc_video.gdshader")
 	screen.material_override = material
 	screen.visible = false
 	add_child(screen)

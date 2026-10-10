@@ -11,6 +11,7 @@ android/.build_version
 native/local.properties
 native/**/build/
 addons/jellyframe_video/bin/
+addons/jellyframe_mpv/
 *.keystore
 *.jks
 export_credentials.cfg
