@@ -1,0 +1,95 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  build:
+    name: Quest 3 debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;36.1.0"
+
+      - name: Install Godot and export templates
+        run: |
+          release="${GODOT_VERSION}-stable"
+          base_url="https://github.com/godotengine/godot-builds/releases/download/${release}"
+          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_export_templates.tpz" -o "$RUNNER_TEMP/templates.tpz"
+          mkdir -p "$RUNNER_TEMP/godot" "$HOME/.local/share/godot/export_templates"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          mv "$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          chmod +x "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mv "$RUNNER_TEMP/export-templates/templates" "$template_dir"
+          mkdir -p android/build
+          unzip -q "$template_dir/android_source.zip" -d android/build
+          printf '%s\n' "${GODOT_VERSION}.stable" > android/.build_version
+          chmod +x android/build/gradlew
+
+      - name: Configure Android export
+        run: |
+          mkdir -p "$HOME/.config/godot" "$HOME/.android"
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/debug.keystore" \
+            -alias androiddebugkey -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          cat > "$HOME/.config/godot/editor_settings-${GODOT_VERSION%.*}.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+
+      - name: Build Quest APK
+        shell: pwsh
+        run: |
+          ./tools/build-android.ps1 -Godot (Get-Command godot).Source `
+            -Gradle (Get-Command gradle).Source `
+            -AndroidSdk $env:ANDROID_HOME -JavaHome $env:JAVA_HOME
+
+      - name: Verify APK signature
+        run: |
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyframe-quest3.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyframe-quest3-debug-${{ github.run_number }}
+          path: dist/jellyframe-quest3.apk
+          if-no-files-found: error
+          retention-days: 14

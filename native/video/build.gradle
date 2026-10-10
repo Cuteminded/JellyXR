@@ -1,7 +1,7 @@
 plugins { id 'com.android.library' }
 
 android {
-    namespace 'nu.cuteminded.jellyframe.video'
+    namespace 'nu.lizzy.jellyframe.video'
     compileSdk 35
     defaultConfig { minSdk 29 }
     compileOptions {
@@ -20,4 +20,3 @@ tasks.register('stagePlugin', Copy) {
     into '../../addons/jellyframe_video/bin'
     rename { 'jellyframe-video-release.aar' }
 }
-

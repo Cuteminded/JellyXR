@@ -48,8 +48,9 @@ connecting to a server outside your home network.
 
 ## Try it on Quest 3
 
-The current installation process requires building the Android app from source.
-The build instructions are below. The resulting APK is a test build.
+Download a test APK from a successful **Build APK** run in the repository's
+**Actions** tab. Under **Artifacts**, download `jellyframe-quest3-debug-<run number>`
+and extract the ZIP. You can also build the app from source using the instructions below.
 
 Once you have built the APK, connect your headset to your computer, approve USB
 debugging in the headset, and install it with Android's `adb` tool:
@@ -99,6 +100,17 @@ Jellyframe declares a fixed Android codec profile rather than checking which
 codecs the headset can decode. There is no native Linux video backend yet.
 
 ### Build the Quest APK
+
+GitHub Actions builds the Quest 3 debug APK on pushes and pull requests. To start
+a build manually, open **Actions > Build APK > Run workflow**. The workflow builds
+the native video plugin, exports the APK, checks its signature, and keeps the APK
+artifact for 14 days. No repository secrets are required.
+
+Each workflow run creates a new debug signing key. Installing a build over an APK
+signed with another key requires uninstalling the previous app first, which removes
+its saved settings and sign-in. These APKs are for testing, not store releases.
+
+To build locally:
 
 1. Install the build requirements and accept the Android SDK licences.
 2. Set the Android SDK and Java SDK paths in Godot's editor settings.

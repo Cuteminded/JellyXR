@@ -1,4 +1,4 @@
-package nu.cuteminded.jellyframe.video;
+package nu.lizzy.jellyframe.video;
 
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
