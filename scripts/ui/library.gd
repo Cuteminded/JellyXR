@@ -13,6 +13,10 @@ var offset := 0
 var search := ""
 var generation := 0
 var busy := false
+var has_more := false
+var scroll: ScrollContainer
+
+const LOAD_AHEAD_PIXELS := 400.0
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 18)
@@ -25,7 +29,7 @@ func _ready() -> void:
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.text_submitted.connect(refresh)
 	Widgets.button("Search", func(): refresh(field.text), tools)
-	var scroll := ScrollContainer.new()
+	scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
@@ -33,12 +37,17 @@ func _ready() -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 24)
 	scroll.add_child(content)
+	var scrollbar := scroll.get_v_scroll_bar()
+	scrollbar.value_changed.connect(func(_value: float): _check_more.call_deferred())
+	scrollbar.changed.connect(func(): _check_more.call_deferred())
 	refresh()
 
 func refresh(term: String = "") -> void:
 	generation += 1
 	var current := generation
 	busy = true
+	has_more = false
+	scroll.scroll_vertical = 0
 	search = term
 	offset = 0
 	for child in content.get_children():
@@ -55,12 +64,13 @@ func refresh(term: String = "") -> void:
 	await _more(current)
 
 func _more(current: int) -> void:
-	if busy: return
+	if busy or current != generation: return
 	busy = true
+	has_more = false
 	var result := await api.library(search, offset, library_id)
 	if current != generation: return
-	busy = false
 	if not result.ok:
+		busy = false
 		status.emit(result.error)
 		var retry := Widgets.button("Retry", func(): pass, content)
 		retry.pressed.connect(func(): retry.queue_free(); _more(current))
@@ -78,20 +88,30 @@ func _more(current: int) -> void:
 	_cards(items)
 	offset += items.size()
 	status.emit("%d titles loaded" % offset if offset > 0 else "No matching titles.")
-	if offset < int(result.data.get("TotalRecordCount", offset)):
-		var next := Widgets.button("Load more", func(): pass, content)
-		next.pressed.connect(func(): next.queue_free(); _more(current))
+	has_more = not items.is_empty() and offset < int(result.data.get("TotalRecordCount", offset))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if current != generation: return
+	busy = false
+	_check_more.call_deferred()
+
+func _check_more() -> void:
+	if busy or not has_more or not is_inside_tree(): return
+	var scrollbar := scroll.get_v_scroll_bar()
+	var remaining := scrollbar.max_value - scrollbar.page - scrollbar.value
+	if remaining <= LOAD_AHEAD_PIXELS:
+		_more(generation)
 
 func _cards(items: Array, horizontal: bool = false) -> void:
 	var holder: Container
 	if horizontal:
-		var scroll := ScrollContainer.new()
-		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		scroll.custom_minimum_size.y = 352
-		content.add_child(scroll)
+		var row_scroll := ScrollContainer.new()
+		row_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		row_scroll.custom_minimum_size.y = 352
+		content.add_child(row_scroll)
 		holder = HBoxContainer.new()
 		holder.add_theme_constant_override("separation", 18)
-		scroll.add_child(holder)
+		row_scroll.add_child(holder)
 	else:
 		var grid := HFlowContainer.new()
 		grid.add_theme_constant_override("h_separation", 18)
