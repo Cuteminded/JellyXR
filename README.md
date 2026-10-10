@@ -199,6 +199,7 @@ godot --headless --xr-mode off --path . --script tests/test_http.gd
 
 ## Licence
 
-Copyright (c) 2026 Cuteminded. Jellyframe's code uses the [MIT licence](LICENSE).
+Copyright (c) 2026 Cuteminded. Jellyframe's code is licensed under the
+[GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`).
 Godot and Android components retain their own licences. Library artwork comes
 from your Jellyfin server and is not bundled with Jellyframe.
