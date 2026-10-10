@@ -110,7 +110,7 @@ func run_checks() -> void:
 	half_sbs.pressed.emit()
 	var reset: Button = view.sections[1].get_child(0).get_child(1)
 	reset.pressed.emit()
-	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Void", "Reset restores all persistent screen defaults.")
+	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Theatre", "Reset restores screen defaults while preserving the separate environment selection.")
 	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")
 	check(fixture.saves == 4 and changes == ["screen", "screen"], "Reset applies immediately and saves once.")
 	var restored_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
@@ -118,6 +118,17 @@ func run_checks() -> void:
 	check(is_equal_approx(restored_slider.value, 3.6) and restored_format.button_pressed, "Reset updates displayed values and preserves the current video format.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-screen")
+	var environment_tab: Button = view.get_child(0).get_child(2)
+	environment_tab.button_pressed = true
+	environment_tab.pressed.emit()
+	check(view.sections[2].visible and not view.sections[1].visible, "Environment has its own settings page.")
+	var theatre_choice: CheckBox = view.sections[2].get_child(2).get_child(1)
+	theatre_choice.button_pressed = true
+	theatre_choice.pressed.emit()
+	var theatre_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
+	check(not theatre_slider.editable, "Fixed Theatre projection disables Void screen positioning.")
+	if "--capture" in OS.get_cmdline_user_args():
+		await capture("settings-environment")
 		shell.custom_minimum_size = Vector2(760, 850)
 		root.size = Vector2i(800, 900)
 		var library_tab: Button = view.get_child(0).get_child(0)

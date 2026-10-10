@@ -3,6 +3,7 @@ extends VBoxContainer
 
 signal back_requested
 signal screen_changed
+signal environment_changed
 signal stereo_selected(value: int)
 signal eyes_swapped
 signal status(message: String)
@@ -23,8 +24,8 @@ func _ready() -> void:
 	navigation.add_theme_constant_override("v_separation", 12)
 	add_child(navigation)
 	var group := ButtonGroup.new()
-	for index in range(2):
-		var title: String = ["Library sorting", "Screen & environment"][index]
+	for index in range(3):
+		var title: String = ["Library sorting", "Screen", "Environment"][index]
 		var button := Widgets.button(title, func(): _show_section(index), navigation)
 		button.toggle_mode = true
 		button.button_group = group
@@ -40,7 +41,7 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
-	for index in range(2):
+	for index in range(3):
 		var section := VBoxContainer.new()
 		section.add_theme_constant_override("separation", 18)
 		section.visible = index == 0
@@ -48,6 +49,7 @@ func _ready() -> void:
 		sections.append(section)
 	_build_library(sections[0])
 	_build_screen(sections[1])
+	_build_environment(sections[2])
 	Widgets.button("Back", func(): back_requested.emit(), self)
 	resized.connect(_adapt_columns)
 	_adapt_columns()
@@ -112,8 +114,8 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(header)
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
-	reset.tooltip_text = "Restore screen size, distance, height, curvature and environment."
-	_hint("Adjust your cinema screen. Position changes apply immediately and are saved automatically.", parent)
+	reset.tooltip_text = "Restore the Void screen size, distance, height and curvature."
+	_hint("Theatre uses its fixed front screen. Switch to Void in Environment to adjust screen position." if settings.environment == "Theatre" else "Adjust your Void screen. Position changes apply immediately and are saved automatically.", parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
 	screen_dimensions.add_theme_constant_override("h_separation", 24)
@@ -135,16 +137,31 @@ func _build_screen(parent: VBoxContainer) -> void:
 	swap.button_pressed = swap_eyes
 	swap.toggled.connect(func(enabled: bool): swap_eyes = enabled; eyes_swapped.emit())
 	parent.add_child(swap)
+
+func _build_environment(parent: VBoxContainer) -> void:
 	Widgets.label("Environment", parent, 26)
+	_hint("Choose where you watch. Your selection applies immediately and is saved automatically.", parent)
 	var environments := HBoxContainer.new()
+	environments.add_theme_constant_override("separation", 12)
 	parent.add_child(environments)
 	var environment_group := ButtonGroup.new()
 	for value in ["Void", "Theatre"]:
 		_choice(value, value == settings.environment, environment_group, environments,
-			func(): settings.environment = value; screen_changed.emit(); _save())
+			func(): settings.environment = value; _rebuild_screen(); environment_changed.emit(); _save())
+	Widgets.label("Void", parent, 24)
+	_hint("A dark space with a movable screen. Set its size, distance, height and curvature on the Screen page.", parent)
+	Widgets.label("Theatre", parent, 24)
+	_hint("A cinema with a fixed front screen. Video fits the screen automatically, with black bars when needed to preserve its proportions. Recenter to align the cinema with your viewing direction.", parent)
 
 func _reset_screen() -> void:
 	settings.reset_screen()
+	_rebuild_screen()
+	var reset: Button = sections[1].get_child(0).get_child(1)
+	if reset.is_visible_in_tree(): reset.grab_focus()
+	screen_changed.emit()
+	_save()
+
+func _rebuild_screen() -> void:
 	dragging_slider = false
 	var section := sections[1]
 	for child in section.get_children():
@@ -152,10 +169,6 @@ func _reset_screen() -> void:
 		child.queue_free()
 	_build_screen(section)
 	_adapt_columns()
-	var reset: Button = section.get_child(0).get_child(1)
-	reset.grab_focus.call_deferred()
-	screen_changed.emit()
-	_save()
 
 func _slider(entry: Array, parent: Node) -> void:
 	var row := VBoxContainer.new()
@@ -174,6 +187,7 @@ func _slider(entry: Array, parent: Node) -> void:
 	slider.max_value = entry[3]
 	slider.step = 0.05
 	slider.value = settings.get(entry[1])
+	slider.editable = settings.environment != "Theatre"
 	row.add_child(slider)
 	slider.value_changed.connect(func(value: float):
 		settings.set(entry[1], value)

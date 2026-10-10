@@ -16,7 +16,7 @@ var page: VBoxContainer
 var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
-var theatre: Node3D
+var theatre: TheatreEnvironment
 var player_overlay: PlayerOverlay
 var mode := Stereo.Mode.MONO
 var video_size := Vector2i(1920, 1080)
@@ -308,7 +308,8 @@ func _screen_settings() -> void:
 	view.stereo_mode = mode
 	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	view.screen_changed.connect(func(): _resize_screen(); _position_screen(); theatre.visible = settings.environment == "Theatre")
+	view.screen_changed.connect(func(): _resize_screen(); _position_screen())
+	view.environment_changed.connect(_change_environment)
 	view.stereo_selected.connect(func(value: int): mode = value; _resize_screen())
 	view.eyes_swapped.connect(func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")))
 	view.status.connect(func(message: String): status.text = message)
@@ -321,19 +322,32 @@ func _screen_settings() -> void:
 	status.text = "Changes apply immediately."
 
 func _resize_screen() -> void:
-	screen.mesh = Stereo.mesh(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
+	var aspect_ratio := Stereo.aspect(video_size.x, video_size.y, mode)
+	var dimensions := theatre.video_size(aspect_ratio) if settings.environment == "Theatre" else Vector2(settings.width, settings.width / aspect_ratio)
+	var curvature := 0.0 if settings.environment == "Theatre" else settings.curvature
+	screen.mesh = Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
-	player_overlay.fit_screen(settings.width, Stereo.aspect(video_size.x, video_size.y, mode), settings.curvature)
+	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
+
+func _change_environment() -> void:
+	theatre.visible = settings.environment == "Theatre"
+	if not theatre.visible: screen.global_basis = camera.global_basis
+	_position_screen()
+	_resize_screen()
 
 func _recenter() -> void:
 	panel.global_transform = camera.global_transform
 	panel.position += -camera.global_basis.z * 2.7
 	screen.global_basis = camera.global_basis
+	theatre.recenter(camera.global_transform)
 	_position_screen()
 	_resize_screen()
 
 func _position_screen() -> void:
-	screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height
+	if settings.environment == "Theatre":
+		screen.global_transform = theatre.projection_transform()
+	else:
+		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height
 
 func _toggle_menu() -> void:
 	if not get_viewport().use_xr: return

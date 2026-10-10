@@ -46,7 +46,7 @@ ARM64 tested through emulation. Linux headset behavior has not been tested yet.
 - Watch 2D movies and side-by-side 3D videos.
 - Resize the screen and adjust its distance, height, and curvature.
 - Recenter the screen in your viewing direction.
-- Choose a dark viewing space or a simple theatre.
+- Choose a dark viewing space or a cinema with tiered seating, curtains, and dim aisle lights.
 - Use your controllers to select titles, type, pause, and skip through a video.
 - Select episodes and cancel the countdown before the next episode starts.
 
@@ -87,6 +87,9 @@ and choose a title to watch.
 Use Settings to adjust your view. Library sorting lets you choose the sort field
 and ascending or descending order for your libraries. These preferences are saved
 automatically; Home continues to show the newest additions first.
+The Environment page switches between Void and Theatre. Theatre plays video on
+the fixed front screen and preserves its proportions with black bars as needed.
+The screen position controls apply to Void; resetting them preserves your environment choice.
 Press A or B during playback to show or hide the controls. If the screen is in the
 wrong place, select Recenter.
 

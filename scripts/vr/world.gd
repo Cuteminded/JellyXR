@@ -8,7 +8,7 @@ var viewport: SubViewport
 var panel: MeshInstance3D
 var screen: MeshInstance3D
 var material: ShaderMaterial
-var theatre: Node3D
+var theatre: TheatreEnvironment
 var player_overlay: PlayerOverlay
 var pointers: Array[LaserPointer] = []
 
@@ -82,19 +82,9 @@ func _process(_delta: float) -> void:
 			pointer.set_target(panel, viewport, Vector2(4.4, 2.75))
 
 func _build_theatre() -> void:
-	theatre = Node3D.new()
+	theatre = TheatreEnvironment.new()
 	add_child(theatre)
+	theatre.build()
 	theatre.visible = settings.environment == "Theatre"
-	for index in range(5):
-		var step := MeshInstance3D.new()
-		var shape := BoxMesh.new()
-		shape.size = Vector3(12, 0.2, 1.8)
-		step.mesh = shape
-		step.position = Vector3(0, -0.5 + index * 0.15, 1.5 + index * 1.8)
-		var finish := StandardMaterial3D.new()
-		finish.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		finish.albedo_color = Color(0.025 + index * 0.003, 0.04, 0.055)
-		step.material_override = finish
-		theatre.add_child(step)
 
 
