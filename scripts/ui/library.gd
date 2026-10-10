@@ -16,6 +16,7 @@ var busy := false
 var has_more := false
 var scroll: ScrollContainer
 var grid: HFlowContainer
+static var previous_hero_ids: Dictionary = {}
 
 const LOAD_AHEAD_PIXELS := 400.0
 
@@ -81,12 +82,12 @@ func _more(current: int) -> void:
 	if offset == 0:
 		if search.is_empty() and not items.is_empty():
 			var hero := LibraryHero.new()
-			hero.item = items[0]
+			hero.item = _choose_hero(items)
 			hero.artwork = artwork
 			hero.chosen.connect(func(item: Dictionary): selected.emit(item))
 			content.add_child(hero)
 			content.move_child(hero, 0)
-		Widgets.label(("Your library" if library_id.is_empty() else library_name) if search.is_empty() else "Search results", content, 28)
+		Widgets.label(("Recently Added" if library_id.is_empty() else library_name) if search.is_empty() else "Search results", content, 28)
 	_cards(items)
 	offset += items.size()
 	status.emit("%d titles loaded" % offset if offset > 0 else "No matching titles.")
@@ -96,6 +97,13 @@ func _more(current: int) -> void:
 	if current != generation: return
 	busy = false
 	_check_more.call_deferred()
+
+func _choose_hero(items: Array) -> Dictionary:
+	var previous_id := str(previous_hero_ids.get(library_id, ""))
+	var candidates := items.filter(func(item: Dictionary): return str(item.get("Id", "")) != previous_id)
+	var chosen: Dictionary = (items if candidates.is_empty() else candidates).pick_random()
+	previous_hero_ids[library_id] = str(chosen.get("Id", ""))
+	return chosen
 
 func _check_more() -> void:
 	if busy or not has_more or not is_inside_tree(): return

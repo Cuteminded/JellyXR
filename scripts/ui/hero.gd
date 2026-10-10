@@ -29,8 +29,6 @@ func _ready() -> void:
 	var text := VBoxContainer.new()
 	text.add_theme_constant_override("separation", 12)
 	margin.add_child(text)
-	var eyebrow := Widgets.label("FROM YOUR LIBRARY", text, 15)
-	eyebrow.add_theme_color_override("font_color", Color("9fe8dc"))
 	var title := Widgets.label(item.get("Name", "Untitled"), text, 38)
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
