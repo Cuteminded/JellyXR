@@ -40,14 +40,14 @@ func request(path: String, method: HTTPClient.Method = HTTPClient.METHOD_GET, bo
 		return {"ok": false, "error": "Cannot reach the server. Check the address and connection."}
 	if code < 200 or code >= 300:
 		var message := "Server returned HTTP %d." % code
-		if code == 401: message = "Sign-in expired or the username/password is incorrect."
+		if code == 401: message = "Your session has expired, or your username or password is incorrect."
 		if code == 403: message = "This account does not have permission for this action."
 		return {"ok": false, "error": message, "status": code}
 	var raw: String = response[3].get_string_from_utf8()
 	if raw.is_empty(): return {"ok": true, "data": {}}
 	var parser := JSON.new()
 	if parser.parse(raw) != OK:
-		return {"ok": false, "error": "The server returned an unexpected response. Check the Jellyfin base address."}
+		return {"ok": false, "error": "The server returned an unexpected response. Check your Jellyfin server address."}
 	var data: Variant = parser.data
 	return {"ok": true, "data": data if data != null else {}}
 

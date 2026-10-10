@@ -60,7 +60,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 
 func retry_transcode() -> void:
 	if fallback_attempted or method == "Transcode":
-		failed.emit("Playback failed, including the server fallback. Check server transcoding and file compatibility.")
+		failed.emit("Playback failed with transcoding. Check whether your Jellyfin server can transcode this file.")
 		return
 	fallback_attempted = true
 	await report("Stopped")
