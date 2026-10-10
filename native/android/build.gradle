@@ -16,7 +16,7 @@ dependencies {
 
 tasks.register('stagePlugin', Copy) {
     dependsOn 'assembleRelease'
-    from layout.buildDirectory.file('outputs/aar/video-release.aar')
+    from layout.buildDirectory.file('outputs/aar/android-release.aar')
     into '../../addons/jellyframe_video/bin'
     rename { 'jellyframe-video-release.aar' }
 }
