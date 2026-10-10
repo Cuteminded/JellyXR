@@ -106,7 +106,13 @@ func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, ac
 	return choice
 
 func _build_screen(parent: VBoxContainer) -> void:
-	Widgets.label("Screen position", parent, 26)
+	var header := HFlowContainer.new()
+	header.add_theme_constant_override("h_separation", 18)
+	header.add_theme_constant_override("v_separation", 12)
+	parent.add_child(header)
+	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
+	reset.tooltip_text = "Restore screen size, distance, height, curvature and environment."
 	_hint("Adjust your cinema screen. Position changes apply immediately and are saved automatically.", parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
@@ -122,12 +128,12 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(formats)
 	var group := ButtonGroup.new()
 	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS]]:
-		_choice(entry[0], entry[1] == stereo_mode, group, formats, func(): stereo_selected.emit(entry[1]))
+		_choice(entry[0], entry[1] == stereo_mode, group, formats, func(): stereo_mode = entry[1]; stereo_selected.emit(entry[1]))
 	var swap := CheckBox.new()
 	swap.text = "Swap left and right eyes"
 	swap.custom_minimum_size.y = 56
 	swap.button_pressed = swap_eyes
-	swap.toggled.connect(func(_enabled: bool): eyes_swapped.emit())
+	swap.toggled.connect(func(enabled: bool): swap_eyes = enabled; eyes_swapped.emit())
 	parent.add_child(swap)
 	Widgets.label("Environment", parent, 26)
 	var environments := HBoxContainer.new()
@@ -136,6 +142,20 @@ func _build_screen(parent: VBoxContainer) -> void:
 	for value in ["Void", "Theatre"]:
 		_choice(value, value == settings.environment, environment_group, environments,
 			func(): settings.environment = value; screen_changed.emit(); _save())
+
+func _reset_screen() -> void:
+	settings.reset_screen()
+	dragging_slider = false
+	var section := sections[1]
+	for child in section.get_children():
+		section.remove_child(child)
+		child.queue_free()
+	_build_screen(section)
+	_adapt_columns()
+	var reset: Button = section.get_child(0).get_child(1)
+	reset.grab_focus.call_deferred()
+	screen_changed.emit()
+	_save()
 
 func _slider(entry: Array, parent: Node) -> void:
 	var row := VBoxContainer.new()
