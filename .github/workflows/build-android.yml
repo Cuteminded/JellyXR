@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ env:
 
 jobs:
   build:
-    name: Quest 3 debug APK
+    name: Build Android debug APK
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -78,7 +78,7 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
 
-      - name: Build Quest APK
+      - name: Build Android APK
         shell: pwsh
         run: |
           ./tools/build-android.ps1 -Godot (Get-Command godot).Source `
@@ -87,12 +87,12 @@ jobs:
 
       - name: Verify APK signature
         run: |
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyframe-quest3.apk
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyframe-android.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: jellyframe-quest3-debug-${{ github.run_number }}
-          path: dist/jellyframe-quest3.apk
+          name: jellyframe-android-debug-${{ github.run_number }}
+          path: dist/jellyframe-android.apk
           if-no-files-found: error
           retention-days: 14
