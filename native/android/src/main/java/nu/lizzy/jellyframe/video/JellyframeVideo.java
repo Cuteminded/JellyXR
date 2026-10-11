@@ -28,6 +28,8 @@ public final class JellyframeVideo extends GodotPlugin {
     private volatile int position;
     private volatile int duration;
     private volatile boolean prepared;
+    private volatile boolean buffering;
+    private volatile boolean seeking;
     private int generation;
 
     public JellyframeVideo(Godot godot) {
@@ -82,6 +84,12 @@ public final class JellyframeVideo extends GodotPlugin {
                 emitSignal("prepared");
             });
             player.setOnVideoSizeChangedListener((current, width, height) -> emitSignal("video_size", width, height));
+            player.setOnInfoListener((current, what, extra) -> {
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) buffering = true;
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) buffering = false;
+                return false;
+            });
+            player.setOnSeekCompleteListener(current -> seeking = false);
             player.setOnCompletionListener(current -> emitSignal("completed"));
             player.setOnErrorListener((current, what, extra) -> {
                 prepared = false;
@@ -114,6 +122,7 @@ public final class JellyframeVideo extends GodotPlugin {
 
     @UsedByGodot public int position_ms() { return position; }
     @UsedByGodot public int duration_ms() { return duration; }
+    @UsedByGodot public boolean is_buffering() { return prepared && (buffering || seeking); }
 
     @UsedByGodot public String calibration_url() {
         int resource = getContext().getResources().getIdentifier("stereo_test", "raw", getContext().getPackageName());
@@ -133,7 +142,10 @@ public final class JellyframeVideo extends GodotPlugin {
 
     @UsedByGodot public void seek_to(int milliseconds) {
         main.post(() -> {
-            if (player != null && prepared) player.seekTo(Math.max(0, Math.min(milliseconds, player.getDuration())), MediaPlayer.SEEK_CLOSEST);
+            if (player != null && prepared) {
+                seeking = true;
+                player.seekTo(Math.max(0, Math.min(milliseconds, player.getDuration())), MediaPlayer.SEEK_CLOSEST);
+            }
         });
     }
 
@@ -142,6 +154,8 @@ public final class JellyframeVideo extends GodotPlugin {
     private void releasePlayer() {
         generation++;
         prepared = false;
+        buffering = false;
+        seeking = false;
         position = 0;
         duration = 0;
         if (player != null) { player.release(); player = null; }

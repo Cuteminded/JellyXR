@@ -12,6 +12,7 @@ void JellyframeMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("seek_to", "milliseconds"), &JellyframeMpv::seek_to);
     ClassDB::bind_method(D_METHOD("position_ms"), &JellyframeMpv::position_ms);
     ClassDB::bind_method(D_METHOD("duration_ms"), &JellyframeMpv::duration_ms);
+    ClassDB::bind_method(D_METHOD("is_buffering"), &JellyframeMpv::is_buffering);
     ClassDB::bind_method(D_METHOD("stop_video"), &JellyframeMpv::stop_video);
     ADD_SIGNAL(MethodInfo("prepared"));
     ADD_SIGNAL(MethodInfo("ended"));
@@ -95,6 +96,15 @@ void JellyframeMpv::seek_to(int64_t milliseconds) {
 
 int64_t JellyframeMpv::position_ms() const { return position; }
 int64_t JellyframeMpv::duration_ms() const { return duration; }
+
+bool JellyframeMpv::is_buffering() const {
+    if (!player || !active) return false;
+    int buffering = 0;
+    int seeking = 0;
+    mpv_get_property(player, "paused-for-cache", MPV_FORMAT_FLAG, &buffering);
+    mpv_get_property(player, "seeking", MPV_FORMAT_FLAG, &seeking);
+    return buffering || seeking;
+}
 
 void JellyframeMpv::stop_video() {
     shutdown();
