@@ -138,8 +138,15 @@ func run_checks() -> void:
 	api.hold_episodes = true
 	session.item = api.catalog[0]
 	app.playing = true
+	app._show_playback()
+	root.use_xr = true
 	video.ended.emit()
 	await settle()
+	check(not app.panel.visible, "The library stays hidden while the next episode is being fetched in VR")
+	check(app.screen.visible and indicator.is_visible_in_tree() and indicator.label.text == "Loading video...", "The loading indicator fills the wait before the countdown")
+	app._update_timeline()
+	check(indicator.is_visible_in_tree(), "Timeline updates do not interrupt the next-episode loading indicator")
+	root.use_xr = false
 	app._screen_settings()
 	api.release_episodes.emit()
 	await settle()

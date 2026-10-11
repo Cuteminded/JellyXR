@@ -438,10 +438,13 @@ func _ended() -> void:
 	var generation := countdown_generation + 1
 	await _stop(false, true)
 	if generation != countdown_generation: return
-	if get_viewport().use_xr: panel.show()
 	if previous.get("Type", "") != "Episode":
 		_show_library()
 		return
+	panel.hide()
+	screen.show()
+	autoplay_pending = true
+	world.player_loading.show_loading()
 	var result := await api.next_episode(previous)
 	if generation != countdown_generation: return
 	if not result.ok:
