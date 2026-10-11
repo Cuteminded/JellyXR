@@ -15,6 +15,7 @@ var episode_heading: Label
 var season_description: Label
 var all_seasons_button: Button
 var generation := 0
+var selected_season: Dictionary = {}
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 20)
@@ -38,7 +39,8 @@ func _ready() -> void:
 	episode_list.add_theme_constant_override("separation", 16)
 	episode_section.add_child(episode_list)
 	episode_section.hide()
-	load_seasons()
+	if selected_season.is_empty(): load_seasons()
+	else: open_season(selected_season)
 
 func load_seasons() -> void:
 	generation += 1
@@ -63,6 +65,7 @@ func load_seasons() -> void:
 		season_grid.add_child(card)
 
 func open_season(season: Dictionary) -> void:
+	selected_season = season.duplicate(true)
 	generation += 1
 	var current := generation
 	season_section.hide()
@@ -94,6 +97,7 @@ func open_season(season: Dictionary) -> void:
 		card.item = episode.duplicate(true)
 		card.item["Type"] = "Episode"
 		card.item["SeriesId"] = series_id
+		card.item["SeasonId"] = str(season.Id)
 		if card.item.get("ParentIndexNumber") == null:
 			card.item["ParentIndexNumber"] = season.get("IndexNumber")
 		card.artwork = artwork
@@ -102,10 +106,12 @@ func open_season(season: Dictionary) -> void:
 	section_changed.emit()
 
 func _show_seasons() -> void:
+	selected_season = {}
 	generation += 1
 	episode_section.hide()
 	season_section.show()
 	section_changed.emit()
+	if season_grid.get_child_count() == 0: load_seasons()
 	if season_grid.get_child_count() > 0:
 		var first := season_grid.get_child(0) as Control
 		if first and first.focus_mode != Control.FOCUS_NONE: first.grab_focus()

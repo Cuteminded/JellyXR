@@ -53,7 +53,7 @@ jobs:
 
       - name: Test PC playback and controls
         run: |
-          foreach ($test in 'test_pc_video', 'test_core', 'test_seek', 'test_recenter', 'test_timeline', 'test_autoplay') {
+          foreach ($test in 'test_pc_video', 'test_core', 'test_seek', 'test_recenter', 'test_timeline', 'test_autoplay', 'test_player_return') {
             & $env:GODOT --headless --xr-mode off --path . --script "tests/$test.gd"
             if ($LASTEXITCODE -ne 0) { throw "$test failed." }
           }

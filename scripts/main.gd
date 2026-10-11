@@ -231,7 +231,7 @@ func _load_libraries() -> void:
 		Widgets.label("Could not load libraries", shell.libraries, 17)
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
-func _details(item: Dictionary) -> void:
+func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	page_generation += 1
 	var current := page_generation
 	status.text = "Loading details..."
@@ -245,6 +245,7 @@ func _details(item: Dictionary) -> void:
 	var view := DetailsView.new()
 	view.item = detail
 	view.api = api
+	view.initial_season = season
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.play_requested.connect(_start)
 	view.back_requested.connect(_show_library)
@@ -252,6 +253,12 @@ func _details(item: Dictionary) -> void:
 	status.text = "Ready."
 
 func _start(item: Dictionary) -> void:
+	if playing and str(session.item.get("Id", "")) == str(item.get("Id", "")):
+		if video.paused:
+			video.toggle_pause()
+			session.report("Progress", false)
+		_show_playback()
+		return
 	if not video.available():
 		status.text = video.unavailable_message()
 		return
@@ -306,8 +313,29 @@ func _player_action(action: String) -> void:
 		"forward": _skip(30000)
 		"stop": _stop()
 		"settings": _screen_settings()
-		"library": _show_library()
+		"library": _return_to_title()
 		"hide": player_overlay.hide()
+
+func _return_to_title() -> void:
+	var item := session.item
+	if item.is_empty():
+		_show_library()
+		return
+	var target_id := str(item.get("SeriesId", "")) if item.get("Type", "") == "Episode" else str(item.Id)
+	if target_id.is_empty(): target_id = str(item.Id)
+	var season: Dictionary = {}
+	if item.get("Type", "") == "Episode" and item.get("SeasonId"):
+		season = {"Id": item.SeasonId, "Name": "Season %d" % int(item.get("ParentIndexNumber", 0)), "IndexNumber": item.get("ParentIndexNumber")}
+	for child in page.get_children():
+		if child is DetailsView and str(child.item.Id) == target_id:
+			page_generation += 1
+			player_overlay.hide()
+			keyboard.hide()
+			if get_viewport().use_xr: panel.show()
+			if child.series_browser and not season.is_empty() and str(child.series_browser.selected_season.get("Id", "")) != str(season.Id):
+				child.series_browser.open_season(season)
+			return
+	await _details({"Id": target_id}, season)
 
 func _screen_settings() -> void:
 	_clear_page()

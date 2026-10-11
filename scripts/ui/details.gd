@@ -6,6 +6,7 @@ signal back_requested
 
 var item: Dictionary
 var api: JellyfinClient
+var initial_season: Dictionary = {}
 var artwork: ArtworkLoader
 var scroll: ScrollContainer
 var body: VBoxContainer
@@ -43,6 +44,7 @@ func _ready() -> void:
 		series_browser.api = api
 		series_browser.artwork = artwork
 		series_browser.series_id = str(item.Id)
+		series_browser.selected_season = initial_season
 		series_browser.play_requested.connect(func(episode: Dictionary): play_requested.emit(episode))
 		series_browser.section_changed.connect(_scroll_to_series)
 		body.add_child(series_browser)
