@@ -8,8 +8,8 @@ var heading: Label
 
 func _ready() -> void:
 	theme = Widgets.theme()
-	position = (get_viewport_rect().size - Vector2(830, 600)) / 2.0
-	custom_minimum_size = Vector2(830, 600)
+	position = (get_viewport_rect().size - Vector2(830, 680)) / 2.0
+	custom_minimum_size = Vector2(830, 680)
 	var background := StyleBoxFlat.new()
 	background.bg_color = Color("142632")
 	background.set_border_width_all(3)
@@ -24,6 +24,11 @@ func _ready() -> void:
 	editor.virtual_keyboard_enabled = false
 	editor.text_changed.connect(func(value: String):
 		if is_instance_valid(target): target.text = value)
+	var shortcuts := HBoxContainer.new()
+	body.add_child(shortcuts)
+	for prefix in ["http://", "https://"]:
+		var key := Widgets.button(prefix, _insert.bind(prefix), shortcuts)
+		key.focus_mode = Control.FOCUS_NONE
 	for letters in ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm", ":/.-_@!?#", "$%&*+=()"]:
 		var row := HBoxContainer.new()
 		body.add_child(row)
@@ -49,8 +54,11 @@ func edit(field: LineEdit) -> void:
 	editor.grab_focus.call_deferred()
 
 func _type(value: String) -> void:
+	_insert(value.to_upper() if uppercase else value)
+
+func _insert(value: String) -> void:
 	if is_instance_valid(target):
-		editor.insert_text_at_caret(value.to_upper() if uppercase else value)
+		editor.insert_text_at_caret(value)
 		target.text = editor.text
 
 func _backspace() -> void:
