@@ -117,7 +117,7 @@ jobs:
             if grep -E 'SCRIPT ERROR:|ERROR:' "$log"; then
               exit 1
             fi
-            timeout 30s "$binary" --headless --xr-mode off \
+            timeout 30s godot --headless --xr-mode off --main-pack "$GITHUB_WORKSPACE/$binary" \
               --script "$GITHUB_WORKSPACE/tests/test_export_renderer.gd" -- "$renderer"
           done
 
