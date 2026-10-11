@@ -38,6 +38,7 @@ ARM64 tested through emulation. Linux headset behavior has not been fully tested
 - Recenter the screen in your viewing direction.
 - Watch against a dark background, in a cinema, or with your room visible through passthrough.
 - Use your controllers to select titles, type, pause, and skip through a video.
+  Point at a player control to see its label beneath the buttons.
 - Return from the player to the selected movie or series with the Library button.
   Series keep the current season open. Selecting the active title returns to playback.
 - Select episodes. After an episode ends, a 5-second countdown on the video
@@ -286,6 +287,7 @@ godot --headless --xr-mode off --path . --script tests/test_core.gd
 godot --headless --xr-mode off --path . --script tests/test_http.gd
 godot --headless --xr-mode off --path . --script tests/test_autoplay.gd
 godot --headless --xr-mode off --path . --script tests/test_player_return.gd
+godot --headless --xr-mode off --path . --script tests/test_player_tooltips.gd
 ```
 
 ### Code layout
@@ -304,6 +306,8 @@ Copyright (c) 2026 Cuteminded.
 
 Jellyframe's code is licensed under the [GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`).
 
-Godot and Android components retain their own licences. 
+The player and library buttons use Google's [Material Symbols Rounded](https://fonts.google.com/icons)
+
+Godot and Android components retain their own licences.
 
 Library artwork comes from your Jellyfin server and is not bundled with Jellyframe.

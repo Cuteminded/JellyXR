@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bvoe6h8jtxt32"
-path="res://.godot/imported/tvshows.svg-5ce61845a710c0bf160be926843ff974.ctex"
+uid="uid://ddjiv2t8oj0tv"
+path="res://.godot/imported/pause.svg-965a7a4815b2fd99d8f2c65e3fcd1246.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/tvshows.svg"
-dest_files=["res://.godot/imported/tvshows.svg-5ce61845a710c0bf160be926843ff974.ctex"]
+source_file="res://assets/icons/material/pause.svg"
+dest_files=["res://.godot/imported/pause.svg-965a7a4815b2fd99d8f2c65e3fcd1246.ctex"]
 
 [params]
 
