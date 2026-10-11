@@ -116,7 +116,7 @@ func _build_screen(parent: VBoxContainer) -> void:
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
 	reset.tooltip_text = "Reset screen size and position. Keep your environment and video format."
-	_hint("Theatre has a fixed screen. Choose Void or Passthrough on the Environment page to adjust it." if settings.environment == "Theatre" else "Set the screen size, distance, height and curve.", parent)
+	_hint("Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it." if settings.is_theatre() else "Set the screen size, distance, height and curve.", parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
 	screen_dimensions.add_theme_constant_override("h_separation", 24)
@@ -142,12 +142,13 @@ func _build_screen(parent: VBoxContainer) -> void:
 func _build_environment(parent: VBoxContainer) -> void:
 	Widgets.label("Environment", parent, 26)
 	_hint("Choose a background for your video screen.", parent)
-	var environments := HFlowContainer.new()
+	var environments := GridContainer.new()
+	environments.columns = 2
 	environments.add_theme_constant_override("h_separation", 12)
 	environments.add_theme_constant_override("v_separation", 12)
 	parent.add_child(environments)
 	var environment_group := ButtonGroup.new()
-	for value in ["Void", "Theatre", "Passthrough"]:
+	for value in ["Void", "Cinema", "Theatre", "Passthrough"]:
 		var choice := _choice(value, value == settings.environment, environment_group, environments,
 			func(): settings.environment = value; _rebuild_screen(); environment_changed.emit(); _save())
 		if value == "Passthrough" and not passthrough_supported:
@@ -155,8 +156,10 @@ func _build_environment(parent: VBoxContainer) -> void:
 			choice.tooltip_text = "This device does not support passthrough."
 	Widgets.label("Void", parent, 24)
 	_hint("A dark background with an adjustable screen. Use the Screen page to change its size and position.", parent)
-	Widgets.label("Theatre", parent, 24)
+	Widgets.label("Cinema", parent, 24)
 	_hint("A cinema with a fixed screen. Black bars keep the picture in proportion. Recenter to face the screen.", parent)
+	Widgets.label("Theatre", parent, 24)
+	_hint("The original simple cinema uses fewer polygons. It has its own fixed screen and supports recentering.", parent)
 	Widgets.label("Passthrough", parent, 24)
 	_hint("Your room surrounds an adjustable screen. Use the Screen page to change its size and position." if passthrough_supported else "This device does not support passthrough.", parent)
 
@@ -194,7 +197,7 @@ func _slider(entry: Array, parent: Node) -> void:
 	slider.max_value = entry[3]
 	slider.step = 0.05
 	slider.value = settings.get(entry[1])
-	slider.editable = settings.environment != "Theatre"
+	slider.editable = not settings.is_theatre()
 	row.add_child(slider)
 	slider.value_changed.connect(func(value: float):
 		settings.set(entry[1], value)

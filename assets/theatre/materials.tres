@@ -1,0 +1,64 @@
+[gd_resource type="Resource" format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_geg01"]
+resource_name = "color_darkBlue"
+cull_mode = 2
+albedo_color = Color(0.18501842, 0.19062462, 0.23893806, 1)
+roughness = 0.953449
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b418r"]
+resource_name = "color_darkgGrey"
+cull_mode = 2
+albedo_color = Color(0.5973451, 0.5973451, 0.5973451, 1)
+metallic = 1.0
+roughness = 0.407332
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_26ovv"]
+resource_name = "color_darkgBrown"
+cull_mode = 2
+albedo_color = Color(0.26114026, 0.2760062, 0.34513277, 1)
+metallic = 1.0
+roughness = 0.897157
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2qu7k"]
+resource_name = "color_blk"
+cull_mode = 2
+albedo_color = Color(0.22566374, 0.22566374, 0.22566374, 1)
+roughness = 0.72381175
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0o80n"]
+resource_name = "color_brown"
+cull_mode = 2
+albedo_color = Color(0.32300887, 0.20581096, 0.20696466, 1)
+roughness = 0.813393
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2xtwu"]
+resource_name = "color_grey"
+cull_mode = 2
+albedo_color = Color(0.69658244, 0.69658244, 0.69658244, 1)
+metallic = 1.0
+roughness = 0.552786
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q7oyu"]
+resource_name = "material"
+cull_mode = 2
+albedo_color = Color(0.99133086, 0.99133086, 0.99133086, 1)
+metallic = 1.0
+roughness = 0.552786
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_djk1p"]
+resource_name = "color_white"
+cull_mode = 2
+roughness = 0.852786
+
+[resource]
+metadata/finishes = {
+"color_blk": SubResource("StandardMaterial3D_2qu7k"),
+"color_brown": SubResource("StandardMaterial3D_0o80n"),
+"color_darkBlue": SubResource("StandardMaterial3D_geg01"),
+"color_darkgBrown": SubResource("StandardMaterial3D_26ovv"),
+"color_darkgGrey": SubResource("StandardMaterial3D_b418r"),
+"color_grey": SubResource("StandardMaterial3D_2xtwu"),
+"color_white": SubResource("StandardMaterial3D_djk1p"),
+"material": SubResource("StandardMaterial3D_q7oyu")
+}

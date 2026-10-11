@@ -362,8 +362,8 @@ func _screen_settings() -> void:
 
 func _resize_screen() -> void:
 	var aspect_ratio := Stereo.aspect(video_size.x, video_size.y, mode)
-	var dimensions := theatre.video_size(aspect_ratio) if settings.environment == "Theatre" else Vector2(settings.width, settings.width / aspect_ratio)
-	var curvature := 0.0 if settings.environment == "Theatre" else settings.curvature
+	var dimensions := theatre.video_size(aspect_ratio) if settings.is_theatre() else Vector2(settings.width, settings.width / aspect_ratio)
+	var curvature := 0.0 if settings.is_theatre() else settings.curvature
 	screen.mesh = Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
@@ -371,7 +371,6 @@ func _resize_screen() -> void:
 
 func _change_environment() -> void:
 	world.apply_environment()
-	theatre.visible = settings.environment == "Theatre"
 	if not theatre.visible: screen.global_basis = camera.global_basis
 	_position_screen()
 	_resize_screen()
@@ -385,7 +384,7 @@ func _recenter() -> void:
 	_resize_screen()
 
 func _position_screen() -> void:
-	if settings.environment == "Theatre":
+	if settings.is_theatre():
 		screen.global_transform = theatre.projection_transform()
 	else:
 		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height

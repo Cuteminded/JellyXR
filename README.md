@@ -83,9 +83,10 @@ Settings has separate pages for library sorting, screen controls and environment
 Library sorting sets the field and order for your libraries. Home always shows the
 newest additions first.
 
-Choose Void for a dark background, Theatre for a cinema, or Passthrough to see
+Void is the default environment. Choose Void for a dark background, Cinema for the detailed cinema, Theatre
+for the original simple cinema, or Passthrough to see
 your room around the screen. Passthrough is disabled on unsupported devices.
-Theatre has a fixed front screen. Black bars keep the picture in proportion.
+Both theatre options have a fixed front screen. Black bars keep the picture in proportion.
 Void and Passthrough let you adjust the screen size, distance, height and curve.
 Reset to defaults restores those screen controls and keeps your environment choice.
 
@@ -309,5 +310,8 @@ Jellyframe's code is licensed under the [GNU General Public License, version 3 o
 The player and library buttons use Google's [Material Symbols Rounded](https://fonts.google.com/icons)
 
 Godot and Android components retain their own licences.
+
+The Cinema environment uses Comicaroid's cinema interior under CC BY 4.0.
+See the [model attribution and rebuild instructions](assets/theatre/ATTRIBUTION.md).
 
 Library artwork comes from your Jellyfin server and is not bundled with Jellyframe.

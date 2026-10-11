@@ -99,11 +99,14 @@ func _process(_delta: float) -> void:
 func _build_theatre() -> void:
 	theatre = TheatreEnvironment.new()
 	add_child(theatre)
-	theatre.build()
-	theatre.visible = settings.environment == "Theatre"
+	theatre.build(settings.environment == "Theatre")
+	theatre.visible = settings.is_theatre()
 
 func apply_environment() -> void:
 	passthrough.apply(settings.environment == "Passthrough")
+	if theatre != null:
+		if settings.is_theatre(): theatre.set_low_res(settings.environment == "Theatre")
+		theatre.visible = settings.is_theatre()
 
 func _exit_tree() -> void:
 	if passthrough.viewport != null: passthrough.apply(false)
