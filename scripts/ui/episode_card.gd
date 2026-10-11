@@ -39,7 +39,7 @@ func _ready() -> void:
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.add_theme_constant_override("separation", 12)
 	row.add_child(text)
-	title_label = _label("%s. %s" % [item.get("IndexNumber", "?"), item.get("Name", "Episode")], text, 26)
+	title_label = _label(DetailsMetadata.title(item, "Episode"), text, 26)
 	var facts := DetailsMetadata.facts(item)
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var position := int(user.get("PlaybackPositionTicks", 0))
@@ -49,7 +49,7 @@ func _ready() -> void:
 	_label(str(item.get("Overview") if item.get("Overview") else "No description available."), text, 22)
 	play_button = Widgets.button("Resume episode" if position > 0 else "Play episode", func(): chosen.emit(item), image_column)
 	play_button.custom_minimum_size = Vector2(190, 56)
-	play_button.accessibility_name = play_button.text + " " + str(item.get("Name", "Episode"))
+	play_button.accessibility_name = play_button.text + " " + title_label.text
 
 func _label(value: String, parent: Node, font_size: int) -> Label:
 	var label := Widgets.label(value, parent, font_size)

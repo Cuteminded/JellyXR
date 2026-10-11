@@ -101,7 +101,7 @@ func run_checks() -> void:
 	check(session.stopped_at == 1200000000, "Natural completion reports the full duration")
 	var indicator: PlayerLoading = app.world.player_loading
 	check(indicator.label.text == "Next episode in 5 seconds", "Completion shows the five-second countdown")
-	check(indicator.episode_title.text == "Second episode", "The countdown identifies the next episode")
+	check(indicator.episode_title.text == "S01 E02 Second episode", "The countdown identifies the next season and episode")
 	check(indicator.is_visible_in_tree() and app.screen.visible and not app.panel.visible and not app.player_overlay.visible, "The countdown uses the loading panel on the video screen")
 	check(indicator.cancel_button.visible and not indicator.spinner.visible, "Countdown mode replaces the spinner with episode details and cancellation")
 	app._update_timeline()
@@ -121,7 +121,7 @@ func run_checks() -> void:
 	app.playing = true
 	video.ended.emit()
 	await settle()
-	check(indicator.episode_title.text == "Next season" and indicator.label.text == "Next episode in 5 seconds", "Cross-season playback also shows the countdown")
+	check(indicator.episode_title.text == "S02 E01 Next season" and indicator.label.text == "Next episode in 5 seconds", "Cross-season playback also shows the countdown")
 	await create_timer(5.2).timeout
 	check(session.opened.size() == 1 and session.opened[0].Id == "third", "The countdown opens the next episode exactly once")
 	check(app.playing, "Autoplay enters playback after the countdown")

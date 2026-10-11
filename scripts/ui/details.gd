@@ -88,7 +88,7 @@ func _build_header() -> void:
 	summary.add_theme_constant_override("separation", 16)
 	row.add_child(summary)
 	_muted("TV series" if item.get("Type", "") == "Series" else "Movie", summary, 20)
-	title_label = _wrapped(str(item.get("Name", "Untitled")), summary, 42)
+	title_label = _wrapped(DetailsMetadata.title(item), summary, 42)
 	var facts := HFlowContainer.new()
 	facts.add_theme_constant_override("h_separation", 10)
 	facts.add_theme_constant_override("v_separation", 10)
