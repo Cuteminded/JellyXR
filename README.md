@@ -2,24 +2,16 @@
 
 Watch your Jellyfin movies and shows on a virtual screen in VR.
 
-Jellyframe connects to your own Jellyfin server so you can browse your library,
-pick something to watch, and adjust the screen to suit your viewing position.
-It is free and open source. Movies and shows come from your server; Jellyframe
-does not include a media library.
+Jellyframe connects to your Jellyfin server. Browse your library, choose a title,
+and adjust the screen to your viewing position. The app is free and open source.
+You supply the movies and shows through your server.
 
 ## From JellyQuest to Jellyframe
 
 This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I plan to
 switch to Steam Frame, so I renamed the app to Jellyframe and made Steam Frame
 the primary target for future development. I do not have a Steam Frame yet,
-so testing on the headset will have to wait.
-
-The Android/Quest version will continue to be developed under the Jellyframe name.
-Planned platform support
-includes running the app directly on Steam Frame as a standalone headset, without
-a PC, and running it on a Windows or Linux PC with a SteamVR-compatible headset.
-See the project status and platform instructions below for what you can currently
-test.
+so testing on the headset will have to wait. Development of the Quest version continues under the Jellyframe name.
 
 ## Project status
 
@@ -27,26 +19,24 @@ Jellyframe is in active development. Basic playback, including 3D video, has bee
 tested on Quest 3, but some features are still missing and playback compatibility
 needs more testing.
 
-Steam Frame is the intended target headset. It has not been tested yet, so
-Jellyframe does not currently claim Steam Frame support.
+Steam Frame support still needs testing on the headset.
 
-The Windows SteamVR version plays video on the VR cinema screen. Stereo video
-and controller playback controls have been checked with SteamVR. Running without
-VR remains an interface preview and cannot play videos.
+The Windows version plays video in VR. Stereo video and controller playback
+controls have been checked with SteamVR.
 
 Linux x64 and ARM64 builds use the same player through libmpv and OpenXR. The
 Linux workflow builds and tests each architecture separately. Playback and
-authenticated MP4/HLS streaming checks pass in Ubuntu 24.04 containers, with
-ARM64 tested through emulation. Linux headset behavior has not been tested yet.
+authenticated MP4/HLS streaming checks pass in Ubuntu 24.04, with
+ARM64 tested through emulation. Linux headset behavior has not been fully tested yet.
 
-## What you can do
+## What works right now
 
 - Sign in with your Jellyfin username and password or Quick Connect.
 - Browse and search your libraries, view title details, and continue watching.
 - Watch 2D movies and side-by-side 3D videos.
 - Resize the screen and adjust its distance, height, and curvature.
 - Recenter the screen in your viewing direction.
-- Choose a dark viewing space or a cinema with tiered seating, curtains, and dim aisle lights.
+- Watch against a dark background, in a cinema, or with your room visible through passthrough.
 - Use your controllers to select titles, type, pause, and skip through a video.
 - Select episodes and cancel the countdown before the next episode starts.
 
@@ -68,8 +58,8 @@ connecting to a server outside your home network.
 
 ## Try it on Quest 3
 
-Download a test APK from a successful **Build APK** run in the repository's
-**Actions** tab. Under **Artifacts**, download `jellyframe-quest3-debug-<run number>`
+Download a test APK from a successful **Build Android APK** run in the repository's
+**Actions** tab. Under **Artifacts**, download `jellyframe-android-debug-<run number>`
 and extract the ZIP. You can also build the app from source using the instructions below.
 
 Once you have built the APK, connect your headset to your computer, approve USB
@@ -77,26 +67,27 @@ debugging in the headset, and install it with Android's `adb` tool:
 
 ```powershell
 adb devices
-adb install -r dist/jellyframe-quest3.apk
+adb install -r dist/jellyframe-android.apk
 ```
 
 Open Jellyframe from Unknown Sources in your headset. Enter your Jellyfin server
 address, then sign in with your account or use Quick Connect. Select a library
 and choose a title to watch.
 
-Use Settings to adjust your view. Library sorting lets you choose the sort field
-and ascending or descending order for your libraries. These preferences are saved
-automatically; Home continues to show the newest additions first.
-The Environment page switches between Void, Theatre and Passthrough. Theatre plays video on
-the fixed front screen and preserves its proportions with black bars as needed.
-Passthrough shows your room around a movable video screen on supported headsets.
-The option is disabled when the OpenXR runtime does not support passthrough.
-The screen position controls apply to Void and Passthrough; resetting them preserves your environment choice.
+Settings has separate pages for library sorting, screen controls and environments.
+Library sorting sets the field and order for your libraries. Home always shows the
+newest additions first.
+
+Choose Void for a dark background, Theatre for a cinema, or Passthrough to see
+your room around the screen. Passthrough is disabled on unsupported devices.
+Theatre has a fixed front screen. Black bars keep the picture in proportion.
+Void and Passthrough let you adjust the screen size, distance, height and curve.
+Reset to defaults restores those screen controls and keeps your environment choice.
 
 ## Try it on Windows with SteamVR
 
-Open **Actions > Build Windows SteamVR > Run workflow** in the repository.
-After the build succeeds, download `jellyframe-windows-steamvr-<run number>` from
+Open **Actions > Build Windows > Run workflow** in the repository.
+After the build succeeds, download `jellyframe-windows-<run number>` from
 **Artifacts** and extract the entire ZIP. Keep the executable, PCK, and any DLLs
 together in the same folder.
 
@@ -105,15 +96,14 @@ in SteamVR's **Settings > OpenXR**. Start SteamVR, then run `jellyframe.exe`.
 Godot uses the active OpenXR runtime, as described in the
 [Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
 
-This build includes the PC video decoder. Sign in to Jellyfin and select a title
-to play it on the VR cinema screen. Pause, seeking, resume, and side-by-side 3D use
-the same controls as the Quest build. Keep `jellyframe_mpv.dll` and `libmpv-2.dll`
-beside the executable. For an interface-only desktop preview, run
-`jellyframe.exe --xr-mode off`.
+Sign in to Jellyfin and select a title to play it in VR. Pause, seeking, resume,
+and side-by-side 3D use the same controls as the Quest build.
+Keep `jellyframe_mpv.dll` and `libmpv-2.dll`
+beside the executable
 
 ## Try it on Linux x64 or ARM64
 
-Open **Actions > Build Linux OpenXR > Run workflow**. The workflow produces
+Open **Actions > Build Linux > Run workflow**. The workflow produces
 `jellyframe-linux-x86_64-<run number>` and `jellyframe-linux-arm64-<run number>`.
 Download the artifact matching your computer, open its ZIP, and extract the
 `.tar.gz` inside. Keep the executable, PCK, and `.so` file together.
@@ -129,12 +119,11 @@ tar -xzf jellyframe-linux-x86_64.tar.gz
 For ARM64, use `jellyframe-linux-arm64.tar.gz` and `./jellyframe.arm64` instead.
 Start your OpenXR runtime with the headset connected before opening Jellyframe.
 On x64, set SteamVR as the active OpenXR runtime. ARM64 needs a compatible ARM64
-OpenXR runtime with OpenGL support. An ARM64 build alone does not establish
-SteamVR ARM64 or standalone Steam Frame compatibility.
+OpenXR runtime with OpenGL support. SteamVR on ARM64 and standalone Steam Frame
+support still need headset testing.
 
 Sign in and play a title using the same VR controls as Windows. Desktop preview
-with `--xr-mode off` still does not play video. See the
-[Linux package instructions](native/pc/LINUX.md) for runtime requirements.
+with `--xr-mode off` does not play video.
 
 ## Current limitations
 
@@ -142,16 +131,13 @@ with `--xr-mode off` still does not play video. See the
 - Linux x64 and ARM64 headset behavior remains untested. The CI playback checks
   run without a headset and cannot validate tracking, controllers, or stereo output.
 - The PC decoder copies video frames through system memory. High-resolution
-  playback needs performance testing on your PC, especially 4K and full-SBS files.
+  playback needs performance testing. especially 4K and full-SBS files.
 - Specific 4K HEVC and HDR videos still need testing. HDR videos rely on your
   Jellyfin server to convert them to standard dynamic range with correct colours.
 - Some files may need your Jellyfin server to convert the video during playback.
   Playback can fail if the server cannot handle that conversion.
-- Audio and subtitle selection, favourites, collections, and full season
-  navigation are not available yet.
-- Passthrough, watched-status controls, and automatic control hiding are still planned.
-- Episode lists show at most 100 episodes. Libraries load 24 titles at a time.
-- Recenter at the start of a new headset tracking session.
+- Audio and subtitle selection, favourites, and collections are not available yet.
+- Manually marking titles as watched and automatically hiding playback controls are still planned.
 
 ## Build from source
 
@@ -175,10 +161,9 @@ codecs the headset can decode. Windows and Linux use libmpv for PC VR playback.
 
 ### Build the Quest APK
 
-GitHub Actions builds the Quest 3 debug APK on pushes and pull requests. To start
-a build manually, open **Actions > Build APK > Run workflow**. The workflow builds
-the native video plugin, exports the APK, checks its signature, and keeps the APK
-artifact for 14 days. No repository secrets are required.
+To build a Quest 3 debug APK, open **Actions > Build Android APK > Run workflow**.
+The workflow builds the native video plugin, exports the APK, checks its signature,
+and keeps the APK artifact for 14 days. No repository secrets are required.
 
 Each workflow run creates a new debug signing key. Installing a build over an APK
 signed with another key requires uninstalling the previous app first, which removes
@@ -198,8 +183,11 @@ To build locally:
 ```
 
 The script creates `dist/jellyframe-quest3.apk` for installation on your headset.
+It also downloads Godot OpenXR Vendors 5.1.0 for Quest passthrough support,
+checks the archive's SHA-256 checksum, and includes the vendor licences in the APK.
+The downloaded addon stays in the ignored `addons/godotopenxrvendors` directory.
 
-### Preview on a computer
+### Build and test on Windows
 
 To build Windows SteamVR locally, install Godot 4.7.2 with matching export templates
 and Python 3.12. Build the PC plugin before importing or exporting the project:
@@ -277,11 +265,11 @@ mkdir -p dist/linux-arm64
 godot --headless --xr-mode off --path . --export-release 'Linux ARM64 OpenXR' dist/linux-arm64/jellyframe.arm64
 ```
 
-**Build Linux OpenXR** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners.
+**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners.
 Each job builds its plugin, checks local and authenticated MP4/HLS playback,
-runs the control regressions, and starts the exported app without VR. The
-artifacts contain tar archives to preserve Linux executable permissions and
-are retained for 14 days. No repository secrets are required.
+runs the control tests, and starts the exported app without VR.
+The artifacts contain tar archives that preserve Linux executable permissions.
+GitHub keeps the artifacts for 14 days. No repository secrets are required.
 
 The same decoder and headset test scripts above work on Linux. Use `python3`
 for the HTTP streaming test and pass the path to your Linux Godot executable.
@@ -297,7 +285,7 @@ godot --headless --xr-mode off --path . --script tests/test_http.gd
 ### Code layout
 
 - `scripts/jellyfin` handles the server API and requests playback streams.
-- `scripts/vr` handles controller pointing.
+- `scripts/vr` handles environments, controller pointing, and recentering.
 - `scripts/player` selects Android playback or PC VR playback.
 - `native/android` contains the Android decoder; `native/pc` contains the libmpv PC decoder.
 - `scripts/core` contains screen settings and stereo geometry.
@@ -306,7 +294,10 @@ godot --headless --xr-mode off --path . --script tests/test_http.gd
 
 ## Licence
 
-Copyright (c) 2026 Cuteminded. Jellyframe's code is licensed under the
-[GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`).
-Godot and Android components retain their own licences. Library artwork comes
-from your Jellyfin server and is not bundled with Jellyframe.
+Copyright (c) 2026 Cuteminded. 
+
+Jellyframe's code is licensed under the [GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`).
+
+Godot and Android components retain their own licences. 
+
+Library artwork comes from your Jellyfin server and is not bundled with Jellyframe.

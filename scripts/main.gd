@@ -321,7 +321,7 @@ func _screen_settings() -> void:
 		elif not api.token.is_empty(): _show_library()
 		else: _show_login())
 	page.add_child(view)
-	status.text = "Changes apply immediately."
+	status.text = "Changes take effect as you make them."
 
 func _resize_screen() -> void:
 	var aspect_ratio := Stereo.aspect(video_size.x, video_size.y, mode)
@@ -498,7 +498,7 @@ func _calibrate() -> void:
 	print("Jellyframe: calibration screen positioned")
 	screen.show()
 	playing = true
-	status.text = "Close one eye at a time. You should see LEFT in your left eye and RIGHT in your right eye."
+	status.text = "Close one eye at a time. Check that LEFT appears in your left eye and RIGHT in your right eye."
 	await video.open(video.bridge.calibration_url(), "", 0)
 	if get_viewport().use_xr: panel.hide()
 
