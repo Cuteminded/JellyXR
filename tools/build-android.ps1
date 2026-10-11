@@ -11,6 +11,7 @@ $env:ANDROID_HOME = $AndroidSdk
 $env:ANDROID_SDK_ROOT = $AndroidSdk
 Push-Location $projectRoot
 try {
+    & "$PSScriptRoot/setup-openxr.ps1"
     & $Gradle -p native :android:stagePlugin
     if ($LASTEXITCODE -ne 0) { throw 'Android video plugin compilation failed.' }
     New-Item -ItemType Directory -Force -Path dist | Out-Null

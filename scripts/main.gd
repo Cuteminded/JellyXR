@@ -17,6 +17,7 @@ var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
 var theatre: TheatreEnvironment
+var world: ViewingWorld
 var player_overlay: PlayerOverlay
 var mode := Stereo.Mode.MONO
 var video_size := Vector2i(1920, 1080)
@@ -53,7 +54,7 @@ func _ready() -> void:
 		_calibrate()
 
 func _setup_world() -> void:
-	var world := ViewingWorld.new()
+	world = ViewingWorld.new()
 	world.settings = settings
 	add_child(world)
 	world.setup()
@@ -305,6 +306,7 @@ func _screen_settings() -> void:
 	shell.heading.text = "Settings"
 	var view := SettingsView.new()
 	view.settings = settings
+	view.passthrough_supported = world.passthrough.is_supported()
 	view.stereo_mode = mode
 	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -330,6 +332,7 @@ func _resize_screen() -> void:
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
 
 func _change_environment() -> void:
+	world.apply_environment()
 	theatre.visible = settings.environment == "Theatre"
 	if not theatre.visible: screen.global_basis = camera.global_basis
 	_position_screen()

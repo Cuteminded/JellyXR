@@ -28,6 +28,7 @@ func load_settings(path: String = PATH) -> void:
 	height = clampf(config.get_value("screen", "height", height), -2.0, 2.0)
 	curvature = clampf(config.get_value("screen", "curvature", curvature), 0.0, 1.2)
 	environment = config.get_value("screen", "environment", "Void")
+	if environment not in ["Void", "Theatre", "Passthrough"]: environment = "Void"
 	server = config.get_value("connection", "server", "")
 	device_id = config.get_value("connection", "device_id", "")
 	library_sort_by = str(config.get_value("library", "sort_by", "SortName"))

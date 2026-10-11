@@ -9,12 +9,22 @@ var panel: MeshInstance3D
 var screen: MeshInstance3D
 var material: ShaderMaterial
 var theatre: TheatreEnvironment
+var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
 var pointers: Array[LaserPointer] = []
 
 func setup() -> void:
 	var xr := XRServer.find_interface("OpenXR")
 	var immersive := xr != null and xr.is_initialized()
+	var world_environment := WorldEnvironment.new()
+	world_environment.environment = Environment.new()
+	world_environment.environment.background_mode = Environment.BG_COLOR
+	world_environment.environment.background_color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
+	add_child(world_environment)
+	passthrough.setup(get_viewport(), world_environment.environment, xr)
+	if settings.environment == "Passthrough" and not passthrough.is_supported():
+		settings.environment = "Void"
+	apply_environment()
 	var origin := XROrigin3D.new()
 	add_child(origin)
 	if immersive:
@@ -86,5 +96,11 @@ func _build_theatre() -> void:
 	add_child(theatre)
 	theatre.build()
 	theatre.visible = settings.environment == "Theatre"
+
+func apply_environment() -> void:
+	passthrough.apply(settings.environment == "Passthrough")
+
+func _exit_tree() -> void:
+	if passthrough.viewport != null: passthrough.apply(false)
 
 
