@@ -89,7 +89,9 @@ func setup() -> void:
 func _process(_delta: float) -> void:
 	if not player_overlay: return
 	for pointer in pointers:
-		if player_overlay.is_visible_in_tree():
+		if player_loading.is_visible_in_tree() and player_loading.cancel_button.visible:
+			pointer.set_target(player_loading, player_loading.viewport, player_loading.panel_size)
+		elif player_overlay.is_visible_in_tree():
 			pointer.set_target(player_overlay, player_overlay.viewport, player_overlay.panel_size)
 		else:
 			pointer.set_target(panel, viewport, Vector2(4.4, 2.75))

@@ -1,6 +1,8 @@
 class_name PlayerLoading
 extends MeshInstance3D
 
+signal cancelled
+
 class Spinner extends Control:
 	var angle := 0.0
 
@@ -15,6 +17,11 @@ class Spinner extends Control:
 		draw_arc(center, 25.0, angle, angle + TAU * 0.7, 40, Color("6de3cf"), 5.0, true)
 
 var viewport: SubViewport
+var spinner: Spinner
+var episode_title: Label
+var label: Label
+var cancel_button: Button
+var panel_size := Vector2.ZERO
 
 func _ready() -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -37,15 +44,44 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
 	panel.add_child(body)
-	var spinner := Spinner.new()
+	spinner = Spinner.new()
 	spinner.custom_minimum_size = Vector2(64, 64)
 	body.add_child(spinner)
-	var label := Widgets.label("Loading video...", body, 28)
+	episode_title = Widgets.label("", body, 22)
+	episode_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	episode_title.clip_text = true
+	label = Widgets.label("Loading video...", body, 28)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cancel_button = Widgets.button("Cancel autoplay", func(): cancelled.emit(), body)
+	show_loading()
 	hide()
+
+func show_loading() -> void:
+	_set_height(170)
+	spinner.show()
+	episode_title.hide()
+	cancel_button.hide()
+	label.text = "Loading video..."
+	show()
+
+func show_countdown(episode_name: String, seconds: int) -> void:
+	_set_height(200)
+	spinner.hide()
+	episode_title.text = episode_name
+	episode_title.tooltip_text = episode_name
+	episode_title.show()
+	label.text = "Next episode in %d seconds" % seconds
+	cancel_button.show()
+	show()
+
+func _set_height(height: int) -> void:
+	viewport.size.y = height
+	panel_size.y = panel_size.x * float(height) / 440.0
+	if mesh is QuadMesh: mesh.size = panel_size
 
 func fit_screen(width: float, curvature: float) -> void:
 	var quad := QuadMesh.new()
-	quad.size = Vector2(width * 0.28, width * 0.28 * 170.0 / 440.0)
+	panel_size = Vector2(width * 0.28, width * 0.28 * viewport.size.y / 440.0)
+	quad.size = panel_size
 	mesh = quad
 	position.z = (1.0 - cos(curvature / 2.0)) * width / curvature + 0.03 if curvature > 0.001 else 0.03

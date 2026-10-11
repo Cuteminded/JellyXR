@@ -139,6 +139,24 @@ func seasons(series_id: String) -> Dictionary:
 func episodes(series_id: String, season_id: String, offset: int = 0) -> Dictionary:
 	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "SeasonId": season_id, "StartIndex": offset, "Limit": 100, "Fields": "Overview,UserData", "EnableUserData": "true", "IsMissing": "false"}))
 
+func next_episode(item: Dictionary) -> Dictionary:
+	var series_id := str(item.get("SeriesId", ""))
+	if series_id.is_empty():
+		var detail := await details(str(item.Id))
+		if not detail.ok: return detail
+		series_id = str(detail.data.get("SeriesId", ""))
+	if series_id.is_empty():
+		return {"ok": false, "error": "This episode has no series information."}
+	var result := await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "StartItemId": item.Id, "Limit": 2, "Fields": "Overview,UserData", "EnableUserData": "true", "IsMissing": "false"}))
+	if not result.ok: return result
+	var items: Array = result.data.get("Items", [])
+	if items.size() < 2 or str(items[0].get("Id", "")) != str(item.Id):
+		return {"ok": true, "data": {}}
+	var next: Dictionary = items[1].duplicate(true)
+	next["Type"] = "Episode"
+	next["SeriesId"] = series_id
+	return {"ok": true, "data": next}
+
 func image_url(item: Dictionary, backdrop: bool = false) -> String:
 	var kind := "Backdrop/0" if backdrop else "Primary"
 	var tags: Array = item.get("BackdropImageTags", []) if item.get("BackdropImageTags") else []
