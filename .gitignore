@@ -1,5 +1,8 @@
 .DS_Store
-addons/godotopenxrvendors/
+*.jks
+*.keystore
+session.cfg
+export_credentials.cfg
 .vscode/
 .godot/
 .idea/
@@ -11,9 +14,8 @@ android/build/
 android/.build_version
 native/local.properties
 native/**/build/
-addons/jellyframe_video/bin/
 addons/jellyframe_mpv/
-*.keystore
-*.jks
-export_credentials.cfg
-session.cfg
+addons/jellyframe_video/bin/
+addons/godotopenxrvendors/
+/tests/__pycache__
+/tools/__pycache__

@@ -51,7 +51,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            build-essential cmake pkg-config python3 curl unzip libmpv-dev ffmpeg
+            build-essential cmake pkg-config python3 curl unzip libmpv-dev ffmpeg patchelf
+          JELLYFRAME_BUNDLE_INTEGRATION=1 python3 -m unittest discover -s tests -p 'test_linux_bundle.py'
 
       - name: Build PC video plugin
         run: bash tools/build-pc-video.sh
@@ -121,14 +122,37 @@ jobs:
               --script "$GITHUB_WORKSPACE/tests/test_export_renderer.gd" -- "$renderer"
           done
 
-      - name: Package Linux build
+      - name: Bundle decoder libraries
         run: |
-          tar -czf "dist/jellyframe-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
+          python3 tools/bundle-linux-libraries.py \
+            --input-directory "dist/linux-${ARCH}" \
+            --output-directory "dist/linux-${ARCH}-bundled" --arch "$ARCH"
+          for renderer in opengl vulkan; do
+            binary="dist/linux-${ARCH}-bundled/jellyframe-${renderer}.${ARCH}"
+            log="$RUNNER_TEMP/jellyframe-${renderer}-bundled-smoke.log"
+            timeout 30s "$binary" --headless --xr-mode off --quit-after 10 --log-file "$log"
+            if grep -E 'SCRIPT ERROR:|ERROR:' "$log"; then
+              exit 1
+            fi
+          done
 
-      - name: Upload Linux build
+      - name: Package Linux builds
+        run: |
+          tar -czf "dist/jellyframe-linux-${ARCH}-system-libs.tar.gz" -C "dist/linux-${ARCH}" .
+          tar -czf "dist/jellyframe-linux-${ARCH}-bundled-libs.tar.gz" -C "dist/linux-${ARCH}-bundled" .
+
+      - name: Upload Linux build with system libraries
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}
-          path: dist/jellyframe-linux-${{ matrix.arch }}.tar.gz
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-system-libs
+          path: dist/jellyframe-linux-${{ matrix.arch }}-system-libs.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Linux build with bundled libraries
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-bundled-libs
+          path: dist/jellyframe-linux-${{ matrix.arch }}-bundled-libs.tar.gz
           if-no-files-found: error
           retention-days: 14
