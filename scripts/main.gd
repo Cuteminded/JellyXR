@@ -1,6 +1,7 @@
 extends Node3D
 
 var settings := JellyframeSettings.new()
+var session_store := SessionStore.new()
 var api := JellyfinClient.new()
 var session := PlaybackSession.new()
 var video: VideoBackend = AndroidVideo.new() if OS.get_name() == "Android" else PcVideo.new()
@@ -50,6 +51,7 @@ func _ready() -> void:
 	video.ended.connect(_ended)
 	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); _resize_screen())
 	_show_login()
+	await _restore_session()
 	if video.has_android_services() and OS.is_debug_build() and video.bridge.calibration_requested():
 		await get_tree().create_timer(2).timeout
 		_calibrate()
@@ -139,18 +141,45 @@ func _show_login() -> void:
 		Widgets.button("Test 3D playback", _calibrate, row)
 	Widgets.label("HTTP sends credentials without encryption. Use HTTPS outside your home network.", page, 18)
 	status.text = "Sign in to start watching."
+
+func _restore_session() -> void:
+	var data: Variant = session_store.load_session()
 	if video.has_android_services():
 		var saved: String = video.bridge.load_session()
-		var data: Variant = JSON.parse_string(saved) if not saved.is_empty() else null
-		if data is Dictionary and data.get("server", "") == settings.server and api.configure(settings.server):
-			api.token = data.get("token", "")
-			api.user_id = data.get("user_id", "")
-			var check := await api.request("/Users/Me")
-			if check.ok: _show_library()
-			else:
-				api.token = ""
-				api.user_id = ""
-				status.text = "Your saved session has expired. Sign in again."
+		data = JSON.parse_string(saved) if not saved.is_empty() else null
+	if not data is Dictionary or data.get("server", "") != settings.server: return
+	for key in ["token", "user_id"]:
+		if not data.get(key) is String or data[key].is_empty(): return
+	if not api.configure(settings.server): return
+	api.token = data.token
+	api.user_id = data.user_id
+	var generation := page_generation
+	status.text = "Restoring your saved session..."
+	_set_login_enabled(false)
+	var check := await api.request("/Users/Me")
+	if generation != page_generation: return
+	_set_login_enabled(true)
+	if check.ok:
+		_show_library()
+	else:
+		api.token = ""
+		api.user_id = ""
+		if check.get("status", 0) in [401, 403]:
+			_clear_saved_session()
+			status.text = "Your saved session has expired. Sign in again."
+		else:
+			status.text = "Could not restore your saved session. Check your connection or sign in again."
+
+func _set_login_enabled(enabled: bool) -> void:
+	for button in page.find_children("*", "BaseButton", true, false):
+		button.disabled = not enabled
+	for field in page.find_children("*", "LineEdit", true, false):
+		field.editable = enabled
+
+func _clear_saved_session() -> void:
+	if video.has_android_services(): video.bridge.save_session("")
+	elif session_store.clear_session() != OK:
+		push_warning("Could not remove the saved sign-in session.")
 
 func _configure(address: String) -> bool:
 	if not api.configure(address):
@@ -163,6 +192,10 @@ func _signed_in() -> void:
 	settings.save()
 	if video.has_android_services():
 		video.bridge.save_session(JSON.stringify({"server": api.server, "token": api.token, "user_id": api.user_id}))
+	else:
+		var error := session_store.save_session({"server": api.server, "token": api.token, "user_id": api.user_id})
+		if error != OK:
+			push_warning("Could not save the sign-in session. Check available storage and permissions.")
 	_show_library()
 
 func _quick_connect() -> void:
@@ -537,7 +570,7 @@ func _sign_out() -> void:
 	api.user_id = ""
 	api.random_library_ids.clear()
 	api.random_library_generation.clear()
-	if video.has_android_services(): video.bridge.save_session("")
+	_clear_saved_session()
 	_show_login()
 
 func _process(delta: float) -> void:

@@ -16,3 +16,4 @@ addons/jellyframe_mpv/
 *.keystore
 *.jks
 export_credentials.cfg
+session.cfg
