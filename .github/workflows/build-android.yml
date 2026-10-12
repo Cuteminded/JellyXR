@@ -2,6 +2,7 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -22,6 +23,10 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date '+%d-%m-%Y')" >> $GITHUB_OUTPUT
+        
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -92,7 +97,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: jellyframe-android-debug-${{ github.run_number }}
+          name: ${{ steps.date.outputs.date }}-jellyframe-android
           path: dist/jellyframe-android.apk
           if-no-files-found: error
           retention-days: 14

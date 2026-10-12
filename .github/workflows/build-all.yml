@@ -1,0 +1,24 @@
+name: Build all platforms
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: all-platforms-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android
+    uses: ./.github/workflows/build-android.yml
+
+  linux:
+    name: Linux
+    uses: ./.github/workflows/build-linux.yml
+
+  windows:
+    name: Windows
+    uses: ./.github/workflows/build-windows.yml
