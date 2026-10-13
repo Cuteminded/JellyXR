@@ -17,6 +17,7 @@ var passthrough_supported := false
 var sort_choices: GridContainer
 var screen_dimensions: GridContainer
 var stereo_choices: HFlowContainer
+var reset_screen_button: Button
 var sections: Array[VBoxContainer] = []
 var scroll: ScrollContainer
 var dragging_slider := false
@@ -112,13 +113,18 @@ func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, ac
 	return choice
 
 func _build_screen(parent: VBoxContainer) -> void:
+	_build_projection(parent)
+	_build_video_format(parent)
+	_build_screen_position(parent)
+
+func _build_screen_position(parent: VBoxContainer) -> void:
 	var header := HFlowContainer.new()
 	header.add_theme_constant_override("h_separation", 18)
 	header.add_theme_constant_override("v_separation", 12)
 	parent.add_child(header)
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
-	reset.tooltip_text = "Reset screen size and position. Keep your environment and video format."
+	reset_screen_button = Widgets.button("Reset to defaults", _reset_screen, header)
+	reset_screen_button.tooltip_text = "Reset screen size and position. Keep your environment and video format."
 	_hint(_screen_position_hint(), parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
@@ -127,8 +133,6 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(screen_dimensions)
 	for entry in [["Width", "width", 1.5, 7.0, " m"], ["Distance", "distance", 1.5, 8.0, " m"], ["Height", "height", -2.0, 2.0, " m"], ["Curvature", "curvature", 0.0, 1.2, ""]]:
 		_slider(entry, screen_dimensions)
-	_build_projection(parent)
-	_build_video_format(parent)
 
 func _screen_position_hint() -> String:
 	if projection_mode == VideoProjection.Mode.EQUIRECTANGULAR:
@@ -193,8 +197,7 @@ func _build_environment(parent: VBoxContainer) -> void:
 func _reset_screen() -> void:
 	settings.reset_screen()
 	_rebuild_screen()
-	var reset: Button = sections[1].get_child(0).get_child(1)
-	if reset.is_visible_in_tree(): reset.grab_focus()
+	if reset_screen_button.is_visible_in_tree(): reset_screen_button.grab_focus()
 	screen_changed.emit()
 	_save()
 

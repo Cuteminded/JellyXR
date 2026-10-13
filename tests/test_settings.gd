@@ -122,7 +122,7 @@ func run_checks() -> void:
 	var half_sbs: CheckBox = view.stereo_choices.get_child(1)
 	half_sbs.button_pressed = true
 	half_sbs.pressed.emit()
-	var reset: Button = view.sections[1].get_child(0).get_child(1)
+	var reset: Button = view.reset_screen_button
 	reset.pressed.emit()
 	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Cinema", "Reset restores screen defaults while preserving the separate environment selection.")
 	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")

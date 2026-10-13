@@ -131,7 +131,7 @@ func check_environment_switching() -> void:
 	theatre_choice.button_pressed = true
 	theatre_choice.pressed.emit()
 	check(not app.theatre.low_res and app.theatre.low_resolution == null and app.theatre.interior != null, "Switching back restores the detailed theatre and releases LowRes geometry.")
-	var reset: Button = view.sections[1].get_child(0).get_child(1)
+	var reset: Button = view.reset_screen_button
 	reset.pressed.emit()
 	check(app.theatre.visible and app.settings.environment == "Cinema", "Screen reset preserves the separate environment choice.")
 	var void_choice: CheckBox = view.sections[2].get_child(2).get_child(0)
