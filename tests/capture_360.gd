@@ -13,7 +13,8 @@ func capture() -> void:
 			var color := Color.from_hsv(float(x) / 1024.0, 0.65, 0.9 - float(y) / 1024.0)
 			if x % 128 < 3 or y % 128 < 3: color = Color.WHITE
 			image.set_pixel(x, y, color)
-	app.material.set_shader_parameter("video_texture", ImageTexture.create_from_image(image))
+	var grid_texture := ImageTexture.create_from_image(image)
+	app.material.set_shader_parameter("video_texture", grid_texture)
 	app.screen.show()
 	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
 	app._show_playback()
@@ -42,6 +43,7 @@ func capture() -> void:
 		push_error("Swapped top-bottom rendering must sample the lower half")
 		quit(1)
 		return
+	if not await check_180_rendering(app, grid_texture): return
 	app._screen_settings()
 	app.viewport.get_parent().show()
 	var settings: SettingsView = app.page.get_child(0)
@@ -50,8 +52,30 @@ func capture() -> void:
 	screen_tab.pressed.emit()
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
-	app.viewport.get_texture().get_image().save_png("res://dist/360-settings-preview.png")
-	print("360 rendering checks: PASS")
+	app.viewport.get_texture().get_image().save_png("res://dist/180-settings-preview.png")
+	print("180 and 360 rendering checks: PASS")
 	app.queue_free()
 	await process_frame
 	quit()
+
+func check_180_rendering(app: Node, texture: Texture2D) -> bool:
+	app._select_stereo(Stereo.Mode.MONO)
+	app.material.set_shader_parameter("swap_eyes", false)
+	app.material.set_shader_parameter("video_texture", texture)
+	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR_180)
+	app._show_playback()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://dist/180-preview.png")
+	app.player_overlay.hide()
+	app.camera.rotate_y(PI)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var frame := root.get_texture().get_image()
+	var pixel := frame.get_pixel(frame.get_width() / 2, frame.get_height() / 2)
+	if pixel.r > 0.05 or pixel.g > 0.05 or pixel.b > 0.05:
+		push_error("The view behind a 180 video must stay dark")
+		quit(1)
+		return false
+	app.camera.rotate_y(-PI)
+	return true

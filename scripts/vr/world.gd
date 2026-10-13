@@ -9,6 +9,7 @@ var panel: MeshInstance3D
 var screen: MeshInstance3D
 var panorama: MeshInstance3D
 var panoramic := false
+var panorama_angle := TAU
 var material: ShaderMaterial
 var theatre: TheatreEnvironment
 var passthrough := PassthroughEnvironment.new()
@@ -121,9 +122,11 @@ func apply_environment() -> void:
 		if settings.is_theatre(): theatre.set_low_res(settings.environment == "Theatre")
 		theatre.visible = settings.is_theatre() and not immersive_video
 
-func set_panoramic(enabled: bool) -> void:
+func set_panoramic(enabled: bool, horizontal_angle: float = TAU) -> void:
 	panoramic = enabled
-	if enabled and panorama.mesh == null: panorama.mesh = VideoProjection.sphere()
+	if enabled and (panorama.mesh == null or not is_equal_approx(panorama_angle, horizontal_angle)):
+		panorama.mesh = VideoProjection.sphere(50.0, horizontal_angle)
+		panorama_angle = horizontal_angle
 	panorama.visible = enabled and screen.visible
 	if enabled:
 		panorama.global_position = camera.global_position

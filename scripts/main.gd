@@ -317,7 +317,7 @@ func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	if not seeking and not stereo_overridden: mode = Stereo.detect(source)
 	if not seeking and not projection_overridden:
 		projection_mode = VideoProjection.detect(source)
-		world.set_panoramic(projection_mode == VideoProjection.Mode.EQUIRECTANGULAR)
+		world.set_panoramic(projection_mode != VideoProjection.Mode.SCREEN, VideoProjection.horizontal_angle(projection_mode))
 	for stream in source.get("MediaStreams", []):
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
@@ -407,7 +407,7 @@ func _screen_settings() -> void:
 	status.text = "Changes take effect as you make them."
 
 func _resize_screen() -> void:
-	var panoramic := projection_mode == VideoProjection.Mode.EQUIRECTANGULAR
+	var panoramic := projection_mode != VideoProjection.Mode.SCREEN
 	var aspect_ratio := 16.0 / 9.0 if panoramic else Stereo.aspect(video_size.x, video_size.y, mode)
 	var fixed_screen := settings.is_theatre() and not panoramic
 	var dimensions := Vector2(settings.width, settings.width / aspect_ratio)
@@ -423,7 +423,7 @@ func _resize_screen() -> void:
 func _select_projection(value: int) -> void:
 	projection_mode = value
 	projection_overridden = true
-	world.set_panoramic(value == VideoProjection.Mode.EQUIRECTANGULAR)
+	world.set_panoramic(value != VideoProjection.Mode.SCREEN, VideoProjection.horizontal_angle(projection_mode))
 	_recenter()
 
 func _select_stereo(value: int) -> void:
@@ -449,7 +449,7 @@ func _recenter() -> void:
 	_resize_screen()
 
 func _position_screen() -> void:
-	if projection_mode == VideoProjection.Mode.EQUIRECTANGULAR:
+	if projection_mode != VideoProjection.Mode.SCREEN:
 		screen.global_position = camera.global_position - screen.global_basis.z * 3.0
 	elif settings.is_theatre():
 		screen.global_transform = theatre.projection_transform()

@@ -17,7 +17,9 @@ func check(condition: bool, message: String) -> void:
 func run_checks() -> void:
 	for filename in ["Beach.360.mp4", "Beach_VR360_TB.mkv", "Beach-360deg.mp4"]:
 		check(VideoProjection.detect({"Path": filename}) == VideoProjection.Mode.EQUIRECTANGULAR, "360 filename marker: " + filename)
-	for filename in ["/360/Beach.mp4", "Beach.3600.mp4", "Beach.mp4", "Beach.180.mp4"]:
+	for filename in ["Beach.180.mp4", "Beach_VR180_FSBS.mkv", "Beach-180deg.mp4"]:
+		check(VideoProjection.detect({"Path": filename}) == VideoProjection.Mode.EQUIRECTANGULAR_180, "180 filename marker: " + filename)
+	for filename in ["/360/Beach.mp4", "/180/Beach.mp4", "Beach.3600.mp4", "Beach.1800.mp4", "Beach.mp4"]:
 		check(VideoProjection.detect({"Path": filename}) == VideoProjection.Mode.SCREEN, "Avoid ambiguous projection detection: " + filename)
 	check(Stereo.detect({"Path": "Beach.360.TB.mp4"}) == Stereo.Mode.TOP_BOTTOM, "Top-bottom filename detection")
 	check(Stereo.detect({"Video3DFormat": "FullTopAndBottom"}) == Stereo.Mode.TOP_BOTTOM, "Top-bottom metadata detection")
@@ -95,8 +97,45 @@ func run_checks() -> void:
 	check(app.world.panoramic and app.screen.mesh == null, "Stream opening applies automatic 360 detection")
 	await app._play_stream("", {"Path": "Normal.mp4"}, 0)
 	check(not app.world.panoramic and app.screen.mesh != null, "An ordinary stream returns to screen mode")
+	await check_180_playback(app)
 	app.playing = false
 	app.queue_free()
 	await process_frame
-	print("360 video checks: ", "PASS" if failures == 0 else str(failures) + " failures")
+	print("180 and 360 video checks: ", "PASS" if failures == 0 else str(failures) + " failures")
 	quit(1 if failures else 0)
+
+func check_180_playback(app: Node) -> void:
+	await app._play_stream("", {"Path": "Beach.VR180.FSBS.mp4"}, 0)
+	check(app.world.panoramic and is_equal_approx(app.world.panorama_angle, PI), "180 stream creates a hemisphere")
+	check(app.mode == Stereo.Mode.FULL_SBS, "180 stream retains automatic stereo detection")
+	check(app.screen.mesh == null and not app.theatre.visible, "180 hides the screen and cinema")
+	var arrays: Array = app.world.panorama.mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	for index in range(vertices.size()):
+		if vertices[index].z > 0.001:
+			check(false, "180 geometry stays in the forward hemisphere")
+			break
+		if uvs[index].is_equal_approx(Vector2(0.5, 0.5)):
+			check(vertices[index].is_equal_approx(Vector3(0, 0, -50)), "180 image center faces forward")
+		if uvs[index].is_equal_approx(Vector2(0, 0.5)):
+			check(vertices[index].is_equal_approx(Vector3(-50, 0, 0)), "180 left edge maps to the left side")
+		if uvs[index].is_equal_approx(Vector2(1, 0.5)):
+			check(vertices[index].is_equal_approx(Vector3(50, 0, 0)), "180 right edge maps to the right side")
+	app._screen_settings()
+	var view: SettingsView = app.page.get_child(0)
+	check(view.projection_mode == VideoProjection.Mode.EQUIRECTANGULAR_180, "Settings show the active 180 projection")
+	for row in view.screen_dimensions.get_children():
+		check(not row.get_child(1).editable, "Screen sliders are disabled for 180")
+	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR_180)
+	app._select_stereo(Stereo.Mode.TOP_BOTTOM)
+	app.seeking = true
+	await app._play_stream("", {"Path": "Normal.mp4"}, 0)
+	app.seeking = false
+	check(is_equal_approx(app.world.panorama_angle, PI) and app.mode == Stereo.Mode.TOP_BOTTOM, "Seeking preserves 180 projection and stereo")
+	app._show_playback()
+	check(app.player_overlay.is_visible_in_tree(), "180 keeps playback controls available")
+	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
+	check(is_equal_approx(app.world.panorama_angle, TAU), "Switching from 180 to 360 restores the full sphere")
+	app._select_projection(VideoProjection.Mode.SCREEN)
+	check(not app.world.panorama.visible and app.screen.mesh != null and app.theatre.visible, "Switching from panorama to screen restores the cinema")
