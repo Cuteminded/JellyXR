@@ -12,7 +12,14 @@ import subprocess
 
 HOST_LIBRARIES = re.compile(
     r"^(?:lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\."
-    r"|libnss_|ld-linux|lib(?:GL|EGL|GLES|OpenGL|vulkan|drm|gbm))"
+    r"|libnss_|ld-linux|lib(?:stdc\+\+|gcc_s)\.so\."
+    r"|lib(?:X(?!present\.so\.)|xcb|xkbcommon|wayland|decor)"
+    r"|lib(?:glib|gobject|gio|gmodule|gthread)-2\.0\.so\."
+    r"|libgdk_pixbuf-2\.0\.so\."
+    r"|lib(?:gtk|gdk)-[234]\.so\."
+    r"|lib(?:mount|blkid|uuid|smartcols)\.so\."
+    r"|lib(?:jpeg|tiff)\.so\."
+    r"|lib(?:GL|EGL|GLES|OpenGL|vulkan|drm|gbm))"
 )
 
 
