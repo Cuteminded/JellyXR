@@ -7,6 +7,8 @@ var camera: Camera3D
 var viewport: SubViewport
 var panel: MeshInstance3D
 var screen: MeshInstance3D
+var panorama: MeshInstance3D
+var panoramic := false
 var material: ShaderMaterial
 var theatre: TheatreEnvironment
 var passthrough := PassthroughEnvironment.new()
@@ -60,6 +62,11 @@ func setup() -> void:
 	screen.material_override = material
 	screen.visible = false
 	add_child(screen)
+	panorama = MeshInstance3D.new()
+	panorama.material_override = material
+	panorama.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	panorama.hide()
+	add_child(panorama)
 	player_overlay = PlayerOverlay.new()
 	screen.add_child(player_overlay)
 	player_loading = PlayerLoading.new()
@@ -88,6 +95,11 @@ func setup() -> void:
 
 func _process(_delta: float) -> void:
 	if not player_overlay: return
+	var show_panorama := panoramic and screen.visible
+	if panorama.visible != show_panorama:
+		panorama.visible = show_panorama
+		apply_environment()
+	if show_panorama: panorama.global_position = camera.global_position
 	for pointer in pointers:
 		if player_loading.is_visible_in_tree() and player_loading.cancel_button.visible:
 			pointer.set_target(player_loading, player_loading.viewport, player_loading.panel_size)
@@ -103,10 +115,20 @@ func _build_theatre() -> void:
 	theatre.visible = settings.is_theatre()
 
 func apply_environment() -> void:
-	passthrough.apply(settings.environment == "Passthrough")
+	var immersive_video := panoramic and screen != null and screen.visible
+	passthrough.apply(settings.environment == "Passthrough" and not immersive_video)
 	if theatre != null:
 		if settings.is_theatre(): theatre.set_low_res(settings.environment == "Theatre")
-		theatre.visible = settings.is_theatre()
+		theatre.visible = settings.is_theatre() and not immersive_video
+
+func set_panoramic(enabled: bool) -> void:
+	panoramic = enabled
+	if enabled and panorama.mesh == null: panorama.mesh = VideoProjection.sphere()
+	panorama.visible = enabled and screen.visible
+	if enabled:
+		panorama.global_position = camera.global_position
+		panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
+	apply_environment()
 
 func _exit_tree() -> void:
 	if passthrough.viewport != null: passthrough.apply(false)

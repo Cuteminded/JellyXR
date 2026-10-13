@@ -5,15 +5,18 @@ signal back_requested
 signal screen_changed
 signal environment_changed
 signal stereo_selected(value: int)
+signal projection_selected(value: int)
 signal eyes_swapped
 signal status(message: String)
 
 var settings: JellyframeSettings
 var stereo_mode := Stereo.Mode.MONO
+var projection_mode := VideoProjection.Mode.SCREEN
 var swap_eyes := false
 var passthrough_supported := false
 var sort_choices: GridContainer
 var screen_dimensions: GridContainer
+var stereo_choices: HFlowContainer
 var sections: Array[VBoxContainer] = []
 var scroll: ScrollContainer
 var dragging_slider := false
@@ -116,7 +119,7 @@ func _build_screen(parent: VBoxContainer) -> void:
 	Widgets.label("Screen position", header, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reset := Widgets.button("Reset to defaults", _reset_screen, header)
 	reset.tooltip_text = "Reset screen size and position. Keep your environment and video format."
-	_hint("Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it." if settings.is_theatre() else "Set the screen size, distance, height and curve.", parent)
+	_hint(_screen_position_hint(), parent)
 	screen_dimensions = GridContainer.new()
 	screen_dimensions.columns = 2
 	screen_dimensions.add_theme_constant_override("h_separation", 24)
@@ -124,20 +127,44 @@ func _build_screen(parent: VBoxContainer) -> void:
 	parent.add_child(screen_dimensions)
 	for entry in [["Width", "width", 1.5, 7.0, " m"], ["Distance", "distance", 1.5, 8.0, " m"], ["Height", "height", -2.0, 2.0, " m"], ["Curvature", "curvature", 0.0, 1.2, ""]]:
 		_slider(entry, screen_dimensions)
+	_build_projection(parent)
+	_build_video_format(parent)
+
+func _screen_position_hint() -> String:
+	if projection_mode == VideoProjection.Mode.EQUIRECTANGULAR:
+		return "Screen position does not affect 360° video. Recenter to change your forward direction."
+	if settings.is_theatre():
+		return "Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it."
+	return "Set the screen size, distance, height and curve."
+
+func _build_video_format(parent: VBoxContainer) -> void:
 	Widgets.label("Video format", parent, 26)
 	_hint("Jellyframe detects the 3D format. Choose a different format if the picture looks wrong.", parent)
-	var formats := HFlowContainer.new()
-	formats.add_theme_constant_override("h_separation", 12)
-	parent.add_child(formats)
+	stereo_choices = HFlowContainer.new()
+	stereo_choices.add_theme_constant_override("h_separation", 12)
+	parent.add_child(stereo_choices)
 	var group := ButtonGroup.new()
-	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS]]:
-		_choice(entry[0], entry[1] == stereo_mode, group, formats, func(): stereo_mode = entry[1]; stereo_selected.emit(entry[1]))
+	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS], ["Top-bottom", Stereo.Mode.TOP_BOTTOM]]:
+		_choice(entry[0], entry[1] == stereo_mode, group, stereo_choices, func(): stereo_mode = entry[1]; stereo_selected.emit(entry[1]))
 	var swap := CheckBox.new()
 	swap.text = "Swap left and right eyes"
 	swap.custom_minimum_size.y = 56
 	swap.button_pressed = swap_eyes
 	swap.toggled.connect(func(enabled: bool): swap_eyes = enabled; eyes_swapped.emit())
 	parent.add_child(swap)
+
+func _build_projection(parent: VBoxContainer) -> void:
+	Widgets.label("Video projection", parent, 26)
+	_hint("360° wraps an equirectangular video around you and hides the environment during playback. Other 360° layouts are not supported.", parent)
+	var choices := HBoxContainer.new()
+	choices.add_theme_constant_override("separation", 12)
+	parent.add_child(choices)
+	var group := ButtonGroup.new()
+	for entry in [["Screen", VideoProjection.Mode.SCREEN], ["360°", VideoProjection.Mode.EQUIRECTANGULAR]]:
+		_choice(entry[0], entry[1] == projection_mode, group, choices, func():
+			projection_mode = entry[1]
+			projection_selected.emit(entry[1])
+			_rebuild_screen.call_deferred())
 
 func _build_environment(parent: VBoxContainer) -> void:
 	Widgets.label("Environment", parent, 26)
@@ -197,7 +224,7 @@ func _slider(entry: Array, parent: Node) -> void:
 	slider.max_value = entry[3]
 	slider.step = 0.05
 	slider.value = settings.get(entry[1])
-	slider.editable = not settings.is_theatre()
+	slider.editable = not settings.is_theatre() and projection_mode == VideoProjection.Mode.SCREEN
 	row.add_child(slider)
 	slider.value_changed.connect(func(value: float):
 		settings.set(entry[1], value)
