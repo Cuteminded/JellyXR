@@ -18,6 +18,7 @@ var sort_choices: GridContainer
 var screen_dimensions: GridContainer
 var stereo_choices: HFlowContainer
 var reset_screen_button: Button
+var playback_choices: VBoxContainer
 var sections: Array[VBoxContainer] = []
 var scroll: ScrollContainer
 var dragging_slider := false
@@ -29,8 +30,8 @@ func _ready() -> void:
 	navigation.add_theme_constant_override("v_separation", 12)
 	add_child(navigation)
 	var group := ButtonGroup.new()
-	for index in range(3):
-		var title: String = ["Library sorting", "Screen", "Environment"][index]
+	for index in range(4):
+		var title: String = ["Library sorting", "Screen", "Environment", "Playback"][index]
 		var button := Widgets.button(title, func(): _show_section(index), navigation)
 		button.toggle_mode = true
 		button.button_group = group
@@ -46,7 +47,7 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
-	for index in range(3):
+	for index in range(4):
 		var section := VBoxContainer.new()
 		section.add_theme_constant_override("separation", 18)
 		section.visible = index == 0
@@ -55,6 +56,7 @@ func _ready() -> void:
 	_build_library(sections[0])
 	_build_screen(sections[1])
 	_build_environment(sections[2])
+	_build_playback(sections[3])
 	Widgets.button("Back", func(): back_requested.emit(), self)
 	resized.connect(_adapt_columns)
 	_adapt_columns()
@@ -92,6 +94,27 @@ func _build_library(parent: VBoxContainer) -> void:
 	parent.move_child(order_heading, 1)
 	parent.move_child(order, 2)
 	_hint("Ascending sorts A to Z, low to high or oldest first. Descending reverses that order. Sort order does not affect Random.", parent)
+
+func _build_playback(parent: VBoxContainer) -> void:
+	Widgets.label("Playback quality", parent, 26)
+	_hint("Choose the video quality. Your choice applies to the next video you start.", parent)
+	playback_choices = VBoxContainer.new()
+	playback_choices.add_theme_constant_override("separation", 12)
+	parent.add_child(playback_choices)
+	var group := ButtonGroup.new()
+	var conversion_hint := "Jellyfin converts the video for this device."
+	if OS.get_name() == "Android":
+		conversion_hint = "Jellyfin converts the video for this device, up to 1080p at 30 fps."
+	for option in [
+		["Automatic", "auto", "Play the original file when supported. Otherwise, Jellyfin converts it."],
+		["Original full resolution", "original", "Play the original file without conversion. Your device must support its format."],
+		["Transcoded", "transcoded", conversion_hint]
+	]:
+		var row := VBoxContainer.new()
+		playback_choices.add_child(row)
+		_choice(option[0], option[1] == settings.playback_mode, group, row,
+			func(): settings.playback_mode = option[1]; _save())
+		_hint(option[2], row)
 
 func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, action: Callable) -> CheckBox:
 	var choice := CheckBox.new()

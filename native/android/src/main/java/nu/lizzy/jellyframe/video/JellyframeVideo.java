@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Surface;
 import android.util.Log;
 import org.godotengine.godot.Godot;
@@ -22,6 +23,9 @@ public final class JellyframeVideo extends GodotPlugin {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicBoolean frameAvailable = new AtomicBoolean();
     private final float[] transform = new float[16];
+    private final PlaybackWatchdog watchdog = new PlaybackWatchdog();
+    private volatile long lastFrame;
+    private final Runnable pollPlayback = this::pollPlayback;
     private SurfaceTexture texture;
     private Surface surface;
     private MediaPlayer player;
@@ -57,7 +61,11 @@ public final class JellyframeVideo extends GodotPlugin {
                 releaseSurface();
                 texture = new SurfaceTexture(textureId);
                 Log.i("JellyframeVideo", "SurfaceTexture created");
-                texture.setOnFrameAvailableListener(ignored -> frameAvailable.set(true));
+                texture.setOnFrameAvailableListener(ignored -> {
+                    if (ignored != texture) return;
+                    lastFrame = SystemClock.elapsedRealtime();
+                    frameAvailable.set(true);
+                });
                 surface = new Surface(texture);
                 Surface output = surface;
                 main.post(() -> {
@@ -76,23 +84,44 @@ public final class JellyframeVideo extends GodotPlugin {
             headers.put("android-allow-cross-domain-redirect", "0");
             player.setDataSource(getContext(), Uri.parse(url), headers);
             player.setOnPreparedListener(current -> {
+                if (current != player) return;
                 Log.i("JellyframeVideo", "Decoder prepared: " + current.getVideoWidth() + "x" + current.getVideoHeight());
                 prepared = true;
+                watchdog.reset(SystemClock.elapsedRealtime());
                 duration = Math.max(0, current.getDuration());
                 if (startMs > 0) current.seekTo(startMs, MediaPlayer.SEEK_CLOSEST);
                 current.start();
+                main.post(pollPlayback);
                 emitSignal("prepared");
             });
             player.setOnVideoSizeChangedListener((current, width, height) -> emitSignal("video_size", width, height));
             player.setOnInfoListener((current, what, extra) -> {
-                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) buffering = true;
-                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) buffering = false;
+                if (current != player) return true;
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                    buffering = true;
+                    Log.i("JellyframeVideo", "Buffering started at " + position + " ms");
+                }
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
+                    buffering = false;
+                    Log.i("JellyframeVideo", "Buffering ended at " + position + " ms");
+                }
+                if (what == MediaPlayer.MEDIA_INFO_VIDEO_TRACK_LAGGING) Log.w("JellyframeVideo", "Video decoder is falling behind");
                 return false;
             });
-            player.setOnSeekCompleteListener(current -> seeking = false);
-            player.setOnCompletionListener(current -> emitSignal("completed"));
+            player.setOnSeekCompleteListener(current -> {
+                if (current != player) return;
+                seeking = false;
+                watchdog.setPaused(!current.isPlaying(), SystemClock.elapsedRealtime());
+            });
+            player.setOnCompletionListener(current -> {
+                if (current != player) return;
+                main.removeCallbacks(pollPlayback);
+                emitSignal("completed");
+            });
             player.setOnErrorListener((current, what, extra) -> {
+                if (current != player) return true;
                 prepared = false;
+                main.removeCallbacks(pollPlayback);
                 emitSignal("failed", "Android could not decode this stream (" + what + ", " + extra + ").");
                 return true;
             });
@@ -108,12 +137,24 @@ public final class JellyframeVideo extends GodotPlugin {
             texture.updateTexImage();
             synchronized (transform) { texture.getTransformMatrix(transform); }
         }
-        main.post(() -> {
-            if (player != null && prepared) {
-                try { position = player.getCurrentPosition(); }
-                catch (IllegalStateException ignored) { prepared = false; }
+    }
+
+    private void pollPlayback() {
+        if (player == null || !prepared) return;
+        try {
+            position = player.getCurrentPosition();
+            if (watchdog.stalled(SystemClock.elapsedRealtime(), lastFrame, buffering || seeking)) {
+                prepared = false;
+                Log.w("JellyframeVideo", "No video frames at " + position + " ms, buffering=" + buffering + ", seeking=" + seeking);
+                emitSignal("failed", "Video playback stalled.");
+                return;
             }
-        });
+        } catch (IllegalStateException exception) {
+            prepared = false;
+            emitSignal("failed", "The video player stopped unexpectedly.");
+            return;
+        }
+        main.postDelayed(pollPlayback, 250);
     }
 
     @UsedByGodot public float[] texture_transform() {
@@ -137,6 +178,7 @@ public final class JellyframeVideo extends GodotPlugin {
         main.post(() -> {
             if (player == null || !prepared) return;
             if (paused) player.pause(); else player.start();
+            watchdog.setPaused(paused, SystemClock.elapsedRealtime());
         });
     }
 
@@ -144,6 +186,7 @@ public final class JellyframeVideo extends GodotPlugin {
         main.post(() -> {
             if (player != null && prepared) {
                 seeking = true;
+                watchdog.setPaused(!player.isPlaying(), SystemClock.elapsedRealtime());
                 player.seekTo(Math.max(0, Math.min(milliseconds, player.getDuration())), MediaPlayer.SEEK_CLOSEST);
             }
         });
@@ -152,6 +195,7 @@ public final class JellyframeVideo extends GodotPlugin {
     @UsedByGodot public void stop_video() { main.post(this::releasePlayer); }
 
     private void releasePlayer() {
+        main.removeCallbacks(pollPlayback);
         generation++;
         prepared = false;
         buffering = false;
@@ -162,6 +206,7 @@ public final class JellyframeVideo extends GodotPlugin {
     }
 
     private void releaseSurface() {
+        lastFrame = 0;
         frameAvailable.set(false);
         if (surface != null) { surface.release(); surface = null; }
         if (texture != null) { texture.release(); texture = null; }

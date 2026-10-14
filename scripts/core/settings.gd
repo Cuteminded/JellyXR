@@ -3,6 +3,7 @@ extends RefCounted
 
 const PATH := "user://settings.cfg"
 const SCREEN_KEYS := ["width", "distance", "height", "curvature"]
+const PLAYBACK_MODES := ["auto", "original", "transcoded"]
 const LIBRARY_SORT_OPTIONS := [
 	["Name", "SortName"], ["Random", "Random"],
 	["Community rating", "CommunityRating"], ["Critics rating", "CriticRating"],
@@ -19,6 +20,7 @@ var server := ""
 var device_id := ""
 var library_sort_by := "SortName"
 var library_sort_order := "Ascending"
+var playback_mode := "auto"
 
 func load_settings(path: String = PATH) -> void:
 	var config := ConfigFile.new()
@@ -40,6 +42,8 @@ func load_settings(path: String = PATH) -> void:
 	library_sort_order = str(config.get_value("library", "sort_order", "Ascending"))
 	if library_sort_order not in ["Ascending", "Descending"]:
 		library_sort_order = "Ascending"
+	playback_mode = str(config.get_value("playback", "mode", "auto"))
+	if playback_mode not in PLAYBACK_MODES: playback_mode = "auto"
 	if device_id.is_empty():
 		device_id = Crypto.new().generate_random_bytes(16).hex_encode()
 		save(path)
@@ -62,5 +66,6 @@ func save(path: String = PATH) -> Error:
 	config.set_value("connection", "device_id", device_id)
 	config.set_value("library", "sort_by", library_sort_by)
 	config.set_value("library", "sort_order", library_sort_order)
+	config.set_value("playback", "mode", playback_mode)
 	return config.save(path)
 

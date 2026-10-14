@@ -42,6 +42,7 @@ func _ready() -> void:
 	api.device_id = settings.device_id
 	add_child(api)
 	session.api = api
+	session.settings = settings
 	add_child(session)
 	add_child(video)
 	_setup_world()

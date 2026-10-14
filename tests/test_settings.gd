@@ -38,21 +38,25 @@ func run_checks() -> void:
 	settings.library_sort_by = "PremiereDate"
 	settings.library_sort_order = "Descending"
 	settings.environment = "Passthrough"
+	settings.playback_mode = "original"
 	var path := "res://dist/settings-test.cfg"
 	check(settings.save(path) == OK, "Settings can be saved.")
 	var restored := JellyframeSettings.new()
 	restored.load_settings(path)
 	check(restored.library_sort_by == "PremiereDate" and restored.library_sort_order == "Descending", "Sorting survives a restart.")
 	check(restored.environment == "Passthrough", "Passthrough preference survives a restart.")
+	check(restored.playback_mode == "original", "Playback preference survives a restart.")
 	var config := ConfigFile.new()
 	config.load(path)
 	config.set_value("library", "sort_by", "Invalid")
 	config.set_value("library", "sort_order", "Invalid")
 	config.set_value("screen", "environment", "Invalid")
+	config.set_value("playback", "mode", "Invalid")
 	config.save(path)
 	restored.load_settings(path)
 	check(restored.library_sort_by == "SortName" and restored.library_sort_order == "Ascending", "Invalid sorting preferences use safe defaults.")
 	check(restored.environment == "Void", "Invalid environments fall back to Void.")
+	check(restored.playback_mode == "auto", "Invalid playback preferences fall back to Automatic.")
 	for names in [["Theatre", "Cinema"], ["Theatre LowRes", "Theatre"]]:
 		if config.has_section_key("screen", "environment_version"):
 			config.erase_section_key("screen", "environment_version")
@@ -177,6 +181,22 @@ func run_checks() -> void:
 		check(shell.get_global_rect().end.x <= root.size.x, "Narrow settings must fit within the viewport.")
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-narrow-bottom")
+	var playback_tab: Button = view.get_child(0).get_child(3)
+	playback_tab.button_pressed = true
+	playback_tab.pressed.emit()
+	check(view.sections[3].visible and not view.sections[2].visible, "Playback has its own settings page.")
+	var original_choice: CheckBox = view.playback_choices.get_child(1).get_child(0)
+	var transcoded_choice: CheckBox = view.playback_choices.get_child(2).get_child(0)
+	var saves_before := fixture.saves
+	original_choice.button_pressed = true
+	original_choice.pressed.emit()
+	check(fixture.playback_mode == "original" and fixture.saves == saves_before + 1, "Original playback selection saves once.")
+	transcoded_choice.button_pressed = true
+	transcoded_choice.pressed.emit()
+	check(fixture.playback_mode == "transcoded" and not original_choice.button_pressed, "Playback options are mutually exclusive.")
+	view._reset_screen()
+	check(fixture.playback_mode == "transcoded", "Screen reset preserves playback quality.")
+	if "--capture" in OS.get_cmdline_user_args(): await capture("settings-playback")
 	print("Settings failures: ", failures)
 	quit(1 if failures else 0)
 

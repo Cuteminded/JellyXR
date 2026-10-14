@@ -47,6 +47,9 @@ func position_ms() -> int:
 func duration_ms() -> int:
 	return bridge.duration_ms() if available() else 0
 
+func is_buffering() -> bool:
+	return bridge.is_buffering() if available() else false
+
 func stop() -> void:
 	if available(): bridge.stop_video()
 
