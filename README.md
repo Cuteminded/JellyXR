@@ -31,7 +31,9 @@ Follow the [installation guide](INSTALLATION.md) to download a build, install th
 
 - 180° projection and top-bottom 3D still need headset validation.
 - Steam Frame installation and playback remain untested.
-- Linux x64 and ARM64 headset behaviour remains untested; the CI playback checks run without a headset and cannot validate tracking, controllers, or stereo output.
+- Linux VR playback has been tested on a Steam Machine running SteamOS, using Vulkan and SteamVR. ARM64 and other Linux systems still need headset testing.
+- CI playback checks run without a headset and do not verify tracking, controller input, or stereo output.
+- Desktop mode only shows the interface. PC video playback requires an active OpenXR session with a connected headset.
 - The PC decoder copies video frames through system memory, so high-resolution playback needs performance testing, especially with 4K and full-SBS files.
 - Specific 4K HEVC and HDR videos still need testing; HDR playback relies on your Jellyfin server to convert the video to standard dynamic range with correct colours.
 - Some files need your Jellyfin server to convert the video during playback, which can fail if the server cannot handle the conversion.
