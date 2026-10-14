@@ -102,9 +102,7 @@ func _build_playback(parent: VBoxContainer) -> void:
 	playback_choices.add_theme_constant_override("separation", 12)
 	parent.add_child(playback_choices)
 	var group := ButtonGroup.new()
-	var conversion_hint := "Jellyfin converts the video for this device."
-	if OS.get_name() == "Android":
-		conversion_hint = "Jellyfin converts the video for this device, up to 1080p at 30 fps."
+	var conversion_hint := "Jellyfin converts the video for this device, up to 1080p at 30 fps."
 	for option in [
 		["Automatic", "auto", "Play the original file when supported. Otherwise, Jellyfin converts it."],
 		["Original full resolution", "original", "Play the original file without conversion. Your device must support its format."],

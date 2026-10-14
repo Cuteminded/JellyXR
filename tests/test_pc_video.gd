@@ -72,7 +72,9 @@ func run_checks() -> void:
 	await create_timer(0.4).timeout
 	check(absi(decoder.position_ms() - paused_at) < 100, "Pause stops the clock")
 	decoder.seek_to(3000)
+	check(decoder.is_buffering(), "Native seeking shows buffering while playback restarts")
 	check(await wait_until(func(): return absi(decoder.position_ms() - 3000) < 250), "Seeking works while paused")
+	check(await wait_until(func(): return not decoder.is_buffering()), "Seek completion clears the loading state")
 	decoder.set_paused(false)
 	check(await wait_until(func(): return decoder.position_ms() > 3400), "Playback continues after seeking")
 	decoder.seek_to(decoder.duration_ms() - 500)
@@ -81,6 +83,7 @@ func run_checks() -> void:
 	check(decoder.open_video(url, authorization, 0).is_empty(), "The decoder can reopen after completion")
 	check(await wait_until(func(): return ready_count == 2), "Reopened playback prepares")
 	decoder.stop_video()
+	check(not decoder.is_buffering(), "Stopping clears native buffering and seeking state")
 	await create_timer(0.2).timeout
 	check(ended_count == 1, "Stopping does not trigger episode autoplay")
 	check(decoder.open_video(ProjectSettings.globalize_path("res://build/desktop/missing.mp4"), "", 0).is_empty(), "Invalid files report asynchronous errors")

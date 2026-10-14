@@ -25,7 +25,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 	started = false
 	var use_transcode := transcode or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
-	var profile := _device_profile(use_transcode, OS.get_name() == "Android", original)
+	var profile := _device_profile(use_transcode, original)
 	if not use_transcode:
 		print("Jellyframe playback: direct codecs=", profile.DirectPlayProfiles[0].get("VideoCodec", "original formats"))
 	var result := await api.request("/Items/%s/PlaybackInfo" % str(item.Id).uri_encode(), HTTPClient.METHOD_POST, {
@@ -68,18 +68,17 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 			break
 	stream_ready.emit(url, source, start_ms)
 
-func _device_profile(transcode: bool, android: bool, original: bool = false) -> Dictionary:
+func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 	var direct_profile := {"Container": "mp4,m4v,mkv,webm", "Type": "Video"}
 	if not original:
 		direct_profile["VideoCodec"] = "h264,hevc,vp9"
 		direct_profile["AudioCodec"] = "aac,mp3,opus,vorbis"
 	var transcoding_profile := {"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}
 	var codec_conditions := [{"Condition": "Equals", "Property": "VideoRangeType", "Value": "SDR", "IsRequired": true}]
-	if android:
-		transcoding_profile["Conditions"] = []
-		for limit in [["Width", "1920"], ["Height", "1080"], ["VideoFramerate", "30"], ["VideoBitrate", "12000000"]]:
-			transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
-		if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
+	transcoding_profile["Conditions"] = []
+	for limit in [["Width", "1920"], ["Height", "1080"], ["VideoFramerate", "30"], ["VideoBitrate", "12000000"]]:
+		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
+	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {
 		"Name": ("Jellyframe original " if original else "Jellyframe SDR ") + OS.get_name(),
 		"MaxStreamingBitrate": 2147483647 if original else 80000000,

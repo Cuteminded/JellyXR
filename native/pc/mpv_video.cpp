@@ -2,9 +2,15 @@
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 using namespace godot;
+
+static uint64_t playback_time_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 void JellyframeMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("open_video", "url", "authorization", "start_ms"), &JellyframeMpv::open_video);
@@ -44,6 +50,9 @@ String JellyframeMpv::initialize() {
     if (error < 0) return String("PC decoder initialization failed: ") + mpv_error_string(error);
     mpv_observe_property(player, 1, "time-pos", MPV_FORMAT_DOUBLE);
     mpv_observe_property(player, 2, "duration", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(player, 3, "paused-for-cache", MPV_FORMAT_FLAG);
+    mpv_observe_property(player, 4, "seeking", MPV_FORMAT_FLAG);
+    mpv_observe_property(player, 5, "pause", MPV_FORMAT_FLAG);
     return "";
 }
 
@@ -81,14 +90,18 @@ String JellyframeMpv::open_video(String url, String authorization, int64_t start
     return "";
 }
 
-void JellyframeMpv::set_paused(bool paused) {
+void JellyframeMpv::set_paused(bool value) {
     if (!player || !active) return;
-    int flag = paused;
+    paused = value;
+    watchdog.reset(playback_time_ms());
+    int flag = value;
     mpv_set_property_async(player, 0, "pause", MPV_FORMAT_FLAG, &flag);
 }
 
 void JellyframeMpv::seek_to(int64_t milliseconds) {
     if (!player || !active) return;
+    seeking = true;
+    watchdog.reset(playback_time_ms());
     auto target = String::num(double(std::max<int64_t>(0, milliseconds)) / 1000.0, 3).utf8();
     const char *command[] = {"seek", target.get_data(), "absolute+exact", nullptr};
     mpv_command_async(player, 0, command);
@@ -98,12 +111,7 @@ int64_t JellyframeMpv::position_ms() const { return position; }
 int64_t JellyframeMpv::duration_ms() const { return duration; }
 
 bool JellyframeMpv::is_buffering() const {
-    if (!player || !active) return false;
-    int buffering = 0;
-    int seeking = 0;
-    mpv_get_property(player, "paused-for-cache", MPV_FORMAT_FLAG, &buffering);
-    mpv_get_property(player, "seeking", MPV_FORMAT_FLAG, &seeking);
-    return buffering || seeking;
+    return active && (buffering || seeking);
 }
 
 void JellyframeMpv::stop_video() {
@@ -112,6 +120,11 @@ void JellyframeMpv::stop_video() {
 
 void JellyframeMpv::shutdown() {
     active = false;
+    prepared = false;
+    paused = false;
+    buffering = false;
+    seeking = false;
+    set_process(false);
     renderer.stop();
     if (player) mpv_terminate_destroy(player);
     player = nullptr;
@@ -135,8 +148,8 @@ bool JellyframeMpv::update_size() {
     return true;
 }
 
-void JellyframeMpv::upload_frame() {
-    if (!renderer.take_frame(frame)) return;
+bool JellyframeMpv::upload_frame() {
+    if (!renderer.take_frame(frame)) return false;
     PackedByteArray pixels;
     pixels.resize(int64_t(frame.pixels.size()));
     std::memcpy(pixels.ptrw(), frame.pixels.data(), frame.pixels.size());
@@ -146,6 +159,31 @@ void JellyframeMpv::upload_frame() {
         emit_signal("texture_changed", texture);
     } else {
         texture->update(image);
+    }
+    return true;
+}
+
+void JellyframeMpv::update_property(const mpv_event &event) {
+    auto *property = static_cast<mpv_event_property *>(event.data);
+    if (!property->data) return;
+    if (property->format == MPV_FORMAT_DOUBLE) {
+        int64_t milliseconds = int64_t(*static_cast<double *>(property->data) * 1000.0);
+        if (event.reply_userdata == 1) position = std::max<int64_t>(0, milliseconds);
+        if (event.reply_userdata == 2) duration = std::max<int64_t>(0, milliseconds);
+    } else if (property->format == MPV_FORMAT_FLAG) {
+        bool value = *static_cast<int *>(property->data) != 0;
+        if (event.reply_userdata == 3) {
+            if (buffering && !value) watchdog.reset(playback_time_ms());
+            buffering = value;
+        }
+        if (event.reply_userdata == 4) {
+            if (seeking && !value) watchdog.reset(playback_time_ms());
+            seeking = value;
+        }
+        if (event.reply_userdata == 5) {
+            paused = value;
+            watchdog.reset(playback_time_ms());
+        }
     }
 }
 
@@ -160,17 +198,15 @@ void JellyframeMpv::_process(double) {
         auto *event = mpv_wait_event(player, 0);
         if (event->event_id == MPV_EVENT_NONE) break;
         if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
-            auto *property = static_cast<mpv_event_property *>(event->data);
-            if (property->format != MPV_FORMAT_DOUBLE || !property->data) continue;
-            int64_t milliseconds = int64_t(*static_cast<double *>(property->data) * 1000.0);
-            if (event->reply_userdata == 1) position = std::max<int64_t>(0, milliseconds);
-            if (event->reply_userdata == 2) duration = std::max<int64_t>(0, milliseconds);
+            update_property(*event);
         } else if (event->event_id == MPV_EVENT_FILE_LOADED) {
             if (!update_size()) {
                 active = false;
                 emit_signal("failed", "The stream has no supported video track.");
                 return;
             }
+            prepared = true;
+            watchdog.reset(playback_time_ms());
             emit_signal("prepared");
             return;
         } else if (event->event_id == MPV_EVENT_VIDEO_RECONFIG) {
@@ -194,5 +230,9 @@ void JellyframeMpv::_process(double) {
             return;
         }
     }
-    upload_frame();
+    bool received_frame = upload_frame();
+    if (prepared && watchdog.stalled(playback_time_ms(), received_frame, paused, buffering || seeking)) {
+        active = false;
+        emit_signal("failed", "Video playback stalled.");
+    }
 }

@@ -31,20 +31,19 @@ func run_checks() -> void:
 	await session.open({"Id": "fixture"}, true)
 	assert(session.method == "Transcode" and streams[1][1] == 0, "Converted streams start at the server-requested offset")
 	assert(not api.bodies[1].EnableDirectPlay and api.bodies[1].DeviceProfile.DirectPlayProfiles.is_empty(), "Recovery requests conversion instead of the failed direct stream")
-	var android_profile := session._device_profile(false, true)
-	assert(android_profile.MaxStreamingBitrate == 80000000, "Direct playback retains its original bitrate budget")
-	assert(not android_profile.DirectPlayProfiles.is_empty(), "Android still negotiates original-quality direct playback")
-	assert(android_profile.CodecProfiles.size() == 1, "Transcoding limits do not restrict direct-play codecs")
+	var automatic_profile := session._device_profile(false)
+	assert(automatic_profile.MaxStreamingBitrate == 80000000, "Direct playback retains its original bitrate budget")
+	assert(not automatic_profile.DirectPlayProfiles.is_empty(), "Automatic mode still negotiates original-quality direct playback")
+	assert(automatic_profile.CodecProfiles.size() == 1, "Transcoding limits do not restrict direct-play codecs")
 	var limits: Dictionary = {}
-	for condition in android_profile.TranscodingProfiles[0].Conditions:
+	for condition in automatic_profile.TranscodingProfiles[0].Conditions:
 		assert(condition.Condition == "LessThanEqual", "Transcoding uses maximum values rather than fixed dimensions")
 		limits[condition.Property] = condition.Value
-	assert(limits == {"Width": "1920", "Height": "1080", "VideoFramerate": "30", "VideoBitrate": "12000000"}, "Android conversion requests a lower-cost output")
-	var retry_profile := session._device_profile(true, true)
+	assert(limits == {"Width": "1920", "Height": "1080", "VideoFramerate": "30", "VideoBitrate": "12000000"}, "Conversion requests a lower-cost output on PC and Android")
+	var retry_profile := session._device_profile(true)
 	assert(retry_profile.DirectPlayProfiles.is_empty(), "Decoder recovery disables the failed direct-play path")
-	assert(retry_profile.TranscodingProfiles == android_profile.TranscodingProfiles, "Decoder recovery retains conversion limits")
-	var pc_profile := session._device_profile(false, false)
-	assert(not pc_profile.TranscodingProfiles[0].has("Conditions"), "Android conversion limits do not affect PC playback")
+	assert(retry_profile.TranscodingProfiles == automatic_profile.TranscodingProfiles, "Decoder recovery retains conversion limits")
+	assert(api.bodies[1].DeviceProfile.TranscodingProfiles[0].Conditions == retry_profile.TranscodingProfiles[0].Conditions, "The playback request sends the conversion limits on the current platform")
 	api.device_id = "fixture device"
 	await session._log_transcoding()
 	assert(api.diagnostics_path == "/Sessions?DeviceId=fixture%20device", "Diagnostics request only the current device and escape its identifier")

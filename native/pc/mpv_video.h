@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render_worker.h"
+#include "playback_watchdog.h"
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/node.hpp>
 
@@ -24,7 +25,8 @@ protected:
 private:
     godot::String initialize();
     bool update_size();
-    void upload_frame();
+    bool upload_frame();
+    void update_property(const mpv_event &event);
     void shutdown();
     mpv_handle *player = nullptr;
     RenderWorker renderer;
@@ -33,4 +35,9 @@ private:
     int64_t position = 0;
     int64_t duration = 0;
     bool active = false;
+    bool prepared = false;
+    bool paused = false;
+    bool buffering = false;
+    bool seeking = false;
+    PlaybackWatchdog watchdog;
 };
