@@ -50,6 +50,7 @@ func run_checks() -> void:
 	var video := FixtureVideo.new()
 	app.add_child(video)
 	app.video = video
+	check_projection_window_position(app)
 	app.settings.environment = "Theatre"
 	app._change_environment()
 	app.screen.show()
@@ -103,6 +104,21 @@ func run_checks() -> void:
 	await process_frame
 	print("180 and 360 video checks: ", "PASS" if failures == 0 else str(failures) + " failures")
 	quit(1 if failures else 0)
+
+func check_projection_window_position(app: Node) -> void:
+	var window_transform: Transform3D = app.panel.global_transform
+	var viewer_transform: Transform3D = app.camera.global_transform
+	app.camera.position += Vector3(0.4, 0.2, 0.3)
+	app.camera.rotate_y(0.5)
+	for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.SCREEN, VideoProjection.Mode.EQUIRECTANGULAR, VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.SCREEN]:
+		app._select_projection(projection)
+		check(app.panel.global_transform.is_equal_approx(window_transform), "Projection switching preserves the settings window position and orientation")
+		check(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Projection switching centers playback toward the viewer")
+		if projection != VideoProjection.Mode.SCREEN:
+			check(app.world.panorama.global_position.is_equal_approx(app.camera.global_position), "Projection switching centers the panorama on the viewer")
+	app.camera.global_transform = viewer_transform
+	app._recenter()
+	app.projection_overridden = false
 
 func check_180_playback(app: Node) -> void:
 	await app._play_stream("", {"Path": "Beach.VR180.FSBS.mp4"}, 0)

@@ -424,7 +424,7 @@ func _select_projection(value: int) -> void:
 	projection_mode = value
 	projection_overridden = true
 	world.set_panoramic(value != VideoProjection.Mode.SCREEN, VideoProjection.horizontal_angle(projection_mode))
-	_recenter()
+	_recenter_video()
 
 func _select_stereo(value: int) -> void:
 	mode = value
@@ -440,6 +440,9 @@ func _change_environment() -> void:
 func _recenter() -> void:
 	panel.global_transform = camera.global_transform
 	panel.position += -camera.global_basis.z * 2.7
+	_recenter_video()
+
+func _recenter_video() -> void:
 	screen.global_basis = camera.global_basis
 	theatre.recenter(camera.global_transform)
 	if world.panoramic:
