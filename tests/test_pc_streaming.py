@@ -66,6 +66,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", required=True)
     parser.add_argument("--hls-directory", type=Path)
+    parser.add_argument("--opengl", action="store_true", help="Test GPU playback in a window")
     args = parser.parse_args()
     project = Path(__file__).resolve().parents[1]
     media = [(project / "native/android/src/main/res/raw", "stereo_test.mp4")]
@@ -78,10 +79,12 @@ def main():
             thread.start()
             try:
                 result = subprocess.run(
-                    [args.godot, "--headless", "--xr-mode", "off", "--path", str(project),
+                    [args.godot, *(["--resolution", "640x360"] if args.opengl else ["--headless"]),
+                     "--xr-mode", "off", "--path", str(project),
                      "--script", "tests/test_pc_video.gd", "--",
                      f"--video=http://127.0.0.1:{server.server_port}/{name}",
-                     f"--auth={AUTHORIZATION}"],
+                     f"--auth={AUTHORIZATION}",
+                     f"--expect-renderer={'opengl' if args.opengl else 'software'}"],
                     timeout=45, check=False,
                 )
                 if result.returncode:

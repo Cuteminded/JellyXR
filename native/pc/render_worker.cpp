@@ -54,17 +54,23 @@ void RenderWorker::render_loop(mpv_render_context *renderer) {
         auto size = dimensions.load();
         frame.width = int(size >> 32);
         frame.height = int(size & 0xffffffff);
-        frame.pixels.resize(size_t(frame.width) * frame.height * 4);
+        if (frame.pixels.resize(int64_t(frame.width) * frame.height * 4) != 0) {
+            render_error = MPV_ERROR_NOMEM;
+            break;
+        }
         int extent[] = {frame.width, frame.height};
         size_t stride = size_t(frame.width) * 4;
         mpv_render_param params[] = {
             {MPV_RENDER_PARAM_SW_SIZE, extent},
             {MPV_RENDER_PARAM_SW_FORMAT, const_cast<char *>("rgba")},
             {MPV_RENDER_PARAM_SW_STRIDE, &stride},
-            {MPV_RENDER_PARAM_SW_POINTER, frame.pixels.data()},
+            {MPV_RENDER_PARAM_SW_POINTER, frame.pixels.ptrw()},
             {MPV_RENDER_PARAM_INVALID, nullptr}
         };
+        auto render_started = std::chrono::steady_clock::now();
         int result = mpv_render_context_render(renderer, params);
+        frame.render_time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - render_started).count();
         if (result < 0) {
             render_error = result;
             break;

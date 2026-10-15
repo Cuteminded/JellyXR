@@ -41,9 +41,11 @@ func run_checks() -> void:
 	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
 	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
 	var authorization := ""
+	var expected_renderer := "software" if DisplayServer.get_name() == "headless" or OS.get_environment("JELLYFRAME_PC_RENDERER") == "software" else "opengl"
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--video="): url = argument.trim_prefix("--video=")
 		if argument.begins_with("--auth="): authorization = argument.trim_prefix("--auth=")
+		if argument.begins_with("--expect-renderer="): expected_renderer = argument.trim_prefix("--expect-renderer=")
 	var open_error: String = decoder.open_video(url, authorization, 1000)
 	check(open_error.is_empty(), "The decoder opens a video: " + open_error)
 	if not open_error.is_empty():
@@ -51,20 +53,28 @@ func run_checks() -> void:
 		quit(1)
 		return
 	var received_frame := await wait_until(func(): return (ready_count == 1 and texture != null) or not errors.is_empty())
-	check(received_frame and texture != null, "A decoded frame reaches Godot: " + str(errors))
+	check(received_frame and texture != null, "A decoded frame reaches Godot: %s, prepared=%d, diagnostics=%s" % [str(errors), ready_count, str(decoder.playback_diagnostics())])
 	if texture == null:
 		decoder.stop_video()
 		decoder.queue_free()
 		quit(1)
 		return
 	check(dimensions == Vector2i(1920, 1080), "Decoded video dimensions reach the screen")
+	var diagnostics: Dictionary = decoder.playback_diagnostics()
+	check(decoder.rendering_backend() == expected_renderer, "The expected rendering backend is active")
+	check(diagnostics.get("width") == 1920 and diagnostics.get("height") == 1080, "Diagnostics report the full-resolution video")
+	check(diagnostics.get("cpu_rgba_bytes") == (0 if expected_renderer == "opengl" else 1920 * 1080 * 4), "GPU rendering avoids a CPU RGBA frame buffer")
+	check(diagnostics.get("uploaded_frames", 0) > 0, "Diagnostics count delivered frames")
+	check(diagnostics.get("hwdec-current", "").length() > 0, "Diagnostics identify hardware decoding or its availability")
 	check(await wait_until(func(): return decoder.position_ms() > 1400), "Playback resumes and advances")
 	check(decoder.duration_ms() > 2000, "Duration is available for seeking")
 	if texture != null and DisplayServer.get_name() != "headless":
 		var image := texture.get_image()
 		check(not image.is_empty(), "The decoder uploads a readable texture")
 		if not image.is_empty():
-			check(image.get_pixel(100, 100) != image.get_pixel(1800, 100), "Both halves of the stereo frame reach the texture")
+			check(image.get_pixel(240, 300).get_luminance() > 0.7, "The left stereo frame reaches the texture")
+			check(image.get_pixel(1200, 300).get_luminance() > 0.7, "The right stereo frame reaches the texture")
+			check(image.get_pixel(380, 500).get_luminance() > 0.7, "The video keeps its source orientation")
 			image.save_png("res://build/desktop/decoded-frame.png")
 	decoder.set_paused(true)
 	await create_timer(0.4).timeout
@@ -83,6 +93,7 @@ func run_checks() -> void:
 	check(decoder.open_video(url, authorization, 0).is_empty(), "The decoder can reopen after completion")
 	check(await wait_until(func(): return ready_count == 2), "Reopened playback prepares")
 	decoder.stop_video()
+	check(decoder.playback_diagnostics().is_empty(), "Stopping releases playback diagnostics")
 	check(not decoder.is_buffering(), "Stopping clears native buffering and seeking state")
 	await create_timer(0.2).timeout
 	check(ended_count == 1, "Stopping does not trigger episode autoplay")

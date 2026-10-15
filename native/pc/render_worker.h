@@ -2,17 +2,18 @@
 
 #include <mpv/client.h>
 #include <mpv/render.h>
+#include <godot_cpp/variant/packed_byte_array.hpp>
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
 #include <thread>
-#include <vector>
 
 struct VideoFrame {
     int width = 0;
     int height = 0;
-    std::vector<uint8_t> pixels;
+    godot::PackedByteArray pixels;
+    int64_t render_time_us = 0;
 };
 
 class RenderWorker {
