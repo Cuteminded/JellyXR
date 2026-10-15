@@ -27,9 +27,20 @@ func run_checks() -> void:
 	app._video_prepared()
 	assert(not indicator.visible, "Prepared playback hides loading")
 	backend.buffering = true
-	app._update_timeline()
+	app._process(0.01)
 	assert(indicator.visible, "Buffering shows loading with controls hidden")
+	assert(indicator.label.text == "Buffering video...", "Buffering identifies why playback is waiting")
+	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "The visible popup renders independently of video frames")
+	var popup_material: StandardMaterial3D = indicator.material_override
+	assert(popup_material.no_depth_test and popup_material.render_priority > 0, "The loading popup draws over video and playback controls")
+	app.screen.hide()
+	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Hiding the video also stops popup rendering")
+	app.screen.show()
+	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "Showing the video restores popup rendering")
 	backend.buffering = false
+	app._process(0.01)
+	assert(not indicator.visible, "Playback resuming hides the popup before the next timeline update")
+	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Hidden loading popups stop rendering")
 	backend.paused = true
 	app._update_timeline()
 	assert(not indicator.visible, "Pausing alone does not show loading")
@@ -49,6 +60,10 @@ func run_checks() -> void:
 		await create_timer(0.5).timeout
 		await RenderingServer.frame_post_draw
 		indicator.viewport.get_texture().get_image().save_png("res://dist/player-loading-preview.png")
+		indicator.show_buffering()
+		await create_timer(0.2).timeout
+		await RenderingServer.frame_post_draw
+		indicator.viewport.get_texture().get_image().save_png("res://dist/player-buffering-preview.png")
 		indicator.show_countdown("S02 E03 The next episode", 5)
 		await create_timer(0.2).timeout
 		await RenderingServer.frame_post_draw

@@ -484,8 +484,14 @@ func _duration_ms() -> int:
 func _update_timeline() -> void:
 	if autoplay_pending: return
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
-	if playing and (not decoder_ready or seeking or video.is_buffering()):
+	_update_loading()
+
+func _update_loading() -> void:
+	if autoplay_pending: return
+	if playing and (not decoder_ready or seeking):
 		world.player_loading.show_loading()
+	elif playing and video.is_buffering():
+		world.player_loading.show_buffering()
 	else:
 		world.player_loading.hide()
 
@@ -613,6 +619,7 @@ func _sign_out() -> void:
 
 func _process(delta: float) -> void:
 	if not playing: return
+	_update_loading()
 	timeline_elapsed += delta
 	if timeline_elapsed >= 0.25:
 		timeline_elapsed = 0.0

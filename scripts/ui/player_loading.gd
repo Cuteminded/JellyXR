@@ -28,11 +28,13 @@ func _ready() -> void:
 	viewport = SubViewport.new()
 	viewport.size = Vector2i(440, 170)
 	viewport.transparent_bg = true
-	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(viewport)
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.no_depth_test = true
+	material.render_priority = 1
 	material.albedo_texture = viewport.get_texture()
 	material_override = material
 	var panel := PanelContainer.new()
@@ -53,16 +55,27 @@ func _ready() -> void:
 	label = Widgets.label("Loading video...", body, 28)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cancel_button = Widgets.button("Cancel autoplay", func(): cancelled.emit(), body)
+	visibility_changed.connect(_update_viewport)
 	show_loading()
 	hide()
 
 func show_loading() -> void:
+	_show_waiting("Loading video...")
+
+func show_buffering() -> void:
+	_show_waiting("Buffering video...")
+
+func _show_waiting(message: String) -> void:
+	if visible and label.text == message and spinner.visible and not cancel_button.visible and not episode_title.visible: return
 	_set_height(170)
 	spinner.show()
 	episode_title.hide()
 	cancel_button.hide()
-	label.text = "Loading video..."
+	label.text = message
 	show()
+
+func _update_viewport() -> void:
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 
 func show_countdown(episode_name: String, seconds: int) -> void:
 	_set_height(200)
