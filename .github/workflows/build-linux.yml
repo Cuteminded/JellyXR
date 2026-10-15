@@ -55,7 +55,10 @@ jobs:
           JELLYFRAME_BUNDLE_INTEGRATION=1 python3 -m unittest discover -s tests -p 'test_linux_bundle.py'
 
       - name: Build PC video plugin
-        run: bash tools/build-pc-video.sh
+        run: |
+          bash tools/build-pc-video.sh
+          c++ -std=c++17 tests/test_pc_watchdog.cpp -o build/linux/test_pc_watchdog
+          build/linux/test_pc_watchdog
 
       - name: Install Godot and export templates
         run: |
@@ -77,7 +80,7 @@ jobs:
       - name: Test playback and authenticated streaming
         run: |
           godot --headless --xr-mode off --path . --editor --import --quit
-          for test in test_pc_video test_core test_seek test_recenter test_timeline test_autoplay test_player_return test_player_tooltips; do
+          for test in test_pc_video test_playback_profile test_player_loading test_core test_seek test_recenter test_timeline test_autoplay test_player_return test_player_tooltips; do
             timeout 60s godot --headless --xr-mode off --path . --script "tests/${test}.gd"
           done
           mkdir -p build/linux/hls
