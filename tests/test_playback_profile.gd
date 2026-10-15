@@ -3,6 +3,7 @@ extends SceneTree
 class FixtureClient extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var direct := true
+	var transcode_path := "/Videos/fixture/master.m3u8"
 	var diagnostics_path := ""
 
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, body: Dictionary = {}) -> Dictionary:
@@ -10,7 +11,7 @@ class FixtureClient extends JellyfinClient:
 			diagnostics_path = path
 			return {"ok": true, "data": [null, {"DeviceId": device_id, "NowPlayingItem": null}, {"DeviceId": device_id, "NowPlayingItem": {"Id": "fixture"}, "TranscodingInfo": null}]}
 		bodies.append(body)
-		return {"ok": true, "data": {"MediaSources": [{"Id": "fixture-source", "SupportsDirectPlay": direct, "TranscodingUrl": "/Videos/fixture/master.m3u8"}]}}
+		return {"ok": true, "data": {"MediaSources": [{"Id": "fixture-source", "SupportsDirectPlay": direct, "TranscodingUrl": transcode_path}]}}
 
 func _initialize() -> void:
 	call_deferred("run_checks")
@@ -29,7 +30,7 @@ func run_checks() -> void:
 	assert("Static=true" in streams[0][0], "Direct playback uses the original file")
 	api.direct = false
 	await session.open({"Id": "fixture"}, true)
-	assert(session.method == "Transcode" and streams[1][1] == 0, "Converted streams start at the server-requested offset")
+	assert(session.method == "Transcode" and streams[1][1] == 30000, "HLS resumes at the absolute position in the decoder")
 	assert(not api.bodies[1].EnableDirectPlay and api.bodies[1].DeviceProfile.DirectPlayProfiles.is_empty(), "Recovery requests conversion instead of the failed direct stream")
 	var automatic_profile := session._device_profile(false)
 	assert(automatic_profile.MaxStreamingBitrate == 80000000, "Direct playback retains its original bitrate budget")
@@ -76,8 +77,14 @@ func check_playback_choices(session: PlaybackSession, api: FixtureClient, stream
 	await session.open({"Id": "fixture", "UserData": {"PlaybackPositionTicks": 450000000}})
 	assert(session.method == "Transcode" and not api.bodies.back().EnableDirectPlay, "Transcoded playback bypasses a supported original stream")
 	assert(not api.bodies.back().AllowVideoStreamCopy, "Transcoded playback requests actual video conversion")
-	assert(api.bodies.back().StartTimeTicks == 450000000 and streams.back()[1] == 0, "Forced conversion preserves the server resume offset")
+	assert(api.bodies.back().StartTimeTicks == 450000000 and streams.back()[1] == 45000, "Forced HLS conversion preserves the resume position in the decoder")
 	session.settings.playback_mode = "original"
 	session.position_ticks = 900000000
 	await session.open(session.item, true)
 	assert(session.method == "Transcode" and api.bodies.back().StartTimeTicks == 900000000, "Seeking keeps the active playback choice even if the next-video preference changes")
+	assert(streams.back()[1] == 90000, "Reopened HLS streams retain the requested decoder position")
+	api.transcode_path = "/Videos/fixture/stream.mp4?StartTimeTicks=900000000"
+	await session.open(session.item, true)
+	assert(not session.is_hls() and streams.back()[1] == 0, "Progressive transcoding starts at the server offset without a second decoder seek")
+	session.source["TranscodingSubProtocol"] = "hls"
+	assert(session.is_hls(), "The advertised HLS protocol is recognized without a playlist extension")

@@ -322,7 +322,7 @@ func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	for stream in source.get("MediaStreams", []):
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
-	transcode_offset = session.position_ticks if session.method == "Transcode" else 0
+	transcode_offset = session.position_ticks if session.method == "Transcode" and not session.is_hls() else 0
 	if not seeking: _recenter()
 	screen.show()
 	playing = true
@@ -498,7 +498,7 @@ func _update_loading() -> void:
 func _seek_to(milliseconds: int) -> void:
 	if not playing or seeking or not decoder_ready: return
 	var target := clampi(milliseconds, 0, maxi(0, _duration_ms() - 1000))
-	if calibration or session.method != "Transcode":
+	if calibration or session.method != "Transcode" or session.is_hls():
 		video.seek(target)
 		return
 	seeking = true

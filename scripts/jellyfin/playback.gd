@@ -60,13 +60,19 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		if url.is_empty():
 			failed.emit("The server returned an unsupported stream address.")
 			return
-		start_ms = 0
+		if not is_hls(): start_ms = 0
 	print("Jellyframe playback: method=", method, ", bitrate=", source.get("Bitrate", 0), ", transcode reasons=", source.get("TranscodeReasons", []))
 	for track in source.get("MediaStreams", []):
 		if track.get("Type", "") == "Video":
 			print("Jellyframe playback: codec=", track.get("Codec", "unknown"), ", size=", track.get("Width", 0), "x", track.get("Height", 0), ", range=", track.get("VideoRangeType", "unknown"), ", fps=", track.get("AverageFrameRate", 0))
 			break
 	stream_ready.emit(url, source, start_ms)
+
+func is_hls() -> bool:
+	if method != "Transcode": return false
+	var protocol := str(source.get("TranscodingSubProtocol", "")).to_lower()
+	var path := str(source.get("TranscodingUrl", "")).get_slice("?", 0).to_lower()
+	return protocol == "hls" or path.ends_with(".m3u8")
 
 func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 	var direct_profile := {"Container": "mp4,m4v,mkv,webm", "Type": "Video"}
