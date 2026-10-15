@@ -19,8 +19,8 @@ Default PC session locations:
 
 | Platform | File |
 | --- | --- |
-| Windows | `%APPDATA%\Godot\app_userdata\Jellyframe\session.cfg` |
-| Linux | `~/.local/share/godot/app_userdata/Jellyframe/session.cfg` |
+| Windows | `%APPDATA%\Jellyframe\session.cfg` |
+| Linux | `~/.local/share/Jellyframe/session.cfg` |
 
 Jellyframe reads the 3D format from Jellyfin's metadata or the filename, but you can select half or full side-by-side mode and swap the left and right views in Settings if the picture looks wrong. Top-bottom uses the upper half for the left eye and the lower half for the right eye; format and eye-swap changes are not saved per title.
 
