@@ -66,6 +66,11 @@ jobs:
             if (-not (Test-Path "dist/windows/$file")) { throw "Export is missing $file." }
           }
 
+      - name: Verify exported renderer settings
+        run: |
+          & $env:GODOT --headless --xr-mode off --main-pack dist/windows/jellyframe.pck --script tests/test_export_renderer.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Windows renderer settings check failed.' }
+
       - name: Copy Windows licenses
         run: |
           New-Item -ItemType Directory -Force dist/windows/licenses | Out-Null

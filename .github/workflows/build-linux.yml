@@ -26,15 +26,12 @@ jobs:
           - arch: x86_64
             runner: ubuntu-24.04
             preset: Linux x64
-            vulkan_preset: Linux x64 Vulkan
           - arch: arm64
             runner: ubuntu-24.04-arm
             preset: Linux ARM64
-            vulkan_preset: Linux ARM64 Vulkan
     env:
       ARCH: ${{ matrix.arch }}
       EXPORT_PRESET: ${{ matrix.preset }}
-      VULKAN_EXPORT_PRESET: ${{ matrix.vulkan_preset }}
     defaults:
       run:
         shell: bash
@@ -78,16 +75,17 @@ jobs:
         run: |
           output="dist/linux-${ARCH}"
           mkdir -p "$output"
-          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe-opengl.${ARCH}"
-          godot --headless --xr-mode off --path . --export-release "$VULKAN_EXPORT_PRESET" "$output/jellyframe-vulkan.${ARCH}"
+          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe.${ARCH}"
 
       - name: Verify Linux export files
         run: |
           output="dist/linux-${ARCH}"
-          test -s "$output/jellyframe-opengl.${ARCH}"
-          test -s "$output/jellyframe-vulkan.${ARCH}"
+          test -s "$output/jellyframe.${ARCH}"
           test -s "$output/jellyframe_mpv.linux.${ARCH}.so"
-          chmod +x "$output/jellyframe-opengl.${ARCH}" "$output/jellyframe-vulkan.${ARCH}"
+          chmod +x "$output/jellyframe.${ARCH}"
+
+      - name: Verify exported renderer settings
+        run: timeout 30 godot --headless --xr-mode off --main-pack "dist/linux-${ARCH}/jellyframe.${ARCH}" --script tests/test_export_renderer.gd
 
       - name: Copy Linux licenses and installation guide
         run: |
@@ -105,7 +103,7 @@ jobs:
             exit 1
           fi
 
-      - name: Package OpenGL and Vulkan AppImages
+      - name: Package Linux AppImage
         run: bash tools/package-linux-appimages.sh "$ARCH"
 
       - name: Package Linux build with system libraries
@@ -125,20 +123,11 @@ jobs:
           retention-days: 14
           archive: false
 
-      - name: Upload OpenGL AppImage
+      - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-opengl-appimage
-          path: dist/jellyframe-linux-${{ matrix.arch }}-opengl.AppImage
-          if-no-files-found: error
-          retention-days: 14
-          archive: false
-
-      - name: Upload Vulkan AppImage
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-vulkan-appimage
-          path: dist/jellyframe-linux-${{ matrix.arch }}-vulkan.AppImage
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-appimage
+          path: dist/jellyframe-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
           retention-days: 14
           archive: false

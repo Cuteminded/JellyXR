@@ -171,21 +171,19 @@ For x64:
 
 ```sh
 mkdir -p dist/linux-x86_64
-godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64/jellyframe-opengl.x86_64
-godot --headless --xr-mode off --path . --export-release 'Linux x64 Vulkan' dist/linux-x86_64/jellyframe-vulkan.x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64/jellyframe.x86_64
 ```
 
 For ARM64:
 
 ```sh
 mkdir -p dist/linux-arm64
-godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linux-arm64/jellyframe-opengl.arm64
-godot --headless --xr-mode off --path . --export-release 'Linux ARM64 Vulkan' dist/linux-arm64/jellyframe-vulkan.arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linux-arm64/jellyframe.arm64
 ```
 
-The OpenGL presets use Compatibility. The Vulkan presets use custom feature tags to select the Mobile renderer and Vulkan. Both executables embed their own resources and share the native decoder library in the output folder.
+Windows and Linux use the Mobile renderer with Vulkan. If Vulkan cannot initialize, Godot falls back to OpenGL Compatibility. Pass `--rendering-method gl_compatibility` to select OpenGL manually. Each Linux executable embeds its resources and loads the native decoder library from the output folder.
 
-The Build Linux workflow uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, exports the OpenGL and Vulkan apps, and checks output files and decoder dependencies. It then packages a system-libraries archive and separate OpenGL and Vulkan AppImages. Run the tests separately with the commands in this guide.
+The Build Linux workflow uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, exports one app with Vulkan as the default and OpenGL as the fallback, and checks output files and decoder dependencies. It then packages a system-libraries archive and one AppImage for its architecture. Run the tests separately with the commands in this guide.
 
 The system-libraries artifact is a tar archive that preserves Linux executable permissions. GitHub keeps the build artifacts for 14 days. The workflow needs no repository secrets.
 
@@ -199,7 +197,7 @@ bash tools/package-linux-appimages.sh arm64
 
 The packager reuses the decoder library bundler and includes its license notices and package manifest. The host supplies graphics drivers and OpenXR. The packager downloads appimagetool 1.9.1 for the selected architecture, verifies its SHA-256 checksum, and runs it without FUSE.
 
-appimagetool downloads its AppImage runtime during packaging, so packaging needs network access. Outputs are `dist/jellyframe-linux-<arch>-opengl.AppImage` and `dist/jellyframe-linux-<arch>-vulkan.AppImage`.
+appimagetool downloads its AppImage runtime during packaging, so packaging needs network access. The output is `dist/jellyframe-linux-<arch>.AppImage`.
 
 The decoder and headset tests in [Build and test on Windows](#build-and-test-on-windows) also work on Linux. Use `python3` for the HTTP streaming test and pass the path to your Linux Godot executable.
 

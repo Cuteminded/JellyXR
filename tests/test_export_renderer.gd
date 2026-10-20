@@ -1,21 +1,26 @@
 extends SceneTree
 
 func _initialize() -> void:
-	var arguments := OS.get_cmdline_user_args()
-	if arguments.size() != 1 or arguments[0] not in ["opengl", "vulkan"]:
-		push_error("Specify the expected exported renderer: opengl or vulkan.")
+	if not OS.has_feature("windows") and not OS.has_feature("linux"):
+		push_error("Run this check on Windows or Linux.")
 		quit(1)
 		return
-	var renderer := arguments[0]
-	var expected := "mobile" if renderer == "vulkan" else "gl_compatibility"
 	var actual: String = ProjectSettings.get_setting_with_override("rendering/renderer/rendering_method")
-	if not OS.has_feature("linux_" + renderer) or actual != expected:
-		push_error("The exported renderer does not match %s: %s" % [renderer, actual])
+	if actual != "mobile":
+		push_error("The desktop export must default to Mobile: %s" % actual)
 		quit(1)
 		return
-	if renderer == "vulkan" and ProjectSettings.get_setting_with_override("rendering/rendering_device/driver") != "vulkan":
-		push_error("The Vulkan export must select the Vulkan driver.")
+	if ProjectSettings.get_setting_with_override("rendering/rendering_device/driver") != "vulkan":
+		push_error("The desktop export must select the Vulkan driver.")
 		quit(1)
 		return
-	print("Exported %s renderer settings: PASS" % renderer)
+	if not ProjectSettings.get_setting_with_override("rendering/rendering_device/fallback_to_opengl3"):
+		push_error("The desktop export must allow OpenGL fallback.")
+		quit(1)
+		return
+	if OS.has_feature("windows") and ProjectSettings.get_setting_with_override("rendering/rendering_device/fallback_to_d3d12"):
+		push_error("Windows must fall back to OpenGL instead of Direct3D 12.")
+		quit(1)
+		return
+	print("Desktop Vulkan defaults and OpenGL fallback settings: PASS")
 	quit()

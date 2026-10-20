@@ -29,13 +29,7 @@ Download the Windows ZIP from **Assets** on the [latest release page](https://gi
 
 Install SteamVR and connect your headset. In SteamVR's **Settings > OpenXR**, set SteamVR as the active OpenXR runtime. Start SteamVR, then run `jellyframe.exe`. Godot uses the active OpenXR runtime, as described in the [Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
 
-The current Windows export defaults to OpenGL. To use the Vulkan backend tested with HDR, 4K, and 8K video, run this from the extracted folder in PowerShell:
-
-```powershell
-.\jellyframe.exe --rendering-method mobile --rendering-driver vulkan
-```
-
-For OpenGL:
+Windows starts with Vulkan and falls back to OpenGL if Vulkan cannot initialize. To select OpenGL manually, run this from the extracted folder in PowerShell:
 
 ```powershell
 .\jellyframe.exe --rendering-method gl_compatibility
@@ -49,16 +43,22 @@ The confirmed Vulkan HDR, 4K, and 8K results apply to a Windows SteamVR setup wi
 
 ## Try it on Linux x64 or ARM64
 
-Download an OpenGL or Vulkan AppImage from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Choose the file for your computer's architecture, `x86_64` or `arm64`. AppImages include libmpv and the bundled decoder libraries.
+Download the Linux AppImage from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Choose the file for your computer's architecture, `x86_64` or `arm64`. AppImages include libmpv and the bundled decoder libraries.
 
-Make the downloaded AppImage executable and launch it. For x64 OpenGL:
+Make the downloaded AppImage executable and launch it. For x64:
 
 ```sh
-chmod +x jellyframe-linux-x86_64-opengl.AppImage
-./jellyframe-linux-x86_64-opengl.AppImage
+chmod +x jellyframe-linux-x86_64.AppImage
+./jellyframe-linux-x86_64.AppImage
 ```
 
-If OpenGL shows a black screen, download and run `jellyframe-linux-x86_64-vulkan.AppImage`. Use the Vulkan AppImage when adding Jellyframe to Steam on SteamOS. For ARM64, use the corresponding `jellyframe-linux-arm64-opengl.AppImage` or `jellyframe-linux-arm64-vulkan.AppImage`.
+Linux starts with Vulkan and falls back to OpenGL if Vulkan cannot initialize. Use the same AppImage when adding Jellyframe to Steam on SteamOS. For ARM64, use `jellyframe-linux-arm64.AppImage`.
+
+To select OpenGL manually:
+
+```sh
+./jellyframe-linux-x86_64.AppImage --rendering-method gl_compatibility
+```
 
 If mounting an AppImage fails because FUSE is unavailable, run it with `--appimage-extract-and-run`.
 
@@ -68,14 +68,14 @@ Connect your headset and start your OpenXR runtime before opening Jellyframe. On
 
 SteamOS Vulkan playback was confirmed with an earlier PC backend. The current native Vulkan decoder, HDR conversion, and high-resolution playback still need Linux headset testing. The Windows results do not confirm those cases on Linux. See the [current limitations](README.md#current-limitations).
 
-The `system-libs` archive remains available if you prefer to install libmpv yourself. It contains both renderers. On Ubuntu x64:
+The `system-libs` archive remains available if you prefer to install libmpv yourself. It contains the same executable with Vulkan as the default and OpenGL as the fallback. On Ubuntu x64:
 
 ```sh
 sudo apt-get install libmpv2
 tar -xzf jellyframe-linux-x86_64-system-libs.tar.gz
-./jellyframe-opengl.x86_64
+./jellyframe.x86_64
 ```
 
-Keep both executables and the `.so` file together. For ARM64, use `jellyframe-linux-arm64-system-libs.tar.gz` and launch `./jellyframe-opengl.arm64` or `./jellyframe-vulkan.arm64`.
+Keep the executable and the `.so` file together. For ARM64, use `jellyframe-linux-arm64-system-libs.tar.gz` and launch `./jellyframe.arm64`.
 
 Sign in and play a title using the same VR controls as Windows; desktop preview with `--xr-mode off` does not play video.

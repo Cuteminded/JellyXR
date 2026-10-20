@@ -35,34 +35,27 @@ staging="$(mktemp -d "$cache/staging-$arch.XXXXXX")"
 trap 'rm -rf -- "$staging"' EXIT
 python3 tools/bundle-linux-libraries.py --input-directory "dist/linux-$arch" --output-directory "$staging/bundle" --arch "$arch"
 
-for renderer in opengl vulkan; do
-    appdir="$staging/Jellyframe-$renderer.AppDir"
-    mkdir -p "$appdir/usr/bin"
-    cp -a "$staging/bundle/." "$appdir/usr/bin/"
-    for other_renderer in opengl vulkan; do
-        if [[ "$other_renderer" != "$renderer" ]]; then
-            rm "$appdir/usr/bin/jellyframe-$other_renderer.$arch"
-        fi
-    done
-    cat > "$appdir/AppRun" <<EOF
+appdir="$staging/Jellyframe.AppDir"
+mkdir -p "$appdir/usr/bin"
+cp -a "$staging/bundle/." "$appdir/usr/bin/"
+cat > "$appdir/AppRun" <<EOF
 #!/bin/sh
 appdir=\$(CDPATH= cd -- "\$(dirname -- "\$0")" && pwd)
-exec "\$appdir/usr/bin/jellyframe-$renderer.$arch" "\$@"
+exec "\$appdir/usr/bin/jellyframe.$arch" "\$@"
 EOF
-    chmod +x "$appdir/AppRun"
-    cat > "$appdir/jellyframe.desktop" <<EOF
+chmod +x "$appdir/AppRun"
+cat > "$appdir/jellyframe.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Jellyframe ($renderer)
+Name=Jellyframe
 Exec=AppRun
 Icon=jellyframe
 Categories=AudioVideo;Player;
 Terminal=false
 EOF
-    cp assets/logo/jellyframe-logo.png "$appdir/jellyframe.png"
-    ln -s jellyframe.png "$appdir/.DirIcon"
-    output="$project_root/dist/jellyframe-linux-$arch-$renderer.AppImage"
-    ARCH="$appimage_arch" "$appimagetool" --appimage-extract-and-run "$appdir" "$output"
-    [[ -s "$output" ]]
-    chmod +x "$output"
-done
+cp assets/logo/jellyframe-logo.png "$appdir/jellyframe.png"
+ln -s jellyframe.png "$appdir/.DirIcon"
+output="$project_root/dist/jellyframe-linux-$arch.AppImage"
+ARCH="$appimage_arch" "$appimagetool" --appimage-extract-and-run "$appdir" "$output"
+[[ -s "$output" ]]
+chmod +x "$output"
