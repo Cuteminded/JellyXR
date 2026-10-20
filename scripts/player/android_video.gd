@@ -22,14 +22,11 @@ func unavailable_message() -> String:
 	return "Video playback requires the Jellyframe Android plugin."
 
 func open(url: String, authorization: String, start_ms: int) -> void:
-	print("Jellyframe: opening video")
 	if not available():
 		failed.emit(unavailable_message())
 		return
 	material.set_shader_parameter("video_texture", texture)
-	print("Jellyframe: external texture assigned")
 	await RenderingServer.frame_post_draw
-	print("Jellyframe: starting decoder, texture ID ", texture.get_external_texture_id())
 	bridge.open_video(texture.get_external_texture_id(), url, authorization, start_ms)
 	paused = false
 

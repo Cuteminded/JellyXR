@@ -638,13 +638,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _calibrate() -> void:
 	transcode_offset = 0
 	decoder_ready = false
-	print("Jellyframe: calibration requested")
 	calibration = true
 	mode = Stereo.Mode.HALF_SBS
 	video_size = Vector2i(1920, 1080)
 	_resize_screen()
 	_recenter()
-	print("Jellyframe: calibration screen positioned")
 	screen.show()
 	playing = true
 	status.text = "Close one eye at a time. Check that LEFT appears in your left eye and RIGHT in your right eye."

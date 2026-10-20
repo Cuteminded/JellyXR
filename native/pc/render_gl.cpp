@@ -2,7 +2,6 @@
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/variant/callable_method_pointer.hpp>
-#include <chrono>
 #include <future>
 
 using namespace godot;
@@ -121,7 +120,6 @@ int RenderGl::select_ready_slot() {
 }
 
 void RenderGl::present_on_render_thread() {
-    auto started = std::chrono::steady_clock::now();
     std::unique_lock<std::mutex> lock(slots_mutex, std::try_to_lock);
     if (lock.owns_lock() && display_texture) {
         int selected = select_ready_slot();
@@ -149,7 +147,6 @@ void RenderGl::present_on_render_thread() {
             wake.notify_one();
         }
     }
-    present_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
     queued = false;
 }
 
@@ -183,6 +180,4 @@ void RenderGl::stop() {
 }
 
 int RenderGl::error() const { return render_error; }
-double RenderGl::render_call_ms() const { return double(render_time_us.load()) / 1000.0; }
-double RenderGl::present_cpu_ms() const { return double(present_time_us.load()) / 1000.0; }
 Ref<ImageTexture> RenderGl::get_texture() const { return texture; }

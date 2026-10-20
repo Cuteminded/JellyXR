@@ -67,10 +67,7 @@ void RenderWorker::render_loop(mpv_render_context *renderer) {
             {MPV_RENDER_PARAM_SW_POINTER, frame.pixels.ptrw()},
             {MPV_RENDER_PARAM_INVALID, nullptr}
         };
-        auto render_started = std::chrono::steady_clock::now();
         int result = mpv_render_context_render(renderer, params);
-        frame.render_time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now() - render_started).count();
         if (result < 0) {
             render_error = result;
             break;

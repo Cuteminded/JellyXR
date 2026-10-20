@@ -22,9 +22,6 @@ func aim(point: Vector2, inside: bool) -> void:
 		viewport.notify_mouse_entered()
 	_move(point)
 	if just_pressed:
-		if OS.is_debug_build() and OS.get_name() == "Android":
-			var hovered := viewport.gui_get_hovered_control()
-			print("Jellyframe input: press at ", point.round(), " target=", hovered.get_class() if hovered else "none")
 		mouse_down = true
 		_button(true)
 	elif mouse_down and not trigger_down:

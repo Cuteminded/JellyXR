@@ -53,9 +53,7 @@ bool RenderGl::render_slot(mpv_render_context *renderer, Slot &slot) {
         {MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, &block},
         {MPV_RENDER_PARAM_INVALID, nullptr}
     };
-    auto started = std::chrono::steady_clock::now();
     int error = mpv_render_context_render(renderer, params);
-    render_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
     if (error < 0) { render_error = error; return false; }
     void *ready = api.fence(gl::sync_complete, 0);
     api.flush();

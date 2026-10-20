@@ -4,12 +4,8 @@ class FixtureClient extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var direct := true
 	var transcode_path := "/Videos/fixture/master.m3u8"
-	var diagnostics_path := ""
 
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, body: Dictionary = {}) -> Dictionary:
-		if path.begins_with("/Sessions?"):
-			diagnostics_path = path
-			return {"ok": true, "data": [null, {"DeviceId": device_id, "NowPlayingItem": null}, {"DeviceId": device_id, "NowPlayingItem": {"Id": "fixture"}, "TranscodingInfo": null}]}
 		bodies.append(body)
 		return {"ok": true, "data": {"MediaSources": [{"Id": "fixture-source", "SupportsDirectPlay": direct, "TranscodingUrl": transcode_path}]}}
 
@@ -45,10 +41,6 @@ func run_checks() -> void:
 	assert(retry_profile.DirectPlayProfiles.is_empty(), "Decoder recovery disables the failed direct-play path")
 	assert(retry_profile.TranscodingProfiles == automatic_profile.TranscodingProfiles, "Decoder recovery retains conversion limits")
 	assert(api.bodies[1].DeviceProfile.TranscodingProfiles[0].Conditions == retry_profile.TranscodingProfiles[0].Conditions, "The playback request sends the conversion limits on the current platform")
-	api.device_id = "fixture device"
-	await session._log_transcoding()
-	assert(api.diagnostics_path == "/Sessions?DeviceId=fixture%20device", "Diagnostics request only the current device and escape its identifier")
-	assert(not session.diagnostics_pending, "Inactive sessions finish diagnostics without a stuck pending request")
 	await check_playback_choices(session, api, streams)
 	session.queue_free()
 	api.queue_free()

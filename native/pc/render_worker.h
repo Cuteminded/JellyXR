@@ -13,7 +13,6 @@ struct VideoFrame {
     int width = 0;
     int height = 0;
     godot::PackedByteArray pixels;
-    int64_t render_time_us = 0;
 };
 
 class RenderWorker {

@@ -53,14 +53,12 @@ public final class JellyframeVideo extends GodotPlugin {
     }
 
     @UsedByGodot public void open_video(int textureId, String url, String authorization, int startMs) {
-        Log.i("JellyframeVideo", "Opening video texture " + textureId);
         main.post(() -> {
             releasePlayer();
             int opening = generation;
             runOnRenderThread(() -> {
                 releaseSurface();
                 texture = new SurfaceTexture(textureId);
-                Log.i("JellyframeVideo", "SurfaceTexture created");
                 texture.setOnFrameAvailableListener(ignored -> {
                     if (ignored != texture) return;
                     lastFrame = SystemClock.elapsedRealtime();
@@ -85,7 +83,6 @@ public final class JellyframeVideo extends GodotPlugin {
             player.setDataSource(getContext(), Uri.parse(url), headers);
             player.setOnPreparedListener(current -> {
                 if (current != player) return;
-                Log.i("JellyframeVideo", "Decoder prepared: " + current.getVideoWidth() + "x" + current.getVideoHeight());
                 prepared = true;
                 watchdog.reset(SystemClock.elapsedRealtime());
                 duration = Math.max(0, current.getDuration());
@@ -99,11 +96,9 @@ public final class JellyframeVideo extends GodotPlugin {
                 if (current != player) return true;
                 if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
                     buffering = true;
-                    Log.i("JellyframeVideo", "Buffering started at " + position + " ms");
                 }
                 if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
                     buffering = false;
-                    Log.i("JellyframeVideo", "Buffering ended at " + position + " ms");
                 }
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_TRACK_LAGGING) Log.w("JellyframeVideo", "Video decoder is falling behind");
                 return false;

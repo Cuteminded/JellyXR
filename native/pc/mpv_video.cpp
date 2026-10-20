@@ -4,7 +4,6 @@
 #include <godot_cpp/classes/display_server.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
 #include <algorithm>
 #include <chrono>
 
@@ -31,7 +30,6 @@ void JellyframeMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("position_ms"), &JellyframeMpv::position_ms);
     ClassDB::bind_method(D_METHOD("duration_ms"), &JellyframeMpv::duration_ms);
     ClassDB::bind_method(D_METHOD("is_buffering"), &JellyframeMpv::is_buffering);
-    ClassDB::bind_method(D_METHOD("playback_diagnostics"), &JellyframeMpv::playback_diagnostics);
     ClassDB::bind_method(D_METHOD("rendering_backend"), &JellyframeMpv::rendering_backend);
     ClassDB::bind_method(D_METHOD("stop_video"), &JellyframeMpv::stop_video);
     ADD_SIGNAL(MethodInfo("prepared"));
@@ -114,8 +112,6 @@ String JellyframeMpv::open_video(String url, String authorization, int64_t start
     position = std::max<int64_t>(0, start_ms);
     duration = 0;
     active = true;
-    diagnostics_enabled = OS::get_singleton()->get_environment("JELLYFRAME_PC_DIAGNOSTICS") == "1";
-    diagnostic_time_ms = playback_time_ms();
     set_process(true);
     return "";
 }
@@ -144,32 +140,6 @@ bool JellyframeMpv::is_buffering() const {
     return active && (buffering || seeking);
 }
 
-Dictionary JellyframeMpv::playback_diagnostics() const {
-    Dictionary result;
-    if (!player) return result;
-    for (const char *name : {"video-codec", "hwdec-current"}) {
-        char *value = mpv_get_property_string(player, name);
-        result[name] = value ? String::utf8(value) : String("unavailable");
-        mpv_free(value);
-    }
-    for (const char *name : {"container-fps", "decoder-frame-drop-count", "frame-drop-count"}) {
-        double value = 0;
-        result[name] = mpv_get_property(player, name, MPV_FORMAT_DOUBLE, &value) >= 0 ? Variant(value) : Variant();
-    }
-    result["render_backend"] = rendering_backend();
-    result["width"] = texture.is_valid() ? texture->get_width() : frame.width;
-    result["height"] = texture.is_valid() ? texture->get_height() : frame.height;
-    result["cpu_rgba_bytes"] = frame.pixels.size();
-    result["render_call_ms"] = gl_renderer.is_valid() ? gl_renderer->render_call_ms() : double(frame.render_time_us) / 1000.0;
-    result["present_cpu_ms"] = gl_renderer.is_valid() ? gl_renderer->present_cpu_ms() : 0.0;
-    result["upload_cpu_ms"] = upload_cpu_ms;
-    result["uploaded_frames"] = int64_t(uploaded_frames);
-    result["paused"] = paused;
-    result["buffering"] = buffering;
-    result["seeking"] = seeking;
-    return result;
-}
-
 String JellyframeMpv::rendering_backend() const {
     if (!player) return "none";
     return gl_renderer.is_valid() ? "opengl" : "software";
@@ -184,18 +154,6 @@ void JellyframeMpv::fallback_to_software() {
     String error = open_video(url, authorization, resume_at);
     if (!error.is_empty()) { emit_signal("failed", error); return; }
     if (was_paused) set_paused(true);
-}
-
-void JellyframeMpv::report_diagnostics() {
-    if (!diagnostics_enabled || !prepared) return;
-    uint64_t now = playback_time_ms();
-    uint64_t elapsed = now - diagnostic_time_ms;
-    if (elapsed < 5000) return;
-    Dictionary result = playback_diagnostics();
-    result["uploaded_fps"] = double(uploaded_frames - diagnostic_frames) * 1000.0 / double(elapsed);
-    UtilityFunctions::print("Jellyframe PC playback: ", result);
-    diagnostic_time_ms = now;
-    diagnostic_frames = uploaded_frames;
 }
 
 void JellyframeMpv::stop_video() {
@@ -218,10 +176,6 @@ void JellyframeMpv::shutdown() {
     player = nullptr;
     texture.unref();
     frame = VideoFrame();
-    uploaded_frames = 0;
-    diagnostic_frames = 0;
-    diagnostic_time_ms = 0;
-    upload_cpu_ms = 0;
     current_url = "";
     current_authorization = "";
 }
@@ -251,12 +205,10 @@ bool JellyframeMpv::upload_frame() {
                 texture = gl_renderer->get_texture();
                 emit_signal("texture_changed", texture);
             }
-            ++uploaded_frames;
         }
         return received;
     }
     if (!renderer.take_frame(frame)) return false;
-    auto upload_started = std::chrono::steady_clock::now();
     auto image = Image::create_from_data(frame.width, frame.height, false, Image::FORMAT_RGBA8, frame.pixels);
     if (texture.is_null() || texture->get_width() != frame.width || texture->get_height() != frame.height) {
         texture = ImageTexture::create_from_image(image);
@@ -264,9 +216,6 @@ bool JellyframeMpv::upload_frame() {
     } else {
         texture->update(image);
     }
-    upload_cpu_ms = double(std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now() - upload_started).count()) / 1000.0;
-    ++uploaded_frames;
     return true;
 }
 
@@ -339,7 +288,6 @@ void JellyframeMpv::_process(double) {
         }
     }
     bool received_frame = upload_frame();
-    report_diagnostics();
     if (prepared && watchdog.stalled(playback_time_ms(), received_frame, paused, buffering || seeking)) {
         if (gl_renderer.is_valid()) { fallback_to_software(); return; }
         active = false;

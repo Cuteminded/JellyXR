@@ -19,8 +19,6 @@ public:
     bool take_frame();
     void stop();
     int error() const;
-    double render_call_ms() const;
-    double present_cpu_ms() const;
     godot::Ref<godot::ImageTexture> get_texture() const;
 
 protected:
@@ -65,8 +63,6 @@ private:
     std::atomic<bool> dirty{false};
     std::atomic<int> render_error{0};
     std::atomic<uint64_t> dimensions{(uint64_t(1920) << 32) | 1080};
-    std::atomic<int64_t> render_time_us{0};
-    std::atomic<int64_t> present_time_us{0};
     std::array<Slot, 2> slots;
     std::mutex slots_mutex;
     uint64_t next_sequence = 0;
