@@ -69,7 +69,7 @@ jobs:
       - name: Copy Windows licenses
         run: |
           New-Item -ItemType Directory -Force dist/windows/licenses | Out-Null
-          Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.txt
+          Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.md
           Copy-Item native/pc/THIRD_PARTY.md dist/windows/licenses/
 
       - name: Upload Windows build
