@@ -108,3 +108,4 @@ jobs:
           path: dist/jellyframe-android.apk
           if-no-files-found: error
           retention-days: 14
+          archive: false

@@ -129,6 +129,7 @@ jobs:
           path: dist/jellyframe-linux-${{ matrix.arch }}-system-libs.tar.gz
           if-no-files-found: error
           retention-days: 14
+          archive: false
 
       - name: Upload Linux build with bundled libraries
         uses: actions/upload-artifact@v7
@@ -137,3 +138,4 @@ jobs:
           path: dist/jellyframe-linux-${{ matrix.arch }}-bundled-libs.tar.gz
           if-no-files-found: error
           retention-days: 14
+          archive: false
