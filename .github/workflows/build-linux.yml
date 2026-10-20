@@ -25,11 +25,11 @@ jobs:
         include:
           - arch: x86_64
             runner: ubuntu-24.04
-            preset: Linux x64 OpenXR
+            preset: Linux x64
             vulkan_preset: Linux x64 Vulkan
           - arch: arm64
             runner: ubuntu-24.04-arm
-            preset: Linux ARM64 OpenXR
+            preset: Linux ARM64
             vulkan_preset: Linux ARM64 Vulkan
     env:
       ARCH: ${{ matrix.arch }}

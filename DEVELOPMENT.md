@@ -46,13 +46,13 @@ The script creates `dist/jellyframe-android.apk` for installation on your headse
 
 ## Build and test on Windows
 
-To build the Windows SteamVR app locally, install Godot 4.7.2 with matching export templates and Python 3.12. Build the PC plugin before importing or exporting the project:
+To build the Windows app locally, install Godot 4.7.2 with matching export templates and Python 3.12. Build the PC plugin before importing or exporting the project:
 
 ```powershell
 ./tools/build-pc-video.ps1 -Python 'C:/path/to/python.exe'
 New-Item -ItemType Directory -Force dist/windows
 godot --headless --xr-mode off --path . --editor --import --quit
-godot --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
+godot --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyframe.exe
 ```
 
 The plugin build script downloads pinned CMake, LLVM-MinGW, godot-cpp, and libmpv archives into `build/desktop`, verifies their checksums, and generates `addons/jellyframe_mpv` without requiring a system-wide compiler installation. Close running Jellyframe instances before rebuilding; Git ignores the generated plugin, and Android exports exclude it.
@@ -98,7 +98,7 @@ For x64:
 
 ```sh
 mkdir -p dist/linux-x86_64
-godot --headless --xr-mode off --path . --export-release 'Linux x64 OpenXR' dist/linux-x86_64/jellyframe-opengl.x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64/jellyframe-opengl.x86_64
 godot --headless --xr-mode off --path . --export-release 'Linux x64 Vulkan' dist/linux-x86_64/jellyframe-vulkan.x86_64
 ```
 
@@ -106,7 +106,7 @@ For ARM64:
 
 ```sh
 mkdir -p dist/linux-arm64
-godot --headless --xr-mode off --path . --export-release 'Linux ARM64 OpenXR' dist/linux-arm64/jellyframe-opengl.arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linux-arm64/jellyframe-opengl.arm64
 godot --headless --xr-mode off --path . --export-release 'Linux ARM64 Vulkan' dist/linux-arm64/jellyframe-vulkan.arm64
 ```
 

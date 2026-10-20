@@ -57,7 +57,7 @@ jobs:
       - name: Export Windows build
         run: |
           New-Item -ItemType Directory -Force dist/windows | Out-Null
-          & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
+          & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyframe.exe
           if ($LASTEXITCODE -ne 0) { throw 'Windows export failed.' }
 
       - name: Verify Windows export files
