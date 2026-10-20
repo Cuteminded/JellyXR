@@ -31,18 +31,29 @@ Sign in to Jellyfin and select a title to play it in VR, using the same pause, s
 
 ## Try it on Linux x64 or ARM64
 
-Open **Actions > Build Linux > Run workflow** and download the artifact for your computer's architecture. Open its ZIP and extract the `.tar.gz` inside. Each package contains separate OpenGL and Vulkan executables with their resources embedded. Keep the executables and the `.so` file together.
+Open **Actions > Build Linux > Run workflow** and download an OpenGL or Vulkan AppImage for your computer's architecture, `x86_64` or `arm64`. AppImages replace the bundled-libraries archives and include libmpv and the bundled decoder libraries.
 
-The builds target Ubuntu 24.04 and use the system libmpv runtime. On Ubuntu, install libmpv and start the x64 build with:
+Make the downloaded AppImage executable and launch it. For x64 OpenGL:
+
+```sh
+chmod +x jellyframe-linux-x86_64-opengl.AppImage
+./jellyframe-linux-x86_64-opengl.AppImage
+```
+
+If OpenGL shows a black screen, download and run `jellyframe-linux-x86_64-vulkan.AppImage`. Use the Vulkan AppImage when adding Jellyframe to Steam on SteamOS. For ARM64, use the corresponding `jellyframe-linux-arm64-opengl.AppImage` or `jellyframe-linux-arm64-vulkan.AppImage`.
+
+If mounting an AppImage fails because FUSE is unavailable, run it with `--appimage-extract-and-run`.
+
+The builds target Ubuntu 24.04. AppImages still need compatible system libraries, graphics drivers, and an OpenXR runtime; they do not guarantee compatibility with older Linux distributions. Start your OpenXR runtime with the headset connected before opening Jellyframe, and set SteamVR as the active runtime on x64. The runtime must support the selected graphics API. SteamVR on ARM64 and standalone Steam Frame support still need headset testing.
+
+The `system-libs` archive remains available if you prefer to install libmpv yourself. It contains both renderers. On Ubuntu x64:
 
 ```sh
 sudo apt-get install libmpv2
-tar -xzf jellyframe-linux-x86_64.tar.gz
+tar -xzf jellyframe-linux-x86_64-system-libs.tar.gz
 ./jellyframe-opengl.x86_64
 ```
 
-If OpenGL shows a black screen, start `./jellyframe-vulkan.x86_64` instead. This executable selects Vulkan with Godot's Mobile renderer without extra launch options. On SteamOS, use the Vulkan executable when adding Jellyframe to Steam. Video playback still requires `libmpv.so.2` to be available to the app.
-
-For ARM64, use `jellyframe-linux-arm64.tar.gz` and choose `./jellyframe-opengl.arm64` or `./jellyframe-vulkan.arm64`. Start your OpenXR runtime with the headset connected before opening Jellyframe, and set SteamVR as the active runtime on x64. The runtime must support the selected graphics API. SteamVR on ARM64 and standalone Steam Frame support still need headset testing.
+Keep both executables and the `.so` file together. For ARM64, use `jellyframe-linux-arm64-system-libs.tar.gz` and launch `./jellyframe-opengl.arm64` or `./jellyframe-vulkan.arm64`.
 
 Sign in and play a title using the same VR controls as Windows; desktop preview with `--xr-mode off` does not play video.

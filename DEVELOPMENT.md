@@ -112,7 +112,17 @@ godot --headless --xr-mode off --path . --export-release 'Linux ARM64 Vulkan' di
 
 The OpenXR presets select OpenGL Compatibility. The Vulkan presets select the Mobile renderer and Vulkan through custom feature tags. Both executables embed their own resources and share the native decoder library in the output folder.
 
-**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, exports the OpenGL and Vulkan apps, checks output files and decoder dependencies, and packages both library variants. Tests run separately using the commands below. The artifacts contain tar archives that preserve Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
+**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, exports the OpenGL and Vulkan apps, checks output files and decoder dependencies, and packages a system-libraries archive plus separate OpenGL and Vulkan AppImages. Tests run separately using the commands below. The system-libraries artifact is a tar archive that preserves Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
+
+To package AppImages after exporting and copying the licenses into `dist/linux-<arch>`, install `patchelf` and run:
+
+```sh
+bash tools/package-linux-appimages.sh x86_64
+# On an ARM64 build machine:
+bash tools/package-linux-appimages.sh arm64
+```
+
+The packager reuses the decoder library bundler, includes its license notices and package manifest, and leaves graphics drivers and OpenXR to the host. It downloads appimagetool 1.9.1 for the selected architecture, verifies its SHA-256 checksum, and runs it without requiring FUSE. appimagetool downloads its AppImage runtime during packaging, so packaging requires network access. Outputs are `dist/jellyframe-linux-<arch>-opengl.AppImage` and `dist/jellyframe-linux-<arch>-vulkan.AppImage`.
 
 The decoder and headset tests in [Build and test on Windows](#build-and-test-on-windows) also work on Linux, where you should use `python3` for the HTTP streaming test and pass the path to your Linux Godot executable.
 

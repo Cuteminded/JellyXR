@@ -107,16 +107,12 @@ jobs:
             exit 1
           fi
 
-      - name: Bundle decoder libraries
-        run: |
-          python3 tools/bundle-linux-libraries.py \
-            --input-directory "dist/linux-${ARCH}" \
-            --output-directory "dist/linux-${ARCH}-bundled" --arch "$ARCH"
+      - name: Package OpenGL and Vulkan AppImages
+        run: bash tools/package-linux-appimages.sh "$ARCH"
 
-      - name: Package Linux builds
+      - name: Package Linux build with system libraries
         run: |
-          tar -czf "dist/jellyframe-linux-${ARCH}-system-libs.tar.gz" -C "dist/linux-${ARCH}" .
-          tar -czf "dist/jellyframe-linux-${ARCH}-bundled-libs.tar.gz" -C "dist/linux-${ARCH}-bundled" .
+          tar -czf "dist/jellyframe-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
 
       - name: Set artifact date
         id: date
@@ -126,16 +122,25 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-system-libs
-          path: dist/jellyframe-linux-${{ matrix.arch }}-system-libs.tar.gz
+          path: dist/jellyframe-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 14
           archive: false
 
-      - name: Upload Linux build with bundled libraries
+      - name: Upload OpenGL AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-bundled-libs
-          path: dist/jellyframe-linux-${{ matrix.arch }}-bundled-libs.tar.gz
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-opengl-appimage
+          path: dist/jellyframe-linux-${{ matrix.arch }}-opengl.AppImage
+          if-no-files-found: error
+          retention-days: 14
+          archive: false
+
+      - name: Upload Vulkan AppImage
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-vulkan-appimage
+          path: dist/jellyframe-linux-${{ matrix.arch }}-vulkan.AppImage
           if-no-files-found: error
           retention-days: 14
           archive: false

@@ -28,9 +28,7 @@ touch "$project_root/build/.gdignore"
 if [[ -z "${GODOT_CPP_PATH:-}" ]]; then
     archive="$dependency_root/godot-cpp.zip"
     if [[ ! -f "$archive" ]]; then
-        curl --fail --location --retry 3 \
-            'https://github.com/godotengine/godot-cpp/archive/refs/tags/godot-4.5-stable.zip' \
-            -o "$archive.part"
+        curl --fail --location --retry 3 'https://github.com/godotengine/godot-cpp/archive/refs/tags/godot-4.5-stable.zip' -o "$archive.part"
         mv "$archive.part" "$archive"
     fi
     printf '%s  %s\n' '0316ea168750b5f4f1caea6457657a6c64241f890f78e2f042aee4be2b1085bf' "$archive" | sha256sum --check
@@ -40,9 +38,7 @@ if [[ -z "${GODOT_CPP_PATH:-}" ]]; then
     fi
 fi
 
-cmake -S "$project_root/native/pc" -B "$build_root" \
-    -DCMAKE_BUILD_TYPE=Release "-DGODOT_CPP_PATH=$GODOT_CPP_PATH" \
-    "-DPython3_EXECUTABLE=$(command -v python3)"
+cmake -S "$project_root/native/pc" -B "$build_root" -DCMAKE_BUILD_TYPE=Release "-DGODOT_CPP_PATH=$GODOT_CPP_PATH" "-DPython3_EXECUTABLE=$(command -v python3)"
 cmake --build "$build_root" --parallel "${JOBS:-4}"
 
 plugin_root="$project_root/addons/jellyframe_mpv"
@@ -52,6 +48,5 @@ cp "$project_root/native/pc/jellyframe_mpv.gdextension" "$plugin_root/"
 mkdir -p "$build_root/licenses"
 cp "$GODOT_CPP_PATH/LICENSE.md" "$build_root/licenses/godot-cpp.txt"
 cp "$project_root/native/pc/THIRD_PARTY.md" "$build_root/licenses/"
-printf 'Architecture: %s\nlibmpv API: %s\ngodot-cpp: godot-4.5-stable\n' \
-    "$arch" "$(pkg-config --modversion mpv)" > "$build_root/build-info.txt"
+printf 'Architecture: %s\nlibmpv API: %s\ngodot-cpp: godot-4.5-stable\n' "$arch" "$(pkg-config --modversion mpv)" > "$build_root/build-info.txt"
 printf 'PC video plugin built for Linux %s in %s\n' "$arch" "$plugin_root"
