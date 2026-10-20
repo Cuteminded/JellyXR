@@ -84,4 +84,3 @@ jobs:
           path: dist/windows/
           if-no-files-found: error
           retention-days: 14
-          archive: false
