@@ -10,20 +10,22 @@ The initial Jellyfin compatibility target is version 10.11.6. Use HTTPS when con
 
 ## Try it on Quest 3
 
-Download a test APK from a successful **Build Android APK** run in the repository's **Actions** tab by opening **Artifacts**, downloading `jellyframe-android-debug-<run number>`, and extracting the ZIP. To build the APK yourself, follow the [build instructions](DEVELOPMENT.md).
+Download the Android APK from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). To build the APK yourself, follow the [build instructions](DEVELOPMENT.md).
 
-After downloading or building the APK, connect your headset to your computer, approve USB debugging in the headset, and install it with Android's `adb` tool:
+Connect your headset to your computer, approve USB debugging in the headset, and install the APK with Android's `adb` tool. Run these commands from the folder containing the downloaded APK:
 
 ```powershell
 adb devices
-adb install -r dist/jellyframe-android.apk
+adb install -r jellyframe-android.apk
 ```
+
+If you built the APK yourself, use `dist/jellyframe-android.apk` as the install path instead.
 
 Open Jellyframe from Unknown Sources in your headset, enter your Jellyfin server address, and sign in with your account or Quick Connect. Select a library and choose a title to watch.
 
 ## Try it on Windows with SteamVR
 
-Open **Actions > Build Windows > Run workflow** in the repository, then download `jellyframe-windows-<run number>` from **Artifacts** after the build succeeds. Extract the entire ZIP and keep the executable, PCK, and any DLLs together in the same folder.
+Download the Windows ZIP from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Extract the entire ZIP and keep the executable, PCK, and any DLLs together in the same folder.
 
 Install SteamVR, connect your headset, and set SteamVR as the active OpenXR runtime in SteamVR's **Settings > OpenXR**. Start SteamVR and run `jellyframe.exe`; Godot uses the active OpenXR runtime, as described in the [Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
 
@@ -31,7 +33,7 @@ Sign in to Jellyfin and select a title to play it in VR, using the same pause, s
 
 ## Try it on Linux x64 or ARM64
 
-Open **Actions > Build Linux > Run workflow** and download an OpenGL or Vulkan AppImage for your computer's architecture, `x86_64` or `arm64`. AppImages replace the bundled-libraries archives and include libmpv and the bundled decoder libraries.
+Download an OpenGL or Vulkan AppImage from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Choose the file for your computer's architecture, `x86_64` or `arm64`. AppImages include libmpv and the bundled decoder libraries.
 
 Make the downloaded AppImage executable and launch it. For x64 OpenGL:
 
