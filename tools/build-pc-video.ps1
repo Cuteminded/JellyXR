@@ -43,6 +43,9 @@ $bindingsRoot = Get-Dependency 'godot-cpp.zip' `
 $mpvRoot = Get-Dependency 'mpv.7z' `
     'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261010/mpv-dev-x86_64-20261010-git-b2c255c13e.7z' `
     '394490ED6354C2294B87C63DFA3663B23524B5551AACE9CBE35C4085682B14FA' 'mpv'
+$ffmpegRoot = Get-Dependency 'ffmpeg.zip' `
+    'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-19-13-06/ffmpeg-n8.1.3-18-g46d899d7a0-win64-gpl-shared-8.1.zip' `
+    'FA41FF09E92EE00E302B3D842716BA1B8332FC0115B3F4C3E02A2083200B20EF' 'ffmpeg-n8.1.3-18-g46d899d7a0-win64-gpl-shared-8.1'
 
 $cmake = Join-Path $cmakeRoot 'bin/cmake.exe'
 $originalPath = $env:PATH
@@ -50,7 +53,7 @@ try {
     $env:PATH = (Join-Path $compilerRoot 'bin') + ';' + $env:PATH
     & $cmake -S (Join-Path $projectRoot 'native/pc') -B (Join-Path $buildRoot 'native') `
         -G 'MinGW Makefiles' '-DCMAKE_BUILD_TYPE=Release' '-DCMAKE_CXX_COMPILER=clang++' `
-        "-DGODOT_CPP_PATH=$bindingsRoot" "-DMPV_ROOT=$mpvRoot" "-DPython3_EXECUTABLE=$Python"
+        "-DGODOT_CPP_PATH=$bindingsRoot" "-DMPV_ROOT=$mpvRoot" "-DFFMPEG_ROOT=$ffmpegRoot" "-DPython3_EXECUTABLE=$Python"
     if ($LASTEXITCODE -ne 0) { throw 'PC video configuration failed.' }
     & $cmake --build (Join-Path $buildRoot 'native') --parallel $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'PC video compilation failed.' }
@@ -62,5 +65,8 @@ $pluginRoot = Join-Path $projectRoot 'addons/jellyframe_mpv'
 New-Item -ItemType Directory -Force (Join-Path $pluginRoot 'bin') | Out-Null
 Copy-Item (Join-Path $buildRoot 'native/jellyframe_mpv.dll') (Join-Path $pluginRoot 'bin')
 Copy-Item (Join-Path $mpvRoot 'libmpv-2.dll') (Join-Path $pluginRoot 'bin')
+foreach ($library in 'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll', 'swscale-9.dll', 'swresample-6.dll') {
+    Copy-Item (Join-Path $ffmpegRoot "bin/$library") (Join-Path $pluginRoot 'bin')
+}
 Copy-Item (Join-Path $projectRoot 'native/pc/jellyframe_mpv.gdextension') $pluginRoot
 Write-Host "PC video plugin built in $pluginRoot"

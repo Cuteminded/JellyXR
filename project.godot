@@ -39,6 +39,12 @@ environment/defaults/default_clear_color=Color(0.018, 0.029, 0.046, 1)
 renderer/rendering_method.linux_opengl="gl_compatibility"
 renderer/rendering_method.linux_vulkan="mobile"
 rendering_device/driver.linux_vulkan="vulkan"
+rendering_device/staging_buffer/block_size_kb.windows=4096
+rendering_device/staging_buffer/block_size_kb.linux=4096
+rendering_device/staging_buffer/max_size_mb.windows=512
+rendering_device/staging_buffer/max_size_mb.linux=512
+rendering_device/staging_buffer/texture_upload_region_size_px.windows=512
+rendering_device/staging_buffer/texture_upload_region_size_px.linux=512
 
 [xr]
 

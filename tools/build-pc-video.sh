@@ -19,6 +19,10 @@ if ! pkg-config --atleast-version=2.0 mpv; then
     printf 'Install libmpv API 2 development files, such as libmpv-dev on Ubuntu.\n' >&2
     exit 1
 fi
+if ! pkg-config --exists 'libavcodec >= 60' 'libavformat >= 60' 'libavutil >= 58' 'libswscale >= 7'; then
+    printf 'Install FFmpeg development files: libavcodec-dev libavformat-dev libavutil-dev libswscale-dev.\n' >&2
+    exit 1
+fi
 
 dependency_root="$project_root/build/linux/deps"
 build_root="$project_root/build/linux/$arch"
@@ -47,6 +51,6 @@ cp "$build_root/jellyframe_mpv.linux.$arch.so" "$plugin_root/bin/"
 cp "$project_root/native/pc/jellyframe_mpv.gdextension" "$plugin_root/"
 mkdir -p "$build_root/licenses"
 cp "$GODOT_CPP_PATH/LICENSE.md" "$build_root/licenses/godot-cpp.txt"
-cp "$project_root/native/pc/THIRD_PARTY.md" "$build_root/licenses/"
+cp "$project_root/LICENSING.md" "$build_root/licenses/"
 printf 'Architecture: %s\nlibmpv API: %s\ngodot-cpp: godot-4.5-stable\n' "$arch" "$(pkg-config --modversion mpv)" > "$build_root/build-info.txt"
 printf 'PC video plugin built for Linux %s in %s\n' "$arch" "$plugin_root"

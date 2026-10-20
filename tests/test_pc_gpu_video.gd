@@ -4,6 +4,7 @@ var decoder: Node
 var preview: TextureRect
 var video_texture: Texture2D
 var errors: Array[String] = []
+var expected_renderer := "opengl"
 
 func _initialize() -> void:
 	call_deferred("run_check")
@@ -44,6 +45,7 @@ func check_controls_and_reopen(url: String) -> bool:
 	return require(video_texture != null and video_texture.get_size() == Vector2(1920, 1080) and errors.is_empty(), "Reopening replaces high-resolution GPU buffers")
 
 func run_check() -> void:
+	expected_renderer = "vulkan" if RenderingServer.get_current_rendering_driver_name() == "vulkan" else "opengl"
 	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
 	var reopen_url := url
 	var expected_size := Vector2i(1920, 1080)
@@ -78,7 +80,7 @@ func run_check() -> void:
 		return
 	var before := int(decoder.position_ms())
 	await create_timer(3.0).timeout
-	if not require(errors.is_empty() and decoder.rendering_backend() == "opengl", "The GPU backend stays active during playback"):
+	if not require(errors.is_empty() and decoder.rendering_backend() == expected_renderer, "The GPU backend stays active during playback"):
 		return
 	if not require(decoder.position_ms() > before + 2000, "High-resolution playback continues advancing"):
 		return

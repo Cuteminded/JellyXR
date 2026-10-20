@@ -62,7 +62,7 @@ jobs:
 
       - name: Verify Windows export files
         run: |
-          foreach ($file in 'jellyframe.exe', 'jellyframe.pck', 'jellyframe_mpv.dll', 'libmpv-2.dll') {
+          foreach ($file in 'jellyframe.exe', 'jellyframe.pck', 'jellyframe_mpv.dll', 'libmpv-2.dll', 'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll', 'swscale-9.dll', 'swresample-6.dll') {
             if (-not (Test-Path "dist/windows/$file")) { throw "Export is missing $file." }
           }
 
@@ -71,6 +71,7 @@ jobs:
           New-Item -ItemType Directory -Force dist/windows/licenses | Out-Null
           Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.md
           Copy-Item LICENSING.md dist/windows/licenses/
+          Copy-Item build/desktop/deps/ffmpeg-n8.1.3-18-g46d899d7a0-win64-gpl-shared-8.1/LICENSE.txt dist/windows/licenses/ffmpeg.txt
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v7

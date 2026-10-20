@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/display_server.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 #include <algorithm>
 #include <chrono>
 
@@ -31,6 +32,7 @@ void JellyframeMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("duration_ms"), &JellyframeMpv::duration_ms);
     ClassDB::bind_method(D_METHOD("is_buffering"), &JellyframeMpv::is_buffering);
     ClassDB::bind_method(D_METHOD("rendering_backend"), &JellyframeMpv::rendering_backend);
+    ClassDB::bind_method(D_METHOD("playback_diagnostics"), &JellyframeMpv::playback_diagnostics);
     ClassDB::bind_method(D_METHOD("stop_video"), &JellyframeMpv::stop_video);
     ADD_SIGNAL(MethodInfo("prepared"));
     ADD_SIGNAL(MethodInfo("ended"));
@@ -43,21 +45,37 @@ JellyframeMpv::~JellyframeMpv() {
     shutdown();
 }
 
-String JellyframeMpv::initialize() {
+String JellyframeMpv::initialize(int64_t start_ms) {
+    log_video_stats = OS::get_singleton()->get_environment("JELLYFRAME_VIDEO_STATS") == "1";
+    last_diagnostics_time = playback_time_ms();
     player = mpv_create();
     if (!player) return "Could not create the PC video decoder.";
     const bool use_opengl = !software_only &&
         OS::get_singleton()->get_environment("JELLYFRAME_PC_RENDERER") != "software" && hardware_opengl_available();
+    if (!software_only && OS::get_singleton()->get_environment("JELLYFRAME_PC_RENDERER") != "software" &&
+            DisplayServer::get_singleton()->get_name() != "headless" &&
+            RenderingServer::get_singleton()->get_current_rendering_driver_name() == "vulkan") {
+        vulkan_renderer.instantiate();
+        if (vulkan_renderer->start(current_url, current_authorization, start_ms) < 0) {
+            vulkan_renderer->stop();
+            vulkan_renderer.unref();
+        }
+    }
     const char *options[][2] = {
         {"config", "no"}, {"terminal", "no"}, {"load-scripts", "no"},
         {"ytdl", "no"}, {"input-default-bindings", "no"}, {"input-vo-keyboard", "no"},
-        {"vo", "libmpv"}, {"hwdec", use_opengl ? "auto" : "auto-copy"}, {"osd-level", "0"},
+        {"vo", vulkan_renderer.is_valid() ? "null" : "libmpv"},
+        {"hwdec", use_opengl ? "auto" : "auto-copy"}, {"osd-level", "0"},
         {"sub-auto", "no"}, {"audio-file-auto", "no"}, {"keep-open", "no"},
         {"idle", "yes"}, {"tls-verify", "yes"}
     };
     for (const auto &option : options) {
         int error = mpv_set_option_string(player, option[0], option[1]);
         if (error < 0) return String("PC decoder option failed: ") + option[0] + ".";
+    }
+    if (vulkan_renderer.is_valid() && vulkan_renderer->has_audio()) {
+        int error = mpv_set_option_string(player, "vid", "no");
+        if (error < 0) return "Could not configure the Vulkan playback clock.";
     }
     int error = mpv_initialize(player);
     if (error >= 0 && use_opengl) {
@@ -67,7 +85,7 @@ String JellyframeMpv::initialize() {
             gl_renderer.unref();
         }
     }
-    if (error >= 0 && gl_renderer.is_null()) {
+    if (error >= 0 && gl_renderer.is_null() && vulkan_renderer.is_null()) {
         error = mpv_set_property_string(player, "hwdec", "auto-copy");
         if (error >= 0) error = renderer.start(player);
     }
@@ -84,10 +102,18 @@ String JellyframeMpv::open_video(String url, String authorization, int64_t start
     shutdown();
     current_url = url;
     current_authorization = authorization;
-    String error = initialize();
+    String error = initialize(start_ms);
     if (!error.is_empty()) {
         shutdown();
         return error;
+    }
+    if (uses_video_clock()) {
+        position = std::max<int64_t>(0, start_ms);
+        duration = vulkan_renderer->duration_ms();
+        video_clock_origin = playback_time_ms() - position;
+        active = true;
+        set_process(true);
+        return "";
     }
     auto header = (String("Authorization: ") + authorization).utf8();
     mpv_node entry{};
@@ -118,16 +144,28 @@ String JellyframeMpv::open_video(String url, String authorization, int64_t start
 
 void JellyframeMpv::set_paused(bool value) {
     if (!player || !active) return;
+    if (uses_video_clock()) {
+        if (!paused && video_clock_started && !seeking) position = int64_t(playback_time_ms() - video_clock_origin);
+        video_clock_origin = playback_time_ms() - position;
+        paused = value;
+        watchdog.reset(playback_time_ms());
+        return;
+    }
     paused = value;
     watchdog.reset(playback_time_ms());
-    int flag = value;
-    mpv_set_property_async(player, 0, "pause", MPV_FORMAT_FLAG, &flag);
+    apply_audio_pause();
 }
 
 void JellyframeMpv::seek_to(int64_t milliseconds) {
     if (!player || !active) return;
     seeking = true;
+    if (vulkan_renderer.is_valid()) vulkan_renderer->seek(milliseconds);
     watchdog.reset(playback_time_ms());
+    if (uses_video_clock()) {
+        position = std::max<int64_t>(0, milliseconds);
+        video_clock_origin = playback_time_ms() - position;
+        return;
+    }
     auto target = String::num(double(std::max<int64_t>(0, milliseconds)) / 1000.0, 3).utf8();
     const char *command[] = {"seek", target.get_data(), "absolute+exact", nullptr};
     mpv_command_async(player, 0, command);
@@ -137,15 +175,34 @@ int64_t JellyframeMpv::position_ms() const { return position; }
 int64_t JellyframeMpv::duration_ms() const { return duration; }
 
 bool JellyframeMpv::is_buffering() const {
-    return active && (buffering || seeking);
+    return active && (buffering || video_buffering || seeking);
+}
+
+bool JellyframeMpv::uses_video_clock() const {
+    return vulkan_renderer.is_valid() && !vulkan_renderer->has_audio();
 }
 
 String JellyframeMpv::rendering_backend() const {
     if (!player) return "none";
+    if (vulkan_renderer.is_valid()) return "vulkan";
     return gl_renderer.is_valid() ? "opengl" : "software";
 }
 
+Dictionary JellyframeMpv::playback_diagnostics() const {
+    Dictionary values = vulkan_renderer.is_valid() ? vulkan_renderer->diagnostics() : Dictionary();
+    values["renderer"] = rendering_backend();
+    values["version"] = "vulkan-planes-4";
+    values["audio_position_ms"] = position;
+    if (vulkan_renderer.is_valid()) {
+        values["video_position_ms"] = vulkan_renderer->timestamp_ms();
+        values["video_buffering"] = video_buffering;
+        values["video_buffer_count"] = int64_t(video_buffer_count);
+    }
+    return values;
+}
+
 void JellyframeMpv::fallback_to_software() {
+    UtilityFunctions::print("PC video: falling back to software. ", playback_diagnostics());
     String url = current_url;
     String authorization = current_authorization;
     int64_t resume_at = position;
@@ -165,8 +222,15 @@ void JellyframeMpv::shutdown() {
     prepared = false;
     paused = false;
     buffering = false;
+    video_buffering = false;
+    video_buffer_count = 0;
     seeking = false;
+    video_clock_started = false;
     set_process(false);
+    if (vulkan_renderer.is_valid()) {
+        vulkan_renderer->stop();
+        vulkan_renderer.unref();
+    }
     if (gl_renderer.is_valid()) {
         gl_renderer->stop();
         gl_renderer.unref();
@@ -181,6 +245,10 @@ void JellyframeMpv::shutdown() {
 }
 
 bool JellyframeMpv::update_size() {
+    if (vulkan_renderer.is_valid()) {
+        emit_signal("size_changed", vulkan_renderer->width(), vulkan_renderer->height());
+        return vulkan_renderer->width() > 0 && vulkan_renderer->height() > 0;
+    }
     int64_t width = 0;
     int64_t height = 0;
     mpv_get_property(player, "dwidth", MPV_FORMAT_INT64, &width);
@@ -198,6 +266,23 @@ bool JellyframeMpv::update_size() {
 }
 
 bool JellyframeMpv::upload_frame() {
+    if (vulkan_renderer.is_valid()) {
+        vulkan_renderer->set_clock(position);
+        if (!vulkan_renderer->take_frame()) return false;
+        if (uses_video_clock()) {
+            if (!video_clock_started || seeking) video_clock_origin = playback_time_ms() - position;
+            video_clock_started = true;
+            seeking = false;
+        }
+        Ref<Texture2D> next = vulkan_renderer->get_texture();
+        if (texture != next) {
+            texture = next;
+            emit_signal("size_changed", texture->get_width(), texture->get_height());
+            emit_signal("texture_changed", texture);
+            UtilityFunctions::print("PC video: ", playback_diagnostics());
+        }
+        return true;
+    }
     if (gl_renderer.is_valid()) {
         bool received = gl_renderer->take_frame();
         if (received) {
@@ -214,7 +299,8 @@ bool JellyframeMpv::upload_frame() {
         texture = ImageTexture::create_from_image(image);
         emit_signal("texture_changed", texture);
     } else {
-        texture->update(image);
+        Ref<ImageTexture> image_texture = texture;
+        image_texture->update(image);
     }
     return true;
 }
@@ -236,7 +322,7 @@ void JellyframeMpv::update_property(const mpv_event &event) {
             if (seeking && !value) watchdog.reset(playback_time_ms());
             seeking = value;
         }
-        if (event.reply_userdata == 5) {
+        if (event.reply_userdata == 5 && vulkan_renderer.is_null()) {
             paused = value;
             watchdog.reset(playback_time_ms());
         }
@@ -245,13 +331,30 @@ void JellyframeMpv::update_property(const mpv_event &event) {
 
 void JellyframeMpv::_process(double) {
     if (!player || !active) return;
+    if (vulkan_renderer.is_valid() && vulkan_renderer->error() < 0) { fallback_to_software(); return; }
     if (gl_renderer.is_valid() && gl_renderer->error() < 0) { fallback_to_software(); return; }
-    if (gl_renderer.is_null() && renderer.error() < 0) {
+    if (gl_renderer.is_null() && vulkan_renderer.is_null() && renderer.error() < 0) {
         active = false;
         emit_signal("failed", String("PC video rendering failed: ") + mpv_error_string(renderer.error()));
         return;
     }
-    for (int count = 0; count < 64; ++count) {
+    if (uses_video_clock()) {
+        if (!prepared) {
+            if (!update_size()) { fallback_to_software(); return; }
+            prepared = true;
+            video_clock_origin = playback_time_ms() - position;
+            watchdog.reset(playback_time_ms());
+            emit_signal("prepared");
+            return;
+        }
+        if (!paused && video_clock_started && !seeking) position = int64_t(playback_time_ms() - video_clock_origin);
+        if (!paused && video_clock_started && ((duration > 0 && position >= duration) || (duration == 0 && vulkan_renderer->ended()))) {
+            active = false;
+            emit_signal("ended");
+            return;
+        }
+    }
+    for (int count = 0; !uses_video_clock() && count < 64; ++count) {
         auto *event = mpv_wait_event(player, 0);
         if (event->event_id == MPV_EVENT_NONE) break;
         if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
@@ -288,8 +391,13 @@ void JellyframeMpv::_process(double) {
         }
     }
     bool received_frame = upload_frame();
-    if (prepared && watchdog.stalled(playback_time_ms(), received_frame, paused, buffering || seeking)) {
-        if (gl_renderer.is_valid()) { fallback_to_software(); return; }
+    update_video_buffering();
+    if (log_video_stats && playback_time_ms() - last_diagnostics_time >= 5000) {
+        last_diagnostics_time = playback_time_ms();
+        UtilityFunctions::print("PC video statistics: ", playback_diagnostics());
+    }
+    if (prepared && watchdog.stalled(playback_time_ms(), received_frame, paused, buffering || video_buffering || seeking)) {
+        if (gl_renderer.is_valid() || vulkan_renderer.is_valid()) { fallback_to_software(); return; }
         active = false;
         emit_signal("failed", "Video playback stalled.");
     }

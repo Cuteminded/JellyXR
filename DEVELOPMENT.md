@@ -55,7 +55,7 @@ godot --headless --xr-mode off --path . --editor --import --quit
 godot --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyframe.exe
 ```
 
-The plugin build script downloads pinned CMake, LLVM-MinGW, godot-cpp, and libmpv archives into `build/desktop`, verifies their checksums, and generates `addons/jellyframe_mpv` without requiring a system-wide compiler installation. Close running Jellyframe instances before rebuilding; Git ignores the generated plugin, and Android exports exclude it.
+The plugin build script downloads pinned CMake, LLVM-MinGW, godot-cpp, libmpv, and FFmpeg archives into `build/desktop`, verifies their checksums, and generates `addons/jellyframe_mpv` without requiring a system-wide compiler installation. Close running Jellyframe instances before rebuilding; Git ignores the generated plugin, and Android exports exclude it.
 
 The Windows workflow builds the plugin, exports the app, verifies the output files, and uploads the build. Tests run separately using the commands below. Build commands disable OpenXR, while the exported app keeps it enabled. The workflow needs no repository secrets, and GitHub keeps its build artifacts for 14 days.
 
@@ -65,6 +65,36 @@ After building the PC plugin, run its decoder tests without a headset:
 godot --headless --xr-mode off --path . --script tests/test_pc_video.gd
 python tests/test_pc_streaming.py --godot 'C:/path/to/godot_console.exe'
 ```
+
+Run GPU playback checks with a graphics context:
+
+```powershell
+godot --xr-mode off --rendering-method gl_compatibility --path . --script tests/test_pc_gpu_video.gd
+godot --xr-mode off --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_pc_gpu_video.gd
+python tests/test_pc_vulkan.py --godot 'C:/path/to/godot_console.exe' --ffmpeg 'C:/path/to/ffmpeg.exe'
+python tests/test_pc_hdr.py --godot 'C:/path/to/godot_console.exe' --ffmpeg 'C:/path/to/ffmpeg.exe'
+python tests/test_pc_streaming.py --godot 'C:/path/to/godot_console.exe' --vulkan
+```
+
+The Vulkan test generates ten-bit video fixtures and checks BT.601 limited-range and BT.709 full-range colors, paused seeks, completion, and playback with audio. Pass `--video=<path>` and `--size=7680x4320` to `test_pc_gpu_video.gd` to check an 8K source and reopening at 1080p. These checks do not measure sustained frame rate or verify headset playback.
+
+OpenGL keeps its libmpv renderer and shared GPU textures. Vulkan uses a separate FFmpeg decoder and a compute shader on Godot's main Vulkan device. Native NV12, P010, and planar 4:2:0 frames keep their original plane layout; other formats are converted to ten-bit planar data. Windows tries CUDA/NVDEC before D3D11VA, while Linux tries VA-API or CUDA. CUDA downloads go directly into reusable pinned upload buffers.
+
+A reader thread buffers compressed video packets independently of decoding, up to four seconds, 128 MiB, or 512 packets. After video falls behind, audio waits for video to catch up and for one second of compressed video to accumulate, unless the reader reaches the end or the buffer limit. Seeking clears queued packets and flushes the decoder. Decoding and downloads run on another worker; uploads are queued through Godot's render thread, with one upload scheduled at a time. Uploads still share the renderer's frame budget. Decoded planes pass through system memory, so this is not a zero-copy backend.
+
+Desktop RenderingDevice settings allow up to 512 MiB of staging buffers and use larger upload regions to reduce stalls with 8K ten-bit frames. The engine allocates this memory as needed. OpenGL and Android Compatibility rendering do not use these buffers.
+
+PQ and HLG video use Hable tone mapping to SDR, using mastering or content-light metadata when available and a 1,000-nit default otherwise. The HDR test compares gray patches with FFmpeg's reference conversion and checks their brightness through the actual 3D video material. HDR output and display calibration are not supported.
+
+Measure presentation rate and frame times with a source long enough for the requested sample, including one second of warm-up:
+
+```powershell
+godot --xr-mode off --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_pc_video_performance.gd -- --video='C:/videos/8k.mp4' --seconds=20 --minimum-fps=57
+```
+
+The result reports presented frames per second, dropped frames, decoder and transfer timings, and main-loop frame times. The default source is the locally generated `build/gpu-worker/8k-av1-test.mp4`; supply your own file on a fresh checkout. This windowed benchmark does not establish SteamVR performance. During ordinary playback, the startup log identifies the renderer, codec, hardware device, HDR transfer, and backend version. Set `JELLYFRAME_VIDEO_STATS=1` to log counters every five seconds. Isolated corrupt video packets are skipped; repeated errors still trigger the software fallback.
+
+For videos with audio, libmpv opens the source separately with video disabled and supplies the audio clock. Remote playback can therefore make two sets of media requests. Silent videos use the FFmpeg frames and a local playback clock. Initialization failures, decoder failures, and stalled GPU playback fall back to the existing software renderer. `JELLYFRAME_PC_RENDERER=software` forces that fallback for troubleshooting.
 
 With SteamVR and your headset running, test the stereo screen and controllers:
 
@@ -87,12 +117,12 @@ Connect to your Jellyfin server to browse your library in desktop mode, which do
 Build natively on the target architecture with Godot 4.7.2 and matching export templates. On Ubuntu, install the build dependencies:
 
 ```sh
-sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev
+sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 bash tools/build-pc-video.sh
 godot --headless --xr-mode off --path . --editor --import --quit
 ```
 
-The script detects x64 or ARM64, downloads and verifies the godot-cpp bindings, and builds the matching plugin in `addons/jellyframe_mpv` using the system libmpv development package. Close Jellyframe before rebuilding its plugin.
+The script detects x64 or ARM64, downloads and verifies the godot-cpp bindings, and builds the matching plugin in `addons/jellyframe_mpv` using the system libmpv and FFmpeg development packages. FFmpeg 6 or newer is required. Close Jellyframe before rebuilding its plugin.
 
 For x64:
 

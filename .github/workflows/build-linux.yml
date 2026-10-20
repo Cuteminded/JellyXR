@@ -47,8 +47,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            build-essential cmake pkg-config python3 curl unzip libmpv-dev patchelf
+          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev patchelf libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
       - name: Build PC video plugin
         run: |

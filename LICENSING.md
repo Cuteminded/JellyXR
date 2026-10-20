@@ -22,6 +22,11 @@ The Windows version of Jellyframe includes third-party libraries required for vi
 
 The build bundles **libmpv** from [shinchiro's Windows builds](https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261010), using release `20261010`, based on mpv revision `b2c255c13e`. It also links against **godot-cpp**, using the `godot-4.5-stable` version.
 
+The Vulkan video backend also links against FFmpeg. Windows builds bundle the shared libraries from [BtbN's release of October 19, 2026](https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-19-13-06), archive `ffmpeg-n8.1.3-18-g46d899d7a0-win64-gpl-shared-8.1.zip`. 
+This archive uses FFmpeg revision `46d899d7a0` with GPL components enabled. Its GPLv3 license is included in the exported app's `licenses/ffmpeg.txt`.
+The [build scripts](https://github.com/BtbN/FFmpeg-Builds) describe its configuration and dependency sources, and the [FFmpeg source](https://github.com/FFmpeg/FFmpeg/tree/46d899d7a0) is available separately. 
+Linux builds use distribution FFmpeg libraries, with their notices included when packaging the bundled libraries.
+
 ## Sources and Attribution
 
 The following links provide access to the original source code, build configurations, and licensing information:

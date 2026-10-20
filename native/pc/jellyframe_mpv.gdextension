@@ -9,4 +9,4 @@ linux.x86_64 = "res://addons/jellyframe_mpv/bin/jellyframe_mpv.linux.x86_64.so"
 linux.arm64 = "res://addons/jellyframe_mpv/bin/jellyframe_mpv.linux.arm64.so"
 
 [dependencies]
-windows.x86_64 = { "res://addons/jellyframe_mpv/bin/libmpv-2.dll": "" }
+windows.x86_64 = { "res://addons/jellyframe_mpv/bin/libmpv-2.dll": "", "res://addons/jellyframe_mpv/bin/avcodec-62.dll": "", "res://addons/jellyframe_mpv/bin/avformat-62.dll": "", "res://addons/jellyframe_mpv/bin/avutil-60.dll": "", "res://addons/jellyframe_mpv/bin/swscale-9.dll": "", "res://addons/jellyframe_mpv/bin/swresample-6.dll": "" }

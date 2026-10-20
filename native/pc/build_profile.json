@@ -1,3 +1,19 @@
 {
-  "enabled_classes": ["Node", "Image", "ImageTexture", "OS", "DisplayServer", "RenderingServer"]
+  "enabled_classes": [
+    "Node",
+    "Image",
+    "ImageTexture",
+    "OS",
+    "DisplayServer",
+    "RenderingServer",
+    "RenderingDevice",
+    "Texture2DRD",
+    "RDShaderSource",
+    "RDShaderSPIRV",
+    "RDTextureFormat",
+    "RDTextureView",
+    "RDSamplerState",
+    "RDUniform",
+    "RDPipelineSpecializationConstant"
+  ]
 }
