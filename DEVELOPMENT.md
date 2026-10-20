@@ -24,6 +24,18 @@ To build locally:
 3. Select Project > Install Android Build Template.
 4. Run the build script with the paths to your installed tools:
 
+On Linux, install `curl`, `unzip`, and `sha256sum`, then run:
+
+```sh
+export JAVA_HOME='/path/to/jdk-17'
+export ANDROID_HOME='/path/to/android-sdk'
+GODOT='/path/to/godot' GRADLE='/path/to/gradle' bash tools/build-android.sh
+```
+
+If `godot` and `gradle` are on your `PATH`, omit the `GODOT` and `GRADLE` overrides. The script also accepts `ANDROID_SDK_ROOT` when `ANDROID_HOME` is unset. The Android workflow uses this Bash script.
+
+On Windows, use PowerShell:
+
 ```powershell
 ./tools/build-android.ps1 -Godot 'C:/tools/godot.exe' `
   -Gradle 'C:/tools/gradle/bin/gradle.bat' `
@@ -45,7 +57,7 @@ godot --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/
 
 The plugin build script downloads pinned CMake, LLVM-MinGW, godot-cpp, and libmpv archives into `build/desktop`, verifies their checksums, and generates `addons/jellyframe_mpv` without requiring a system-wide compiler installation. Close running Jellyframe instances before rebuilding; Git ignores the generated plugin, and Android exports exclude it.
 
-The Windows workflow builds the plugin, tests decoding and controls, exports the app, and checks that the exported executable starts with VR disabled. Build commands disable OpenXR, while the exported app keeps it enabled. The workflow needs no repository secrets, and GitHub keeps its build artifacts for 14 days.
+The Windows workflow builds the plugin, exports the app, verifies the output files, and uploads the build. Tests run separately using the commands below. Build commands disable OpenXR, while the exported app keeps it enabled. The workflow needs no repository secrets, and GitHub keeps its build artifacts for 14 days.
 
 After building the PC plugin, run its decoder tests without a headset:
 
@@ -75,7 +87,7 @@ Connect to your Jellyfin server to browse your library in desktop mode, which do
 Build natively on the target architecture with Godot 4.7.2 and matching export templates. On Ubuntu, install the build dependencies:
 
 ```sh
-sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev ffmpeg
+sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev
 bash tools/build-pc-video.sh
 godot --headless --xr-mode off --path . --editor --import --quit
 ```
@@ -100,7 +112,7 @@ godot --headless --xr-mode off --path . --export-release 'Linux ARM64 Vulkan' di
 
 The OpenXR presets select OpenGL Compatibility. The Vulkan presets select the Mobile renderer and Vulkan through custom feature tags. Both executables embed their own resources and share the native decoder library in the output folder.
 
-**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, checks local and authenticated MP4/HLS playback, runs the control tests, and starts both exported apps without VR. It also checks the renderer settings in each export; these headless checks do not validate graphics output or headset behavior. The artifacts contain tar archives that preserve Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
+**Build Linux** uses native `ubuntu-24.04` and `ubuntu-24.04-arm` runners. Each job builds its plugin, exports the OpenGL and Vulkan apps, checks output files and decoder dependencies, and packages both library variants. Tests run separately using the commands below. The artifacts contain tar archives that preserve Linux executable permissions; GitHub keeps them for 14 days, and the workflow needs no repository secrets.
 
 The decoder and headset tests in [Build and test on Windows](#build-and-test-on-windows) also work on Linux, where you should use `python3` for the HTTP streaming test and pass the path to your Linux Godot executable.
 
