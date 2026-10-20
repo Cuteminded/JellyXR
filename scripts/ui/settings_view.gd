@@ -19,6 +19,8 @@ var screen_dimensions: GridContainer
 var stereo_choices: HFlowContainer
 var reset_screen_button: Button
 var playback_choices: VBoxContainer
+var transcode_options: VBoxContainer
+var transcode_choices: HFlowContainer
 var sections: Array[VBoxContainer] = []
 var scroll: ScrollContainer
 var dragging_slider := false
@@ -102,7 +104,7 @@ func _build_playback(parent: VBoxContainer) -> void:
 	playback_choices.add_theme_constant_override("separation", 12)
 	parent.add_child(playback_choices)
 	var group := ButtonGroup.new()
-	var conversion_hint := "Jellyfin converts the video for this device, up to 1080p at 30 fps."
+	var conversion_hint := "Jellyfin converts the video to the resolution you choose below, up to 30 fps."
 	for option in [
 		["Automatic", "auto", "Play the original file when supported. Otherwise, Jellyfin converts it."],
 		["Original full resolution", "original", "Play the original file without conversion. Your device must support its format."],
@@ -111,8 +113,31 @@ func _build_playback(parent: VBoxContainer) -> void:
 		var row := VBoxContainer.new()
 		playback_choices.add_child(row)
 		_choice(option[0], option[1] == settings.playback_mode, group, row,
-			func(): settings.playback_mode = option[1]; _save())
+			func(): _select_playback_mode(option[1]))
 		_hint(option[2], row)
+	_build_transcode_options(parent)
+
+func _select_playback_mode(value: String) -> void:
+	settings.playback_mode = value
+	transcode_options.visible = value == "transcoded"
+	_save()
+
+func _build_transcode_options(parent: VBoxContainer) -> void:
+	transcode_options = VBoxContainer.new()
+	transcode_options.add_theme_constant_override("separation", 12)
+	transcode_options.visible = settings.playback_mode == "transcoded"
+	parent.add_child(transcode_options)
+	Widgets.label("Transcoded resolution", transcode_options, 26)
+	transcode_choices = HFlowContainer.new()
+	transcode_choices.add_theme_constant_override("h_separation", 12)
+	transcode_choices.add_theme_constant_override("v_separation", 12)
+	transcode_options.add_child(transcode_choices)
+	var group := ButtonGroup.new()
+	for resolution in JellyframeSettings.TRANSCODE_PRESETS:
+		var preset: Dictionary = JellyframeSettings.TRANSCODE_PRESETS[resolution]
+		_choice(preset.label, settings.transcode_resolution == resolution, group, transcode_choices,
+			func(): settings.transcode_resolution = resolution; _save())
+	_hint("Choose a maximum resolution. Smaller videos keep their size. Higher resolutions need a faster connection and more server processing power.", transcode_options)
 
 func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, action: Callable) -> CheckBox:
 	var choice := CheckBox.new()

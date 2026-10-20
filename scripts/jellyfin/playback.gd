@@ -7,6 +7,7 @@ signal stream_ready(url: String, source: Dictionary, start_ms: int)
 var api: JellyfinClient
 var settings: JellyframeSettings
 var active_playback_mode := "auto"
+var active_transcode_resolution := 1080
 var item: Dictionary = {}
 var source: Dictionary = {}
 var session_id := ""
@@ -21,6 +22,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		position_ticks = int(item.get("UserData", {}).get("PlaybackPositionTicks", 0))
 		fallback_attempted = false
 		active_playback_mode = settings.playback_mode if settings != null else "auto"
+		active_transcode_resolution = settings.transcode_resolution if settings != null and active_playback_mode == "transcoded" else 1080
 	started = false
 	var use_transcode := transcode or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
@@ -73,8 +75,9 @@ func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 		direct_profile["AudioCodec"] = "aac,mp3,opus,vorbis"
 	var transcoding_profile := {"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}
 	var codec_conditions := [{"Condition": "Equals", "Property": "VideoRangeType", "Value": "SDR", "IsRequired": true}]
+	var preset: Dictionary = JellyframeSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyframeSettings.TRANSCODE_PRESETS[1080])
 	transcoding_profile["Conditions"] = []
-	for limit in [["Width", "1920"], ["Height", "1080"], ["VideoFramerate", "30"], ["VideoBitrate", "12000000"]]:
+	for limit in [["Width", str(preset.width)], ["Height", str(preset.height)], ["VideoFramerate", "30"], ["VideoBitrate", str(preset.bitrate)]]:
 		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
 	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {

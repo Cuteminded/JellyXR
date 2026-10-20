@@ -42,6 +42,7 @@ func run_checks() -> void:
 	assert(retry_profile.TranscodingProfiles == automatic_profile.TranscodingProfiles, "Decoder recovery retains conversion limits")
 	assert(api.bodies[1].DeviceProfile.TranscodingProfiles[0].Conditions == retry_profile.TranscodingProfiles[0].Conditions, "The playback request sends the conversion limits on the current platform")
 	await check_playback_choices(session, api, streams)
+	await check_transcode_resolutions(session, api, streams)
 	session.queue_free()
 	api.queue_free()
 	print("Playback profile checks: PASS")
@@ -80,3 +81,36 @@ func check_playback_choices(session: PlaybackSession, api: FixtureClient, stream
 	assert(not session.is_hls() and streams.back()[1] == 0, "Progressive transcoding starts at the server offset without a second decoder seek")
 	session.source["TranscodingSubProtocol"] = "hls"
 	assert(session.is_hls(), "The advertised HLS protocol is recognized without a playlist extension")
+
+func check_transcode_resolutions(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
+	session.settings.playback_mode = "transcoded"
+	api.direct = true
+	api.transcode_path = "/Videos/fixture/master.m3u8"
+	for sample in [[720, "1280", "720", "6000000"], [1080, "1920", "1080", "12000000"], [2160, "3840", "2160", "40000000"]]:
+		session.settings.transcode_resolution = sample[0]
+		await session.open({"Id": "fixture", "UserData": {"PlaybackPositionTicks": 450000000}})
+		var request: Dictionary = api.bodies.back()
+		var expected := {"Width": sample[1], "Height": sample[2], "VideoFramerate": "30", "VideoBitrate": sample[3]}
+		var limits := {}
+		for condition in request.DeviceProfile.TranscodingProfiles[0].Conditions:
+			assert(condition.Condition == "LessThanEqual", "Resolution choices set a maximum and do not force upscaling")
+			limits[condition.Property] = condition.Value
+		assert(limits == expected, "Each resolution sends its own dimensions and bitrate budget")
+		for condition in request.DeviceProfile.CodecProfiles[0].Conditions:
+			if expected.has(condition.Property):
+				assert(condition.Value == expected[condition.Property], "Codec limits match the selected conversion quality")
+		assert(not request.EnableDirectPlay and not request.AllowVideoStreamCopy, "Each resolution forces conversion even for a directly playable source")
+		assert(streams.back()[1] == 45000, "Each resolution preserves the HLS resume position")
+
+	session.settings.transcode_resolution = 720
+	session.position_ticks = 900000000
+	await session.open(session.item, true)
+	assert(session.active_transcode_resolution == 2160 and streams.back()[1] == 90000, "Seeking keeps the active 4K quality and requested position")
+	await session.open({"Id": "fixture"})
+	assert(session.active_transcode_resolution == 720, "A new video uses the updated resolution preference")
+	session.settings.playback_mode = "auto"
+	session.settings.transcode_resolution = 2160
+	await session.open({"Id": "fixture"})
+	assert(session.method == "DirectPlay" and session.active_transcode_resolution == 1080, "Automatic playback keeps its existing direct-play and conversion defaults")
+	await session.retry_transcode()
+	assert(session.method == "Transcode" and session.active_transcode_resolution == 1080, "Automatic recovery retains its existing 1080p conversion default")

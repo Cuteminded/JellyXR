@@ -4,6 +4,11 @@ extends RefCounted
 const PATH := "user://settings.cfg"
 const SCREEN_KEYS := ["width", "distance", "height", "curvature"]
 const PLAYBACK_MODES := ["auto", "original", "transcoded"]
+const TRANSCODE_PRESETS := {
+	720: {"label": "720p", "width": 1280, "height": 720, "bitrate": 6000000},
+	1080: {"label": "1080p", "width": 1920, "height": 1080, "bitrate": 12000000},
+	2160: {"label": "4K", "width": 3840, "height": 2160, "bitrate": 40000000}
+}
 const LIBRARY_SORT_OPTIONS := [
 	["Name", "SortName"], ["Random", "Random"],
 	["Community rating", "CommunityRating"], ["Critics rating", "CriticRating"],
@@ -21,6 +26,7 @@ var device_id := ""
 var library_sort_by := "SortName"
 var library_sort_order := "Ascending"
 var playback_mode := "auto"
+var transcode_resolution := 1080
 
 func load_settings(path: String = PATH) -> void:
 	var config := ConfigFile.new()
@@ -44,6 +50,8 @@ func load_settings(path: String = PATH) -> void:
 		library_sort_order = "Ascending"
 	playback_mode = str(config.get_value("playback", "mode", "auto"))
 	if playback_mode not in PLAYBACK_MODES: playback_mode = "auto"
+	transcode_resolution = int(config.get_value("playback", "transcode_resolution", 1080))
+	if not TRANSCODE_PRESETS.has(transcode_resolution): transcode_resolution = 1080
 	if device_id.is_empty():
 		device_id = Crypto.new().generate_random_bytes(16).hex_encode()
 		save(path)
@@ -67,5 +75,6 @@ func save(path: String = PATH) -> Error:
 	config.set_value("library", "sort_by", library_sort_by)
 	config.set_value("library", "sort_order", library_sort_order)
 	config.set_value("playback", "mode", playback_mode)
+	config.set_value("playback", "transcode_resolution", transcode_resolution)
 	return config.save(path)
 
