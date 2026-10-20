@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.microedition.khronos.opengles.GL10;
 
 public final class JellyframeVideo extends GodotPlugin {
@@ -34,7 +35,9 @@ public final class JellyframeVideo extends GodotPlugin {
     private volatile boolean prepared;
     private volatile boolean buffering;
     private volatile boolean seeking;
-    private int generation;
+    private final AtomicInteger generation = new AtomicInteger();
+    private volatile int readyGeneration = -1;
+    private int textureGeneration = -1;
 
     public JellyframeVideo(Godot godot) {
         super(godot);
@@ -53,27 +56,34 @@ public final class JellyframeVideo extends GodotPlugin {
     }
 
     @UsedByGodot public void open_video(int textureId, String url, String authorization, int startMs) {
+        int opening = generation.incrementAndGet();
         main.post(() -> {
+            if (opening != generation.get()) return;
             releasePlayer();
-            int opening = generation;
             runOnRenderThread(() -> {
+                if (opening != generation.get()) return;
                 releaseSurface();
                 texture = new SurfaceTexture(textureId);
+                textureGeneration = opening;
                 texture.setOnFrameAvailableListener(ignored -> {
-                    if (ignored != texture) return;
+                    if (ignored != texture || opening != generation.get()) return;
                     lastFrame = SystemClock.elapsedRealtime();
                     frameAvailable.set(true);
                 });
                 surface = new Surface(texture);
                 Surface output = surface;
                 main.post(() -> {
-                    if (opening == generation) prepare(output, url, authorization, startMs);
+                    if (opening == generation.get()) prepare(output, url, authorization, startMs, opening);
                 });
             });
         });
     }
 
-    private void prepare(Surface output, String url, String authorization, int startMs) {
+    private boolean isCurrent(MediaPlayer current, int opening) {
+        return current == player && opening == generation.get();
+    }
+
+    private void prepare(Surface output, String url, String authorization, int startMs, int opening) {
         try {
             player = new MediaPlayer();
             player.setSurface(output);
@@ -82,7 +92,7 @@ public final class JellyframeVideo extends GodotPlugin {
             headers.put("android-allow-cross-domain-redirect", "0");
             player.setDataSource(getContext(), Uri.parse(url), headers);
             player.setOnPreparedListener(current -> {
-                if (current != player) return;
+                if (!isCurrent(current, opening)) return;
                 prepared = true;
                 watchdog.reset(SystemClock.elapsedRealtime());
                 duration = Math.max(0, current.getDuration());
@@ -91,9 +101,11 @@ public final class JellyframeVideo extends GodotPlugin {
                 main.post(pollPlayback);
                 emitSignal("prepared");
             });
-            player.setOnVideoSizeChangedListener((current, width, height) -> emitSignal("video_size", width, height));
+            player.setOnVideoSizeChangedListener((current, width, height) -> {
+                if (isCurrent(current, opening)) emitSignal("video_size", width, height);
+            });
             player.setOnInfoListener((current, what, extra) -> {
-                if (current != player) return true;
+                if (!isCurrent(current, opening)) return true;
                 if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
                     buffering = true;
                 }
@@ -104,17 +116,17 @@ public final class JellyframeVideo extends GodotPlugin {
                 return false;
             });
             player.setOnSeekCompleteListener(current -> {
-                if (current != player) return;
+                if (!isCurrent(current, opening)) return;
                 seeking = false;
                 watchdog.setPaused(!current.isPlaying(), SystemClock.elapsedRealtime());
             });
             player.setOnCompletionListener(current -> {
-                if (current != player) return;
+                if (!isCurrent(current, opening)) return;
                 main.removeCallbacks(pollPlayback);
                 emitSignal("completed");
             });
             player.setOnErrorListener((current, what, extra) -> {
-                if (current != player) return true;
+                if (!isCurrent(current, opening)) return true;
                 prepared = false;
                 main.removeCallbacks(pollPlayback);
                 emitSignal("failed", "Android could not decode this stream (" + what + ", " + extra + ").");
@@ -131,6 +143,7 @@ public final class JellyframeVideo extends GodotPlugin {
         if (texture != null && frameAvailable.compareAndSet(true, false)) {
             texture.updateTexImage();
             synchronized (transform) { texture.getTransformMatrix(transform); }
+            if (textureGeneration == generation.get()) readyGeneration = textureGeneration;
         }
     }
 
@@ -158,6 +171,7 @@ public final class JellyframeVideo extends GodotPlugin {
 
     @UsedByGodot public int position_ms() { return position; }
     @UsedByGodot public int duration_ms() { return duration; }
+    @UsedByGodot public boolean has_video_frame() { return readyGeneration >= 0 && readyGeneration == generation.get(); }
     @UsedByGodot public boolean is_buffering() { return prepared && (buffering || seeking); }
 
     @UsedByGodot public String calibration_url() {
@@ -187,11 +201,13 @@ public final class JellyframeVideo extends GodotPlugin {
         });
     }
 
-    @UsedByGodot public void stop_video() { main.post(this::releasePlayer); }
+    @UsedByGodot public void stop_video() {
+        generation.incrementAndGet();
+        main.post(this::releasePlayer);
+    }
 
     private void releasePlayer() {
         main.removeCallbacks(pollPlayback);
-        generation++;
         prepared = false;
         buffering = false;
         seeking = false;
@@ -201,6 +217,7 @@ public final class JellyframeVideo extends GodotPlugin {
     }
 
     private void releaseSurface() {
+        readyGeneration = -1;
         lastFrame = 0;
         frameAvailable.set(false);
         if (surface != null) { surface.release(); surface = null; }
@@ -210,6 +227,7 @@ public final class JellyframeVideo extends GodotPlugin {
     @Override public void onMainPause() { set_paused(true); }
 
     @Override public void onMainDestroy() {
+        generation.incrementAndGet();
         releasePlayer();
         runOnRenderThread(this::releaseSurface);
     }
