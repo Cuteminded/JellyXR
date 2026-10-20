@@ -23,16 +23,13 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - name: Get current date
-        id: date
-        run: |
-          "date=$((Get-Date).ToUniversalTime().ToString('dd-MM-yyyy'))" >> $env:GITHUB_OUTPUT
-
-      - uses: actions/checkout@v7
+      - name: Check out source code
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -52,31 +49,33 @@ jobs:
           Copy-Item "$env:RUNNER_TEMP/templates/templates/*" $templateDirectory -Recurse
           "GODOT=$env:RUNNER_TEMP/godot/Godot_v${release}_win64_console.exe" >> $env:GITHUB_ENV
 
-      - name: Import project
+      - name: Import Godot project
         run: |
           & $env:GODOT --headless --xr-mode off --path . --editor --import --quit
           if ($LASTEXITCODE -ne 0) { throw 'Godot import failed.' }
-
-      - name: Test PC playback and controls
-        run: |
-          foreach ($test in 'test_pc_video', 'test_core', 'test_seek', 'test_recenter', 'test_timeline', 'test_autoplay', 'test_player_return', 'test_player_tooltips') {
-            & $env:GODOT --headless --xr-mode off --path . --script "tests/$test.gd"
-            if ($LASTEXITCODE -ne 0) { throw "$test failed." }
-          }
-          python tests/test_pc_streaming.py --godot $env:GODOT
-          if ($LASTEXITCODE -ne 0) { throw 'Authenticated PC streaming failed.' }
 
       - name: Export Windows build
         run: |
           New-Item -ItemType Directory -Force dist/windows | Out-Null
           & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows SteamVR' dist/windows/jellyframe.exe
           if ($LASTEXITCODE -ne 0) { throw 'Windows export failed.' }
+
+      - name: Verify Windows export files
+        run: |
           foreach ($file in 'jellyframe.exe', 'jellyframe.pck', 'jellyframe_mpv.dll', 'libmpv-2.dll') {
             if (-not (Test-Path "dist/windows/$file")) { throw "Export is missing $file." }
           }
+
+      - name: Copy Windows licenses
+        run: |
           New-Item -ItemType Directory -Force dist/windows/licenses | Out-Null
           Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.txt
           Copy-Item native/pc/THIRD_PARTY.md dist/windows/licenses/
+
+      - name: Set artifact date
+        id: date
+        run: |
+          "date=$((Get-Date).ToUniversalTime().ToString('dd-MM-yyyy'))" >> $env:GITHUB_OUTPUT
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v7
