@@ -23,20 +23,19 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Get current date
-        id: date
-        run: echo "date=$(date '+%d-%m-%Y')" >> $GITHUB_OUTPUT
-        
-      - uses: actions/checkout@v7
+      - name: Check out source code
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-java@v6
+      - name: Set up Java
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v6
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.10.2'
 
@@ -61,17 +60,25 @@ jobs:
           unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
           template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           mv "$RUNNER_TEMP/export-templates/templates" "$template_dir"
+
+      - name: Install Android build template
+        run: |
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p android/build
           unzip -q "$template_dir/android_source.zip" -d android/build
           printf '%s\n' "${GODOT_VERSION}.stable" > android/.build_version
           chmod +x android/build/gradlew
 
-      - name: Configure Android export
+      - name: Create Android debug keystore
         run: |
-          mkdir -p "$HOME/.config/godot" "$HOME/.android"
+          mkdir -p "$HOME/.android"
           keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/debug.keystore" \
             -alias androiddebugkey -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: Configure Android export
+        run: |
+          mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-${GODOT_VERSION%.*}.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
@@ -84,15 +91,15 @@ jobs:
           EOF
 
       - name: Build Android APK
-        shell: pwsh
-        run: |
-          ./tools/build-android.ps1 -Godot (Get-Command godot).Source `
-            -Gradle (Get-Command gradle).Source `
-            -AndroidSdk $env:ANDROID_HOME -JavaHome $env:JAVA_HOME
+        run: bash tools/build-android.sh
 
       - name: Verify APK signature
         run: |
           "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyframe-android.apk
+
+      - name: Set artifact date
+        id: date
+        run: echo "date=$(date -u '+%d-%m-%Y')" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
