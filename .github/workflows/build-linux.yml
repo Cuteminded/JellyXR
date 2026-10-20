@@ -95,6 +95,7 @@ jobs:
           output="dist/linux-${ARCH}"
           cp -r "build/linux/${ARCH}/licenses" "$output/"
           cp LICENSE "$output/licenses/jellyframe.txt"
+          cp LICENSING.md "$output/licenses/"
 
       - name: Check Linux decoder dependencies
         run: |

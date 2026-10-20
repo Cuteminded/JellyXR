@@ -15,3 +15,20 @@ Jellyframe uses third-party software and assets that are subject to their respec
 ## Media Artwork
 
 Movie posters, backdrops, and other media artwork are retrieved from the user's Jellyfin server. These assets are not included in Jellyframe's source code or distributed with the application.
+
+# PC Playback Dependencies
+
+The Windows version of Jellyframe includes third-party libraries required for video playback and integration with Godot.
+
+The build bundles **libmpv** from [shinchiro's Windows builds](https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261010), using release `20261010`, based on mpv revision `b2c255c13e`. It also links against **godot-cpp**, using the `godot-4.5-stable` version.
+
+## Sources and Attribution
+
+The following links provide access to the original source code, build configurations, and licensing information:
+
+- **libmpv:** [Windows binary release (20261010)](https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261010)
+- **mpv:** [Source code and copyright information (b2c255c13e)](https://github.com/mpv-player/mpv/tree/b2c255c13e)
+- **Windows Decoder Dependencies:** [Build scripts and dependency sources](https://github.com/shinchiro/mpv-winbuild-cmake)
+- **godot-cpp:** [Source code (Godot 4.5 stable)](https://github.com/godotengine/godot-cpp/tree/godot-4.5-stable)
+
+These components remain subject to their respective licenses and copyright notices.
