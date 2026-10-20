@@ -72,15 +72,10 @@ jobs:
           Copy-Item build/desktop/deps/godot-cpp-godot-4.5-stable/LICENSE.md dist/windows/licenses/godot-cpp.txt
           Copy-Item native/pc/THIRD_PARTY.md dist/windows/licenses/
 
-      - name: Set artifact date
-        id: date
-        run: |
-          "date=$((Get-Date).ToUniversalTime().ToString('dd-MM-yyyy'))" >> $env:GITHUB_OUTPUT
-
       - name: Upload Windows build
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-windows
+          name: jellyframe-windows
           path: dist/windows/
           if-no-files-found: error
           retention-days: 14
