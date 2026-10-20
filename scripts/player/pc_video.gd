@@ -12,6 +12,7 @@ func unavailable_message() -> String:
 	return "The video plugin is missing. Extract all files from the Windows build, including the DLLs."
 
 func open(url: String, authorization: String, start_ms: int) -> void:
+	_set_texture(null)
 	if not available():
 		failed.emit(unavailable_message())
 		return
@@ -22,10 +23,13 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 		bridge.ended.connect(func(): ended.emit())
 		bridge.failed.connect(func(message: String): failed.emit(message))
 		bridge.size_changed.connect(func(w: int, h: int): size_changed.emit(w, h))
-		bridge.texture_changed.connect(func(texture: Texture2D): material.set_shader_parameter("video_texture", texture))
+		bridge.texture_changed.connect(_set_texture)
 	paused = false
 	var error: String = bridge.open_video(url, authorization, start_ms)
 	if not error.is_empty(): failed.emit(error)
+
+func _set_texture(texture: Texture2D) -> void:
+	if material != null: material.set_shader_parameter("video_texture", texture)
 
 func toggle_pause() -> void:
 	if bridge != null:
@@ -42,5 +46,6 @@ func duration_ms() -> int:
 	return bridge.duration_ms() if bridge != null else 0
 
 func stop() -> void:
+	_set_texture(null)
 	if bridge != null: bridge.stop_video()
 	paused = false

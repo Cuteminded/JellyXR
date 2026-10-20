@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled;
 
-uniform sampler2D video_texture : source_color, filter_linear;
+uniform sampler2D video_texture : source_color, filter_linear, hint_default_black;
 uniform bool stereo = false;
 uniform bool top_bottom = false;
 uniform bool swap_eyes = false;
