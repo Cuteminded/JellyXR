@@ -19,6 +19,8 @@ func capture() -> void:
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.albedo_color = Color("876143")
 	app.screen.material_override = material
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	app._screen_settings()
 	app.panel.show()
 	await create_timer(0.5).timeout

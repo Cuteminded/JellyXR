@@ -48,6 +48,8 @@ func run_checks() -> void:
 	assert(app.player_overlay.get_parent() == app.screen, "The overlay follows the movie screen")
 	app._toggle_menu()
 	assert(not app.player_overlay.visible and app.screen.global_transform == screen_transform, "Hiding the overlay does not move the movie")
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	app._screen_settings()
 	assert(app.panel.visible and not app.player_overlay.visible, "Settings open in the main window")
 	var menu_material: StandardMaterial3D = app.panel.material_override

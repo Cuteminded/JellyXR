@@ -44,6 +44,8 @@ func capture() -> void:
 		quit(1)
 		return
 	if not await check_180_rendering(app, grid_texture): return
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	app._screen_settings()
 	app.viewport.get_parent().show()
 	var settings: SettingsView = app.page.get_child(0)

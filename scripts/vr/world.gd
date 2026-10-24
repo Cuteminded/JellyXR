@@ -2,6 +2,7 @@ class_name ViewingWorld
 extends Node3D
 
 signal menu_requested
+signal settings_requested
 signal library_requested
 var settings: JellyframeSettings
 var camera: Camera3D
@@ -99,7 +100,9 @@ func setup() -> void:
 		viewport.reparent(container)
 
 func _controller_button_pressed(action: String, hand: StringName) -> void:
-	if action == "by_button" and hand == &"right_hand":
+	if action == "menu_button" and hand == &"left_hand":
+		settings_requested.emit()
+	elif action == "by_button" and hand == &"right_hand":
 		library_requested.emit()
 	elif action in ["menu_button", "ax_button", "by_button"]:
 		menu_requested.emit()

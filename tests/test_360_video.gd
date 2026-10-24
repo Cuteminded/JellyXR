@@ -46,6 +46,8 @@ func run_checks() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	app.set_process(false)
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	app.video.queue_free()
 	var video := FixtureVideo.new()
 	app.add_child(video)

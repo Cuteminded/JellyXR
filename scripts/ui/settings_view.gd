@@ -1,7 +1,6 @@
 class_name SettingsView
 extends VBoxContainer
 
-signal back_requested
 signal screen_changed
 signal environment_changed
 signal stereo_selected(value: int)
@@ -59,7 +58,6 @@ func _ready() -> void:
 	_build_screen(sections[1])
 	_build_environment(sections[2])
 	_build_playback(sections[3])
-	Widgets.button("Back", func(): back_requested.emit(), self)
 	resized.connect(_adapt_columns)
 	_adapt_columns()
 

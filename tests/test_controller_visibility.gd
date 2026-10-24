@@ -7,6 +7,8 @@ func run_checks() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	app.set_process(false)
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	var world: ViewingWorld = app.world
 	check_controller_materials(world)
 	var origin := world.camera.get_parent()

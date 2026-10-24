@@ -78,6 +78,7 @@ func run_checks() -> void:
 	app.add_child(video)
 	app.add_child(session)
 	app.api = api
+	app.shell.set_signed_in(true)
 	app.video = video
 	app.session = session
 	video.ended.connect(app._ended)

@@ -13,6 +13,7 @@ var logout: Button
 var heading: Label
 var rail: PanelContainer
 var selected_id := ""
+var signed_in := false
 var buttons: Dictionary = {}
 var rail_background: StyleBoxFlat
 var main_background: StyleBoxFlat
@@ -75,8 +76,10 @@ func _ready() -> void:
 	set_signed_in(false)
 
 func set_signed_in(value: bool) -> void:
+	signed_in = value
 	rail.visible = value
 	home.disabled = not value
+	settings_button.disabled = not value
 	logout.visible = value
 	if not value:
 		heading.text = ""

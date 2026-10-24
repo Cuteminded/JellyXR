@@ -77,6 +77,7 @@ func _setup_world() -> void:
 	theatre = world.theatre
 	video.material = material
 	world.menu_requested.connect(_toggle_menu)
+	world.settings_requested.connect(_toggle_settings)
 	world.library_requested.connect(_toggle_controller_library)
 	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
 	if xr:
@@ -242,6 +243,9 @@ func _toggle_controller_library() -> void:
 	if autoplay_pending:
 		_show_library()
 		return
+	_toggle_panel()
+
+func _toggle_panel() -> void:
 	panel.visible = not panel.visible
 	player_overlay.hide()
 	keyboard.hide()
@@ -398,9 +402,18 @@ func _return_to_title() -> void:
 			return
 	await _details({"Id": target_id}, season)
 
+func _toggle_settings() -> void:
+	if api.token.is_empty() or not shell.signed_in: return
+	for child in page.get_children():
+		if child is SettingsView:
+			_toggle_panel()
+			return
+	_screen_settings()
+
 func _screen_settings() -> void:
+	if api.token.is_empty() or not shell.signed_in: return
 	_clear_page()
-	var previous_heading := shell.heading.text if shell.heading.text != "Settings" else "Home"
+	panel.show()
 	shell.heading.text = "Settings"
 	var view := SettingsView.new()
 	view.settings = settings
@@ -415,11 +428,6 @@ func _screen_settings() -> void:
 	view.projection_selected.connect(_select_projection)
 	view.eyes_swapped.connect(func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")))
 	view.status.connect(func(message: String): status.text = message)
-	view.back_requested.connect(func():
-		shell.heading.text = previous_heading
-		if playing: _show_playback()
-		elif not api.token.is_empty(): _show_library()
-		else: _show_login())
 	page.add_child(view)
 	status.text = "Changes take effect as you make them."
 

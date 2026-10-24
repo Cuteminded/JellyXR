@@ -85,6 +85,8 @@ func check_environment_switching() -> void:
 	app.settings = FixtureSettings.new()
 	root.add_child(app)
 	check(not app.theatre.visible, "Void starts without theatre geometry.")
+	app.api.token = "fixture"
+	app.shell.set_signed_in(true)
 	app._screen_settings()
 	var view: SettingsView = app.page.get_child(0)
 	var theatre_choice: CheckBox = view.sections[2].get_child(2).get_child(1)

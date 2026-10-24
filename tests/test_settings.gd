@@ -106,6 +106,8 @@ func run_checks() -> void:
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shell.page.add_child(view)
 	await process_frame
+	for button in view.find_children("*", "Button", true, false):
+		check(button.text != "Back", "Settings pages do not show a Back button.")
 	var release_date: CheckBox = view.sort_choices.get_child(8)
 	release_date.button_pressed = true
 	release_date.pressed.emit()
