@@ -6,6 +6,7 @@ class FixtureApi extends JellyfinClient:
 
 var failures := 0
 var selected: Array = []
+var restarted: Array = []
 var back_count := 0
 
 func _initialize() -> void:
@@ -42,6 +43,7 @@ func show_details(shell: UiShell, item: Dictionary) -> DetailsView:
 	view.item = item
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.play_requested.connect(func(chosen: Dictionary): selected.append(chosen))
+	view.play_from_start_requested.connect(func(chosen: Dictionary): restarted.append(chosen))
 	view.back_requested.connect(func(): back_count += 1)
 	shell.page.add_child(view)
 	return view
@@ -60,6 +62,10 @@ func run_checks() -> void:
 	check(view.play_button.text == "Resume", "Saved playback must offer Resume.")
 	view.play_button.pressed.emit()
 	check(selected == [item], "Resume must pass the original item to playback.")
+	check(view.play_from_start_button != null and view.play_from_start_button.text == "Play from start", "Saved playback also offers Play from start.")
+	view.play_from_start_button.pressed.emit()
+	check(restarted == [item] and selected == [item], "Play from start emits a separate playback request.")
+	check(item.UserData.PlaybackPositionTicks == 7200000000, "The details page keeps the original saved progress.")
 	view.back_button.pressed.emit()
 	check(back_count == 1, "Back must return to the library.")
 	check(DetailsMetadata.facts(item).has("2h 09m"), "Runtime must use readable hours and minutes.")
@@ -77,14 +83,17 @@ func run_checks() -> void:
 		await settle()
 		check(view.body.size.x <= view.scroll.size.x, "Details must fit the available width at %d pixels." % width)
 		check(view.title_label.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Long titles must not escape the details panel.")
+		check(view.play_from_start_button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "The restart button fits narrow details panels.")
 	root.size.x = 1536
 	view = show_details(shell, {"Id": "plain", "Name": "A movie without artwork", "Type": "Movie", "Overview": null, "UserData": null, "Genres": null, "People": null})
 	await settle()
 	check(view.play_button.text == "Play movie", "Unstarted movies must offer Play movie.")
+	check(view.play_from_start_button == null, "Titles without progress do not need a restart button.")
 	check(view.overview_label.text == "No description available.", "Missing metadata must have a readable fallback.")
 	view = show_details(shell, {"Id": "series", "Name": "Example series", "Type": "Series"})
 	await settle()
 	check(view.play_button == null, "Series must select episodes instead of playing the series itself.")
+	check(view.play_from_start_button == null, "Series headers do not offer title playback actions.")
 	check(view.series_browser != null, "Series must show a season browser.")
 	check(view.series_browser.season_grid.get_child(0).text == "No seasons available.", "An empty series must have a readable fallback.")
 	print("Details checks: ", "PASS" if failures == 0 else str(failures) + " failures")

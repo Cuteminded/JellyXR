@@ -295,12 +295,13 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	view.initial_season = season
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.play_requested.connect(_start)
+	view.play_from_start_requested.connect(_start.bind(true))
 	view.back_requested.connect(_show_library)
 	page.add_child(view)
 	status.text = "Ready."
 
-func _start(item: Dictionary) -> void:
-	if playing and str(session.item.get("Id", "")) == str(item.get("Id", "")):
+func _start(item: Dictionary, from_start: bool = false) -> void:
+	if not from_start and playing and str(session.item.get("Id", "")) == str(item.get("Id", "")):
 		if video.paused:
 			video.toggle_pause()
 			session.report("Progress", false)
@@ -321,7 +322,12 @@ func _start(item: Dictionary) -> void:
 	screen.show()
 	_show_playback()
 	player_overlay.title.text = DetailsMetadata.title(item, "Now playing")
-	await session.open(item)
+	var selected := item
+	if from_start:
+		selected = item.duplicate(true)
+		if not selected.get("UserData") is Dictionary: selected.UserData = {}
+		selected.UserData.PlaybackPositionTicks = 0
+	await session.open(selected)
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	var keep_menu_open := playing and panel.visible

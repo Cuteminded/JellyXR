@@ -2,6 +2,7 @@ class_name DetailsView
 extends VBoxContainer
 
 signal play_requested(item: Dictionary)
+signal play_from_start_requested(item: Dictionary)
 signal back_requested
 
 var item: Dictionary
@@ -12,6 +13,7 @@ var scroll: ScrollContainer
 var body: VBoxContainer
 var series_browser: SeriesBrowser
 var play_button: Button
+var play_from_start_button: Button
 var back_button: Button
 var title_label: Label
 var overview_label: Label
@@ -111,7 +113,9 @@ func _build_playback(parent: VBoxContainer) -> void:
 		return
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var position := int(user.get("PlaybackPositionTicks", 0))
-	var actions := HBoxContainer.new()
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 12)
+	actions.add_theme_constant_override("v_separation", 12)
 	parent.add_child(actions)
 	play_button = Widgets.button("Resume" if position > 0 else "Play movie", func(): play_requested.emit(item), actions)
 	play_button.custom_minimum_size = Vector2(200, 64)
@@ -126,6 +130,8 @@ func _build_playback(parent: VBoxContainer) -> void:
 	focus.border_color = Color("071c20")
 	play_button.add_theme_stylebox_override("focus", focus)
 	if position > 0:
+		play_from_start_button = Widgets.button("Play from start", func(): play_from_start_requested.emit(item), actions)
+		play_from_start_button.custom_minimum_size = Vector2(200, 64)
 		_muted("Continue from " + DetailsMetadata.duration(position), parent, 20)
 
 func _build_information() -> void:

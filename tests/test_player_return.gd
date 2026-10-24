@@ -11,7 +11,7 @@ class FixtureApi extends JellyfinClient:
 	func details(id: String) -> Dictionary:
 		detail_calls.append(id)
 		await get_tree().process_frame
-		return {"ok": true, "data": {"Id": id, "Name": "Selected series" if id == "show" else "Selected movie", "Type": "Series" if id == "show" else "Movie"}}
+		return {"ok": true, "data": {"Id": id, "Name": "Selected series" if id == "show" else "Selected movie", "Type": "Series" if id == "show" else "Movie", "UserData": {"PlaybackPositionTicks": 7200000000}}}
 
 	func seasons(_series_id: String) -> Dictionary:
 		await get_tree().process_frame
@@ -77,6 +77,15 @@ func run_checks() -> void:
 	await settle()
 	check(session.opens == 1 and video.stops == 0 and not video.paused, "Returning to the active movie resumes the current decoder without restarting")
 	check(app.player_overlay.visible, "The movie's play button returns to the playback controls")
+	movie_view.play_from_start_button.pressed.emit()
+	await settle()
+	check(session.opens == 2 and video.stops == 1, "Play from start restarts an already playing title")
+	check(session.item.UserData.PlaybackPositionTicks == 0, "Restarted playback receives a zero start position")
+	check(movie_view.item.UserData.PlaybackPositionTicks == 7200000000, "Restarting does not overwrite the details page's saved progress")
+	await app._stop(false)
+	movie_view.play_from_start_button.pressed.emit()
+	await settle()
+	check(session.opens == 3 and session.item.UserData.PlaybackPositionTicks == 0, "Play from start also starts stopped titles at zero")
 
 	await app._details({"Id": "show"})
 	await settle()

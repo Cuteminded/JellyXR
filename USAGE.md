@@ -31,6 +31,8 @@ To reset the saved app settings as well, delete `settings.cfg` from the same fol
 3. Select a movie to open its details, then choose **Play movie**. For a series, choose a season and select **Play episode** beside the episode you want.
 4. If you have watched part of a title before, choose **Resume** or **Resume episode** to continue from where you left off.
 
+On a title's details page, **Play from start** appears beside **Resume** when saved progress is available. It starts the video at the beginning, even if that title is already playing.
+
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
 ## Control playback
