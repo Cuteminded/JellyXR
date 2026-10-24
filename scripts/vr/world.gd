@@ -175,7 +175,6 @@ func set_panoramic(enabled: bool, horizontal_angle: float = TAU) -> void:
 	panorama.visible = enabled and screen.visible
 	if enabled:
 		panorama.global_position = camera.global_position
-		panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
 	apply_environment()
 
 func _exit_tree() -> void:

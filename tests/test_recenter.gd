@@ -1,5 +1,14 @@
 extends SceneTree
 
+class FixtureVideo extends VideoBackend:
+	func available() -> bool: return true
+	func open(_url: String, _authorization: String, _start_ms: int) -> void: pass
+	func stop() -> void: pass
+
+class FixtureSession extends PlaybackSession:
+	func open(selected: Dictionary, _transcode: bool = false) -> void: item = selected
+	func report(_event: String, _paused: bool = false) -> void: pass
+
 var calls := 0
 
 func _initialize() -> void:
@@ -67,11 +76,37 @@ func run_checks() -> void:
 	assert(app.panel.global_position.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 2.7), "Headset recenter also moves the library menu")
 	assert(not app.panel.visible and app.player_overlay.visible, "Headset recenter preserves menu visibility")
 	check_menu_placement(app)
+	await check_playback_placement(app)
 	app.playing = false
 	root.use_xr = false
 	if added_interface: XRServer.remove_interface(xr)
 	print("Startup recenter checks: PASS")
 	quit()
+
+func check_playback_placement(app: Node) -> void:
+	app.video.queue_free()
+	app.session.queue_free()
+	app.video = FixtureVideo.new()
+	app.session = FixtureSession.new()
+	app.add_child(app.video)
+	app.add_child(app.session)
+	for environment in ["Void", "Cinema", "Theatre"]:
+		app.settings.environment = environment
+		app._change_environment()
+		app._recenter()
+		var screen_transform: Transform3D = app.screen.global_transform
+		var theatre_transform: Transform3D = app.theatre.global_transform
+		var panorama_basis: Basis = app.world.panorama.global_basis
+		app.camera.position += Vector3(0.4, 0.2, 0.3)
+		app.camera.rotate_y(0.5)
+		await app._start({"Id": environment})
+		assert(app.screen.global_transform.is_equal_approx(screen_transform), "Starting an item preserves screen placement")
+		for path in ["Normal.mp4", "Beach.VR180.mp4", "Beach.360.mp4", "Normal.mp4"]:
+			await app._play_stream("", {"Path": path}, 0)
+			assert(app.screen.global_transform.is_equal_approx(screen_transform), "Starting a stream preserves screen placement")
+			assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Starting a stream preserves theatre placement")
+			assert(app.world.panorama.global_basis.is_equal_approx(panorama_basis), "Starting a stream preserves panorama direction")
+			app.camera.rotate_y(0.2)
 
 func check_menu_placement(app: Node) -> void:
 	for environment in ["Theatre", "Cinema", "Void"]:

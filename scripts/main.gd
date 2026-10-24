@@ -322,7 +322,7 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 	stereo_overridden = false
 	projection_mode = VideoProjection.Mode.SCREEN
 	world.set_panoramic(false)
-	_recenter()
+	_resize_screen()
 	status.text = "Preparing playback..."
 	playing = true
 	screen.show()
@@ -347,7 +347,7 @@ func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
 	transcode_offset = session.position_ticks if session.method == "Transcode" and not session.is_hls() else 0
-	if not seeking: _recenter()
+	if not seeking: _resize_screen()
 	screen.show()
 	playing = true
 	if not seeking and not keep_menu_open: _show_playback()
@@ -475,9 +475,8 @@ func _recenter() -> void:
 func _recenter_video() -> void:
 	screen.global_basis = camera.global_basis
 	theatre.recenter(camera.global_transform)
-	if world.panoramic:
-		world.panorama.global_position = camera.global_position
-		world.panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
+	world.panorama.global_position = camera.global_position
+	world.panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
 	_position_screen()
 	_resize_screen()
 
