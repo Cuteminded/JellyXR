@@ -39,7 +39,7 @@ func run_checks() -> void:
 	decoder.failed.connect(func(message: String): errors.append(message))
 	decoder.size_changed.connect(func(w: int, h: int): dimensions = Vector2i(w, h))
 	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
-	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
+	var url := ProjectSettings.globalize_path("res://tests/fixtures/stereo_test.mp4")
 	var authorization := ""
 	var expected_renderer := "software" if DisplayServer.get_name() == "headless" or OS.get_environment("JELLYFRAME_PC_RENDERER") == "software" else "opengl"
 	if expected_renderer != "software" and RenderingServer.get_current_rendering_driver_name() == "vulkan":

@@ -71,7 +71,7 @@ def main():
     graphics.add_argument("--vulkan", action="store_true", help="Test Vulkan GPU playback in a window")
     args = parser.parse_args()
     project = Path(__file__).resolve().parents[1]
-    media = [(project / "native/android/src/main/res/raw", "stereo_test.mp4")]
+    media = [(project / "tests/fixtures", "stereo_test.mp4")]
     if args.hls_directory:
         media.append((args.hls_directory.resolve(), "stream.m3u8"))
     for directory, name in media:

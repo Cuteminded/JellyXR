@@ -31,7 +31,6 @@ var transcode_offset := 0
 var quick_generation := 0
 var countdown_generation := 0
 var autoplay_pending := false
-var calibration := false
 var seeking := false
 var seek_paused := false
 var timeline_elapsed := 0.0
@@ -57,9 +56,6 @@ func _ready() -> void:
 	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); _resize_screen())
 	_show_login()
 	await _restore_session()
-	if video.has_android_services() and OS.is_debug_build() and video.bridge.calibration_requested():
-		await get_tree().create_timer(2).timeout
-		_calibrate()
 
 func _setup_world() -> void:
 	world = ViewingWorld.new()
@@ -145,8 +141,6 @@ func _show_login() -> void:
 		else: status.text = result.error)
 	Widgets.button("Quick Connect", func():
 		if _configure(address.text): _quick_connect(), row)
-	if video.has_android_services() and OS.is_debug_build():
-		Widgets.button("Test 3D playback", _calibrate, row)
 	Widgets.label("HTTP sends credentials without encryption. Use HTTPS outside your home network.", page, 18)
 	status.text = "Sign in to start watching."
 
@@ -317,7 +311,6 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 		status.text = video.unavailable_message()
 		return
 	await _stop(false)
-	calibration = false
 	projection_overridden = false
 	stereo_overridden = false
 	projection_mode = VideoProjection.Mode.SCREEN
@@ -502,7 +495,6 @@ func _skip(amount: int) -> void:
 	_seek_to(int(transcode_offset / 10000) + video.position_ms() + amount)
 
 func _duration_ms() -> int:
-	if calibration: return video.duration_ms()
 	var ticks := int(session.source.get("RunTimeTicks", 0))
 	if ticks <= 0: ticks = int(session.item.get("RunTimeTicks", 0))
 	if ticks > 0: return int(ticks / 10000)
@@ -516,7 +508,7 @@ func _update_timeline() -> void:
 	_update_loading()
 
 func _active_segment() -> Dictionary:
-	if not playing or not decoder_ready or seeking or calibration: return {}
+	if not playing or not decoder_ready or seeking: return {}
 	return media_segments.active(int(transcode_offset / 10000) + video.position_ms(), _duration_ms())
 
 func _skip_segment() -> void:
@@ -535,7 +527,7 @@ func _update_loading() -> void:
 func _seek_to(milliseconds: int) -> void:
 	if not playing or seeking or not decoder_ready: return
 	var target := clampi(milliseconds, 0, maxi(0, _duration_ms() - 1000))
-	if calibration or session.method != "Transcode" or session.is_hls():
+	if session.method != "Transcode" or session.is_hls():
 		video.seek(target)
 		return
 	seeking = true
@@ -571,12 +563,6 @@ func _stop(show_library: bool = true, completed: bool = false) -> void:
 
 func _ended() -> void:
 	if not playing: return
-	if calibration:
-		await _stop(false)
-		calibration = false
-		_show_login()
-		if get_viewport().use_xr: panel.show()
-		return
 	var previous := session.item.duplicate(true)
 	var generation := countdown_generation + 1
 	await _stop(false, true)
@@ -619,9 +605,6 @@ func _cancel_countdown() -> void:
 
 func _video_failed(message: String) -> void:
 	status.text = message
-	if calibration:
-		_error(message)
-		return
 	if video.available() and playing:
 		decoder_ready = false
 		_update_timeline()
@@ -674,19 +657,3 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE: _toggle_menu()
-
-
-func _calibrate() -> void:
-	transcode_offset = 0
-	decoder_ready = false
-	calibration = true
-	mode = Stereo.Mode.HALF_SBS
-	video_size = Vector2i(1920, 1080)
-	_resize_screen()
-	_recenter()
-	screen.show()
-	playing = true
-	status.text = "Close one eye at a time. Check that LEFT appears in your left eye and RIGHT in your right eye."
-	_update_timeline()
-	await video.open(video.bridge.calibration_url(), "", 0)
-	if get_viewport().use_xr: panel.hide()

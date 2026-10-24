@@ -24,6 +24,5 @@ func run_check() -> void:
 	quit()
 
 func play_clip() -> void:
-	app.calibration = true
 	app.session.item = {"Name": "Stereo check: LEFT in left eye, RIGHT in right eye"}
-	app._play_stream(ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4"), {"Video3DFormat": "HalfSideBySide"}, 0)
+	app._play_stream(ProjectSettings.globalize_path("res://tests/fixtures/stereo_test.mp4"), {"Video3DFormat": "HalfSideBySide"}, 0)

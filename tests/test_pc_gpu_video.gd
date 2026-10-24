@@ -46,7 +46,7 @@ func check_controls_and_reopen(url: String) -> bool:
 
 func run_check() -> void:
 	expected_renderer = "vulkan" if RenderingServer.get_current_rendering_driver_name() == "vulkan" else "opengl"
-	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
+	var url := ProjectSettings.globalize_path("res://tests/fixtures/stereo_test.mp4")
 	var reopen_url := url
 	var expected_size := Vector2i(1920, 1080)
 	for argument in OS.get_cmdline_user_args():

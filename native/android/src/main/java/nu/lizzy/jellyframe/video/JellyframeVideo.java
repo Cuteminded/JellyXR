@@ -174,15 +174,6 @@ public final class JellyframeVideo extends GodotPlugin {
     @UsedByGodot public boolean has_video_frame() { return readyGeneration >= 0 && readyGeneration == generation.get(); }
     @UsedByGodot public boolean is_buffering() { return prepared && (buffering || seeking); }
 
-    @UsedByGodot public String calibration_url() {
-        int resource = getContext().getResources().getIdentifier("stereo_test", "raw", getContext().getPackageName());
-        return "android.resource://" + getContext().getPackageName() + "/" + resource;
-    }
-
-    @UsedByGodot public boolean calibration_requested() {
-        return getActivity() != null && getActivity().getIntent().getBooleanExtra("jellyframe_calibration", false);
-    }
-
     @UsedByGodot public void set_paused(boolean paused) {
         main.post(() -> {
             if (player == null || !prepared) return;

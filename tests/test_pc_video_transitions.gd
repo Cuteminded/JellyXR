@@ -63,7 +63,7 @@ func run_check() -> void:
 	video.failed.connect(func(message: String): errors.append(message))
 	root.add_child(video)
 	if not require(await screen_brightness() < 0.001, "The screen is black before the first video"): return
-	var url := ProjectSettings.globalize_path("res://native/android/src/main/res/raw/stereo_test.mp4")
+	var url := ProjectSettings.globalize_path("res://tests/fixtures/stereo_test.mp4")
 	for cycle in range(2):
 		video.open(url, "", 0)
 		if not await wait_for_video(): return
