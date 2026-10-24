@@ -16,6 +16,7 @@ var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
 var player_loading: PlayerLoading
 var pointers: Array[LaserPointer] = []
+var controller_models: OpenXRRenderModelManager
 
 func setup() -> void:
 	var xr := XRServer.find_interface("OpenXR")
@@ -53,8 +54,8 @@ func setup() -> void:
 	ui_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	ui_material.albedo_texture = viewport.get_texture()
 	ui_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ui_material.no_depth_test = true
 	ui_material.render_priority = 100
+	VrOverlayMaterial.apply_depth(ui_material)
 	panel.material_override = ui_material
 	add_child(panel)
 	screen = MeshInstance3D.new()
@@ -74,6 +75,9 @@ func setup() -> void:
 	screen.add_child(player_loading)
 	_build_theatre()
 	if immersive:
+		controller_models = OpenXRRenderModelManager.new()
+		controller_models.render_model_added.connect(_prepare_controller_model)
+		origin.add_child(controller_models)
 		for hand in ["left_hand", "right_hand"]:
 			var pointer := LaserPointer.new()
 			pointer.tracker = hand
@@ -101,13 +105,31 @@ func _process(_delta: float) -> void:
 		panorama.visible = show_panorama
 		apply_environment()
 	if show_panorama: panorama.global_position = camera.global_position
+	var loading_menu_visible := player_loading.is_visible_in_tree() and player_loading.cancel_button.visible
+	var menu_visible := panel.is_visible_in_tree() or player_overlay.is_visible_in_tree() or loading_menu_visible
+	var controllers_visible := not screen.visible or menu_visible
+	if controller_models != null:
+		controller_models.visible = controllers_visible
 	for pointer in pointers:
+		pointer.visible = controllers_visible
 		if player_loading.is_visible_in_tree() and player_loading.cancel_button.visible:
 			pointer.set_target(player_loading, player_loading.viewport, player_loading.panel_size)
 		elif player_overlay.is_visible_in_tree():
 			pointer.set_target(player_overlay, player_overlay.viewport, player_overlay.panel_size)
 		else:
 			pointer.set_target(panel, viewport, Vector2(4.4, 2.75))
+
+func _prepare_controller_model(node: Node) -> void:
+	if node is MeshInstance3D and node.mesh != null:
+		for surface in range(node.mesh.get_surface_count()):
+			var source := node.get_active_material(surface) as BaseMaterial3D
+			if source == null: continue
+			var unshaded := source.duplicate() as BaseMaterial3D
+			unshaded.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			VrOverlayMaterial.apply_depth(unshaded)
+			node.set_surface_override_material(surface, unshaded)
+	for child in node.get_children():
+		_prepare_controller_model(child)
 
 func _build_theatre() -> void:
 	theatre = TheatreEnvironment.new()

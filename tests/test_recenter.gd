@@ -51,7 +51,7 @@ func run_checks() -> void:
 	app._screen_settings()
 	assert(app.panel.visible and not app.player_overlay.visible, "Settings open in the main window")
 	var menu_material: StandardMaterial3D = app.panel.material_override
-	assert(menu_material.no_depth_test and menu_material.render_priority > 0, "Main-window pages draw over a nearer movie screen")
+	assert(not menu_material.no_depth_test, "Main-window pages respect controller depth")
 	app._show_playback()
 	assert(not app.panel.visible and app.player_overlay.visible, "Returning from settings restores the overlay")
 	var before_reset: Transform3D = app.screen.global_transform
@@ -64,8 +64,19 @@ func run_checks() -> void:
 	assert(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Headset recenter uses the current viewing direction")
 	assert(app.panel.global_position.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 2.7), "Headset recenter also moves the library menu")
 	assert(not app.panel.visible and app.player_overlay.visible, "Headset recenter preserves menu visibility")
+	check_menu_placement(app)
 	app.playing = false
 	root.use_xr = false
 	if added_interface: XRServer.remove_interface(xr)
 	print("Startup recenter checks: PASS")
 	quit()
+
+func check_menu_placement(app: Node) -> void:
+	for environment in ["Theatre", "Cinema", "Void"]:
+		app.settings.environment = environment
+		app._change_environment()
+		for pitch in [-70.0, -30.0, 0.0]:
+			app.camera.rotation = Vector3(deg_to_rad(pitch), 0.4, 0.3)
+			app._recenter()
+			assert(app.panel.global_basis.is_equal_approx(app.camera.global_basis), "Menu recenter preserves the viewing direction")
+			assert(app.panel.global_position.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 2.7), "Room geometry does not shift the menu position")

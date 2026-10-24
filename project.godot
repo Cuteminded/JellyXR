@@ -15,8 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Jellyframe"
-config/version="0.1.1"
 config/description="A Jellyfin cinema for standalone VR."
+config/version="0.1.1"
 run/main_scene="res://scenes/main.tscn"
 config/use_custom_user_dir=true
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -39,8 +39,6 @@ textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.018, 0.029, 0.046, 1)
 renderer/rendering_method.windows="mobile"
 renderer/rendering_method.linux="mobile"
-rendering_device/driver.windows="vulkan"
-rendering_device/driver.linuxbsd="vulkan"
 rendering_device/fallback_to_d3d12.windows=false
 rendering_device/fallback_to_opengl3.windows=true
 rendering_device/fallback_to_opengl3.linux=true
@@ -54,5 +52,6 @@ rendering_device/staging_buffer/texture_upload_region_size_px.linux=512
 [xr]
 
 openxr/enabled=true
+openxr/extensions/render_model=true
 shaders/enabled=true
 openxr/extensions/meta/passthrough=true

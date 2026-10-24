@@ -33,9 +33,9 @@ func _ready() -> void:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.no_depth_test = true
 	material.render_priority = 1
 	material.albedo_texture = viewport.get_texture()
+	VrOverlayMaterial.apply_depth(material)
 	material_override = material
 	var panel := PanelContainer.new()
 	panel.theme = Widgets.theme()

@@ -32,7 +32,7 @@ func run_checks() -> void:
 	assert(indicator.label.text == "Buffering video...", "Buffering identifies why playback is waiting")
 	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "The visible popup renders independently of video frames")
 	var popup_material: StandardMaterial3D = indicator.material_override
-	assert(popup_material.no_depth_test and popup_material.render_priority > 0, "The loading popup draws over video and playback controls")
+	assert(not popup_material.no_depth_test and popup_material.render_priority > 0, "The loading popup respects closer geometry while drawing over playback controls")
 	app.screen.hide()
 	assert(indicator.viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "Hiding the video also stops popup rendering")
 	app.screen.show()

@@ -50,7 +50,7 @@ func _process(delta: float) -> void:
 		if is_instance_valid(active_pointer) and active_pointer != self:
 			active_pointer._cancel()
 		active_pointer = self
-	if (is_instance_valid(active_pointer) and active_pointer != self) or not get_is_active() or not panel.is_visible_in_tree():
+	if not is_visible_in_tree() or (is_instance_valid(active_pointer) and active_pointer != self) or not get_is_active() or not panel.is_visible_in_tree():
 		_cancel()
 		return
 	var inverse := panel.global_transform.affine_inverse()
