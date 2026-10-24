@@ -17,6 +17,8 @@ var theatre: TheatreEnvironment
 var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
 var player_loading: PlayerLoading
+var player_skip_popup: PlayerSkipPopup
+var skip_screen_size := Vector3(4.0, 16.0 / 9.0, 0.0)
 var pointers: Array[LaserPointer] = []
 var controller_models: OpenXRRenderModelManager
 
@@ -75,6 +77,8 @@ func setup() -> void:
 	screen.add_child(player_overlay)
 	player_loading = PlayerLoading.new()
 	screen.add_child(player_loading)
+	player_skip_popup = PlayerSkipPopup.new()
+	screen.add_child(player_skip_popup)
 	_build_theatre()
 	if immersive:
 		controller_models = OpenXRRenderModelManager.new()
@@ -115,7 +119,8 @@ func _process(_delta: float) -> void:
 		apply_environment()
 	if show_panorama: panorama.global_position = camera.global_position
 	var loading_menu_visible := player_loading.is_visible_in_tree() and player_loading.cancel_button.visible
-	var menu_visible := panel.is_visible_in_tree() or player_overlay.is_visible_in_tree() or loading_menu_visible
+	_update_skip_popup()
+	var menu_visible := panel.is_visible_in_tree() or player_overlay.is_visible_in_tree() or loading_menu_visible or player_skip_popup.is_visible_in_tree()
 	var controllers_visible := not screen.visible or menu_visible
 	if controller_models != null:
 		controller_models.visible = controllers_visible
@@ -123,10 +128,18 @@ func _process(_delta: float) -> void:
 		pointer.visible = controllers_visible
 		if player_loading.is_visible_in_tree() and player_loading.cancel_button.visible:
 			pointer.set_target(player_loading, player_loading.viewport, player_loading.panel_size)
+		elif player_skip_popup.is_visible_in_tree() and (not player_overlay.is_visible_in_tree() or pointer.points_at(player_skip_popup, player_skip_popup.panel_size)):
+			pointer.set_target(player_skip_popup, player_skip_popup.viewport, player_skip_popup.panel_size)
 		elif player_overlay.is_visible_in_tree():
 			pointer.set_target(player_overlay, player_overlay.viewport, player_overlay.panel_size)
 		else:
 			pointer.set_target(panel, viewport, Vector2(4.4, 2.75))
+
+func _update_skip_popup() -> void:
+	player_skip_popup.visible = player_skip_popup.available and not panel.is_visible_in_tree() and not player_loading.is_visible_in_tree()
+	if not player_skip_popup.is_visible_in_tree(): return
+	var controls_height := player_overlay.panel_size.y if player_overlay.is_visible_in_tree() else 0.0
+	player_skip_popup.fit_screen(skip_screen_size.x, skip_screen_size.y, skip_screen_size.z, controls_height)
 
 func _prepare_controller_model(node: Node) -> void:
 	if node is MeshInstance3D and node.mesh != null:

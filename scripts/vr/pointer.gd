@@ -44,6 +44,15 @@ func set_target(target: Node3D, target_viewport: SubViewport, target_size: Vecto
 		input.viewport = viewport
 	panel_size = target_size
 
+func points_at(target: Node3D, target_size: Vector2) -> bool:
+	var inverse := target.global_transform.affine_inverse()
+	var origin := inverse * global_position
+	var direction := inverse.basis * -global_basis.z
+	if absf(direction.z) <= 0.00001: return false
+	var distance := -origin.z / direction.z
+	var hit := origin + direction * distance
+	return distance > 0 and absf(hit.x) < target_size.x / 2 and absf(hit.y) < target_size.y / 2
+
 func _process(delta: float) -> void:
 	input.sample_trigger(get_float("trigger"))
 	if input.just_pressed and get_is_active():

@@ -54,6 +54,12 @@ Press **B** to browse your library while playback continues. Select the title th
 
 When an episode finishes, a five-second countdown appears before the next available episode starts. Choose **Cancel** during the countdown to return to your library.
 
+### Skip intros and credits
+
+With [Intro Skipper](https://github.com/intro-skipper/intro-skipper) installed on Jellyfin 10.10 or newer, a **Skip intro** or **Skip credits** popup appears at the bottom-right of the video during a detected segment. Point at it and press the trigger to skip, even with the playback controls hidden. When the controls are open, the popup sits just above them. Recap and preview segments also have skip buttons when the server supplies them. Skipping is manual.
+
+The server must finish analyzing the title before timestamps are available. Jellyframe reads Jellyfin's media segments, so other providers using the same API also work. If there are no timestamps or the request fails, playback continues without a skip button. Older plugin-specific APIs are not supported.
+
 ## Make the screen comfortable
 
 Open **Settings**, then choose **Screen**. If your chosen background allows screen adjustments, you can change:

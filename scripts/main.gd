@@ -36,6 +36,7 @@ var seeking := false
 var seek_paused := false
 var timeline_elapsed := 0.0
 var decoder_ready := false
+var media_segments := MediaSegments.new()
 
 func _ready() -> void:
 	settings.load_settings()
@@ -73,6 +74,7 @@ func _setup_world() -> void:
 	player_overlay.action.connect(_player_action)
 	player_overlay.seek_requested.connect(_seek_to)
 	world.player_loading.cancelled.connect(_show_library)
+	world.player_skip_popup.skip_requested.connect(_skip_segment)
 	material = world.material
 	theatre = world.theatre
 	video.material = material
@@ -326,6 +328,7 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 	screen.show()
 	_show_playback()
 	player_overlay.title.text = DetailsMetadata.title(item, "Now playing")
+	media_segments.load_item(api, str(item.Id))
 	var selected := item
 	if from_start:
 		selected = item.duplicate(true)
@@ -376,6 +379,7 @@ func _player_action(action: String) -> void:
 			_update_timeline()
 		"back": _skip(-10000)
 		"forward": _skip(30000)
+		"skip_segment": _skip_segment()
 		"stop": _stop()
 		"settings": _screen_settings()
 		"library": _return_to_title()
@@ -444,6 +448,7 @@ func _resize_screen() -> void:
 	material.set_shader_parameter("top_bottom", mode == Stereo.Mode.TOP_BOTTOM)
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
 	world.player_loading.fit_screen(dimensions.x, curvature)
+	world.skip_screen_size = Vector3(dimensions.x, aspect_ratio, curvature)
 
 func _select_projection(value: int) -> void:
 	projection_mode = value
@@ -508,7 +513,16 @@ func _duration_ms() -> int:
 func _update_timeline() -> void:
 	if autoplay_pending: return
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
+	world.player_skip_popup.update_segment(_active_segment())
 	_update_loading()
+
+func _active_segment() -> Dictionary:
+	if not playing or not decoder_ready or seeking or calibration: return {}
+	return media_segments.active(int(transcode_offset / 10000) + video.position_ms(), _duration_ms())
+
+func _skip_segment() -> void:
+	var segment := _active_segment()
+	if not segment.is_empty(): _seek_to(int(segment.target_ms))
 
 func _update_loading() -> void:
 	if autoplay_pending: return
@@ -539,6 +553,8 @@ func _seek_to(milliseconds: int) -> void:
 	await session.open(session.item, true)
 
 func _stop(show_library: bool = true, completed: bool = false) -> void:
+	media_segments.clear()
+	world.player_skip_popup.update_segment({})
 	countdown_generation += 1
 	_cancel_countdown()
 	world.player_loading.hide()
@@ -615,6 +631,8 @@ func _video_failed(message: String) -> void:
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	media_segments.clear()
+	world.player_skip_popup.update_segment({})
 	countdown_generation += 1
 	_cancel_countdown()
 	world.player_loading.hide()

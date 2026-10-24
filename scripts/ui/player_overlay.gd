@@ -99,7 +99,7 @@ func _process(_delta: float) -> void:
 		tooltip.text = hovered_control.accessibility_name
 
 func fit_screen(width: float, aspect: float, curvature: float) -> void:
-	panel_size = Vector2(width * 0.94, width * 0.94 * 300.0 / 1400.0)
+	panel_size = Vector2(width * 0.94, width * 0.94 * float(viewport.size.y) / float(viewport.size.x))
 	var quad := QuadMesh.new()
 	quad.size = panel_size
 	mesh = quad
