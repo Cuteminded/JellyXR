@@ -1,60 +1,48 @@
 # Install and start Jellyframe
 
-## What you need
+Download the package for your platform from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest).
 
-- Access to a Jellyfin server and an account on that server.
-- For Quest, a Quest 3 with developer mode and USB debugging enabled, plus a computer to install the app.
-- For Windows or Linux, a computer and a headset with a compatible OpenXR runtime.
+You need a Jellyfin server and an account to use the app. To build Jellyframe yourself, follow the [build instructions](DEVELOPMENT.md).
 
-The initial Jellyfin compatibility target is version 10.11.6. Use HTTPS when connecting to a server outside your home network.
+## Quest 3
 
-## Try it on Quest 3
+Enable developer mode and USB debugging on your headset. Install Android's `adb` tool on your computer and download `jellyframe-android.apk`.
 
-Download the Android APK from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). To build the APK yourself, follow the [build instructions](DEVELOPMENT.md).
-
-Connect your headset to your computer and approve USB debugging in the headset. Install the APK with Android's `adb` tool. Run these commands from the folder containing the downloaded APK:
+Connect your headset to your computer by USB and approve USB debugging in the headset. Run these commands from the folder containing the APK:
 
 ```powershell
 adb devices
 adb install -r jellyframe-android.apk
 ```
 
-If you built the APK yourself, use `dist/jellyframe-android.apk` as the install path instead.
+Open Jellyframe from **Unknown Sources** in your headset.
 
-Open Jellyframe from Unknown Sources in your headset, enter your Jellyfin server address, and sign in with your account or Quick Connect. Select a library and choose a title to watch.
+## Windows with SteamVR
 
-## Try it on Windows with SteamVR
+Download the Windows ZIP and extract the entire archive. Keep all files together in the extracted folder.
 
-Download the Windows ZIP from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Extract the entire ZIP and keep the executable, PCK, and any DLLs together in the same folder.
+Install SteamVR and connect your headset. In SteamVR's **Settings > OpenXR**, set SteamVR as the active OpenXR runtime. Start SteamVR, then run `jellyframe.exe`.
 
-Install SteamVR and connect your headset. In SteamVR's **Settings > OpenXR**, set SteamVR as the active OpenXR runtime. Start SteamVR, then run `jellyframe.exe`. Godot uses the active OpenXR runtime, as described in the [Godot Windows PCVR guide](https://www.khronos.org/assets/uploads/developers/presentations/Godot_guide_to_OpenXR_for_Windows_PCVR.pdf).
-
-Windows starts with Vulkan and falls back to OpenGL if Vulkan cannot initialize. To select OpenGL manually, run this from the extracted folder in PowerShell:
+If Jellyframe cannot start with Vulkan, try OpenGL from PowerShell in the extracted folder:
 
 ```powershell
 .\jellyframe.exe --rendering-method gl_compatibility
 ```
 
-Sign in to Jellyfin and select a title to play it in VR. Pause, seek, resume, and side-by-side 3D controls work as they do in the Quest build.
+## Linux x64 or ARM64
 
-Keep all DLLs from the matching build beside the executable. Current source builds need `jellyframe_mpv.dll`, `libmpv-2.dll`, `avcodec-62.dll`, `avformat-62.dll`, `avutil-60.dll`, `swscale-9.dll`, and `swresample-6.dll`.
+Download the AppImage for your computer's architecture, `x86_64` or `arm64`. The builds target Ubuntu 24.04 and need compatible system libraries, graphics drivers, and an OpenXR runtime.
 
-The confirmed Vulkan HDR, 4K, and 8K results apply to a Windows SteamVR setup with an NVIDIA RTX 4070. Check the [current limitations](README.md#current-limitations) for other configurations. A published release may predate these changes; use [the source build instructions](DEVELOPMENT.md#build-and-test-on-windows) when testing the current implementation.
-
-## Try it on Linux x64 or ARM64
-
-Download the Linux AppImage from **Assets** on the [latest release page](https://github.com/Cuteminded/jellyframe/releases/latest). Choose the file for your computer's architecture, `x86_64` or `arm64`. AppImages include libmpv and the bundled decoder libraries.
-
-Make the downloaded AppImage executable and launch it. For x64:
+Connect your headset and start your OpenXR runtime. On x64, set SteamVR as the active runtime. Make the AppImage executable and launch it:
 
 ```sh
 chmod +x jellyframe-linux-x86_64.AppImage
 ./jellyframe-linux-x86_64.AppImage
 ```
 
-Linux starts with Vulkan and falls back to OpenGL if Vulkan cannot initialize. Use the same AppImage when adding Jellyframe to Steam on SteamOS. For ARM64, use `jellyframe-linux-arm64.AppImage`.
+For ARM64, replace the filename with `jellyframe-linux-arm64.AppImage`. On SteamOS, add the AppImage to Steam as a non-Steam game.
 
-To select OpenGL manually:
+If Jellyframe cannot start with Vulkan, try OpenGL:
 
 ```sh
 ./jellyframe-linux-x86_64.AppImage --rendering-method gl_compatibility
@@ -62,13 +50,9 @@ To select OpenGL manually:
 
 If mounting an AppImage fails because FUSE is unavailable, run it with `--appimage-extract-and-run`.
 
-The builds target Ubuntu 24.04. AppImages need compatible system libraries, graphics drivers, and an OpenXR runtime. They may not work on older Linux distributions.
+### Use system libraries instead of an AppImage
 
-Connect your headset and start your OpenXR runtime before opening Jellyframe. On x64, set SteamVR as the active runtime. The runtime must support the selected graphics API. SteamVR on ARM64 and standalone Steam Frame support still need headset testing.
-
-SteamOS Vulkan playback was confirmed with an earlier PC backend. The current native Vulkan decoder, HDR conversion, and high-resolution playback still need Linux headset testing. The Windows results do not confirm those cases on Linux. See the [current limitations](README.md#current-limitations).
-
-The `system-libs` archive remains available if you prefer to install libmpv yourself. It contains the same executable with Vulkan as the default and OpenGL as the fallback. On Ubuntu x64:
+Download the `system-libs` archive for your architecture. On Ubuntu x64, install libmpv, extract the archive, and launch Jellyframe:
 
 ```sh
 sudo apt-get install libmpv2
@@ -78,4 +62,6 @@ tar -xzf jellyframe-linux-x86_64-system-libs.tar.gz
 
 Keep the executable and the `.so` file together. For ARM64, use `jellyframe-linux-arm64-system-libs.tar.gz` and launch `./jellyframe.arm64`.
 
-Sign in and play a title using the same VR controls as Windows; desktop preview with `--xr-mode off` does not play video.
+## After installation
+
+Follow the [usage guide](USAGE.md) to sign in and play a video. See the [current limitations](README.md#current-limitations) for platform and headset compatibility.
