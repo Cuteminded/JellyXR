@@ -37,7 +37,9 @@ In VR, point your controller at a button and squeeze the trigger to select it. P
 
 ## Control playback
 
-Press **A** to show the playback controls. Press **B** to open or close the main menu, including while a video is playing. Reopening the menu preserves the current library, title details, or settings page. Playback continues while you browse. Point at a button to see its name beneath the controls.
+Press **A** to show the playback controls.
+Press **B** to open or close the library during playback.
+Press **Y** on the left controller to open or close settings.
 
 | Control | What it does |
 | --- | --- |
