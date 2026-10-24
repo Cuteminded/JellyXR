@@ -145,7 +145,7 @@ With SteamVR and your headset running, test the stereo screen and controllers:
 godot --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_steamvr_video.gd
 ```
 
-The headset test loops a labelled stereo clip for two minutes. Close one eye at a time to check the LEFT and RIGHT labels. Press A or B to open the playback controls. Use `--rendering-method gl_compatibility` instead of the Vulkan arguments to check OpenGL. The decoder tests cover resume, pause, seeking, completion, reopening, and errors.
+The headset test loops a labelled stereo clip for two minutes. Close one eye at a time to check the LEFT and RIGHT labels. Press A to open the playback controls. When signed in, press B to browse the library while playback continues. Use `--rendering-method gl_compatibility` instead of the Vulkan arguments to check OpenGL. The decoder tests cover resume, pause, seeking, completion, reopening, and errors.
 
 Import `project.godot` into Godot, or run:
 

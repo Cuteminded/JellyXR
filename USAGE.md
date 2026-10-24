@@ -35,7 +35,7 @@ In VR, point your controller at a button and squeeze the trigger to select it. P
 
 ## Control playback
 
-Press **A** or **B** to show the playback controls. Point at a button to see its name beneath the controls.
+Press **A** to show the playback controls. Press **B** to open or close the main menu, including while a video is playing. Reopening the menu preserves the current library, title details, or settings page. Playback continues while you browse. Point at a button to see its name beneath the controls.
 
 | Control | What it does |
 | --- | --- |
@@ -45,10 +45,10 @@ Press **A** or **B** to show the playback controls. Point at a button to see its
 | Forward 30 seconds | Skip ahead. |
 | Time bar | Choose a different point in the video. |
 | Settings | Change the screen, background, or playback quality. |
-| Library | Return to the current movie or series details while the video keeps playing. |
-| Hide controls | Remove the controls from your view. Press A or B to show them again. |
+| Audio and subtitles | Placeholder for future audio-track and subtitle selection. This button is currently disabled. |
+| Hide controls | Remove the controls from your view. Press A to show them again. |
 
-After using **Library**, select the title that is already playing to return to the video. For a series, Jellyframe keeps the current season open.
+Press **B** to browse your library while playback continues. Select the title that is already playing to return to the video.
 
 When an episode finishes, a five-second countdown appears before the next available episode starts. Choose **Cancel** during the countdown to return to your library.
 
@@ -104,7 +104,7 @@ These videos let you look around inside the scene instead of watching a normal s
 3. Under **Video projection**, choose **180°** for a scene in front of you, or **360°** for a scene that surrounds you.
 4. If the video is also in 3D, choose the matching **Video format** as described above. Otherwise, leave it on **2D**.
 
-Move your head to look around. For a 180° video, the space behind you stays dark. Use your headset's recenter command if the scene faces the wrong direction. Press A or B to bring up the controls.
+Move your head to look around. For a 180° video, the space behind you stays dark. Use your headset's recenter command if the scene faces the wrong direction. Press A to bring up the controls.
 
 The video replaces your chosen background while you watch. Screen width, distance, height, and curvature do not affect these videos. Select **Screen** under Video projection to return to a normal video screen.
 
@@ -130,7 +130,7 @@ Home always shows the newest additions first. The sort order does not affect Ran
 
 ## If something does not look right
 
-- If the controls disappear, press A or B to show them again.
+- If the controls disappear, press A to show them again.
 - If you cannot resize the screen, choose Void or Passthrough under Settings > Environment, and select Screen under Video projection.
 - If you see two copies of the picture, check Video format under Settings > Screen.
 - If the scene surrounds you when you wanted a normal screen, select Screen under Video projection.

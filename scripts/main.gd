@@ -77,6 +77,7 @@ func _setup_world() -> void:
 	theatre = world.theatre
 	video.material = material
 	world.menu_requested.connect(_toggle_menu)
+	world.library_requested.connect(_toggle_controller_library)
 	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
 	if xr:
 		xr.pose_recentered.connect(_recenter, CONNECT_DEFERRED)
@@ -236,6 +237,15 @@ func _show_library() -> void:
 	if shell.buttons.has(shell.selected_id): title = shell.buttons[shell.selected_id].text
 	_open_library(shell.selected_id, title)
 
+func _toggle_controller_library() -> void:
+	if api.token.is_empty(): return
+	if autoplay_pending:
+		_show_library()
+		return
+	panel.visible = not panel.visible
+	player_overlay.hide()
+	keyboard.hide()
+
 func _open_library(id: String, title: String) -> void:
 	_clear_page()
 	shell.set_signed_in(true)
@@ -314,6 +324,7 @@ func _start(item: Dictionary) -> void:
 	await session.open(item)
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
+	var keep_menu_open := playing and panel.visible
 	decoder_ready = false
 	if not seeking and not stereo_overridden: mode = Stereo.detect(source)
 	if not seeking and not projection_overridden:
@@ -326,7 +337,7 @@ func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	if not seeking: _recenter()
 	screen.show()
 	playing = true
-	if not seeking: _show_playback()
+	if not seeking and not keep_menu_open: _show_playback()
 	_update_timeline()
 	await video.open(url, api.authorization(), start_ms)
 
@@ -334,9 +345,8 @@ func _video_prepared() -> void:
 	decoder_ready = true
 	if seeking and seek_paused: video.toggle_pause()
 	session.report("Playing", video.paused)
-	status.text = "Playing. Press A or B to show the controls."
-	if get_viewport().use_xr and not seeking:
-		panel.hide()
+	status.text = "Playing. Press A for controls or B for the library."
+	if get_viewport().use_xr and not seeking and not panel.visible:
 		player_overlay.hide()
 	seeking = false
 	_update_timeline()

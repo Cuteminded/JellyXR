@@ -46,26 +46,41 @@ func _ready() -> void:
 	timeline.slider.mouse_exited.connect(_hide_tooltip.bind(timeline.slider))
 	timeline.slider.focus_entered.connect(_show_tooltip.bind(timeline.slider))
 	timeline.slider.focus_exited.connect(_hide_tooltip.bind(timeline.slider))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	body.add_child(row)
-	for entry in [["Pause", "pause", "pause"], ["Stop", "stop", "stop"], ["Back 10 seconds", "back", "replay_10"], ["Forward 30 seconds", "forward", "forward_30"], ["Settings", "settings", "settings"], ["Library", "library", "video_library"], ["Hide controls", "hide", "visibility_off"]]:
-		var button := Widgets.button("", func(): action.emit(entry[1]), row)
-		button.icon = load("res://assets/icons/material/%s.svg" % entry[2])
-		button.accessibility_name = entry[0]
-		button.custom_minimum_size = Vector2(140, 72)
-		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		button.add_theme_constant_override("icon_max_width", 44)
-		button.mouse_entered.connect(_show_tooltip.bind(button))
-		button.mouse_exited.connect(_hide_tooltip.bind(button))
-		button.focus_entered.connect(_show_tooltip.bind(button))
-		button.focus_exited.connect(_hide_tooltip.bind(button))
-		if entry[1] == "pause": pause_button = button
+	_build_controls(body)
 	tooltip = Widgets.label("", body, 20)
 	tooltip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tooltip.custom_minimum_size.y = 28
 	hide()
+
+func _build_controls(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	parent.add_child(row)
+	pause_button = _add_control("Pause", "pause", "pause", row)
+	_add_control("Stop", "stop", "stop", row)
+	_add_control("Back 10 seconds", "back", "replay_10", row)
+	_add_control("Forward 30 seconds", "forward", "forward_30", row)
+	row.add_spacer(false)
+	var tracks := _add_control("Audio and subtitles (coming soon)", "tracks", "subtitles", row)
+	tracks.disabled = true
+	tracks.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	tracks.add_theme_color_override("icon_disabled_color", Color("8793a8"))
+	_add_control("Settings", "settings", "settings", row)
+	_add_control("Hide controls", "hide", "visibility_off", row)
+
+func _add_control(label: String, action_name: String, icon_name: String, parent: Control) -> Button:
+	var button := Widgets.button("", func(): action.emit(action_name), parent)
+	button.icon = load("res://assets/icons/material/%s.svg" % icon_name)
+	button.accessibility_name = label
+	button.custom_minimum_size = Vector2(140, 72)
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.add_theme_constant_override("icon_max_width", 44)
+	button.mouse_entered.connect(_show_tooltip.bind(button))
+	button.mouse_exited.connect(_hide_tooltip.bind(button))
+	button.focus_entered.connect(_show_tooltip.bind(button))
+	button.focus_exited.connect(_hide_tooltip.bind(button))
+	return button
 
 func _show_tooltip(control: Control) -> void:
 	hovered_control = control

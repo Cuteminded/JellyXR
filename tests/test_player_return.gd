@@ -114,6 +114,72 @@ func run_checks() -> void:
 	check(app.page.get_child(0) is LibraryView, "Back to library still opens the library grid")
 	await settle()
 
+	api.token = "fixture"
+	app.libraries_loaded = true
+	root.use_xr = true
+	app.playing = true
+	app.screen.show()
+	app._show_playback()
+	app.player_overlay.hide()
+	var stops_before_library := video.stops
+	var opens_before_library := session.opens
+	var paused_before_library := video.paused
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.page.get_child(0) is LibraryView and app.panel.visible, "B opens the library while video controls are hidden")
+	check(app.playing and app.screen.visible and not app.player_overlay.visible, "B preserves playback and hides the player controls")
+	check(video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "B does not stop, restart, or pause the video")
+	await app._play_stream("", {}, 0)
+	check(app.panel.visible and not app.player_overlay.visible, "A stream becoming ready does not replace a library opened with B")
+	app._video_prepared()
+	check(app.panel.visible, "Video preparation does not hide a library opened with B")
+	var controller_library: Node = app.page.get_child(0)
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(not app.panel.visible and not app.player_overlay.visible and app.playing, "Pressing B again closes the library and returns to the video")
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) == controller_library, "B reopens the library without rebuilding the page")
+	app.world._controller_button_pressed("ax_button", &"right_hand")
+	check(app.player_overlay.visible and not app.panel.visible, "A still opens the playback controls")
+	app.world._controller_button_pressed("by_button", &"left_hand")
+	check(not app.player_overlay.visible, "Left-hand Y keeps its existing menu toggle")
+	app.playing = false
+	app.screen.hide()
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) is LibraryView, "B also opens the library outside playback")
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(not app.panel.visible, "B also closes the library outside playback")
+	app._screen_settings()
+	var controller_settings: Node = app.page.get_child(0)
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(not app.panel.visible and app.page.get_child(0) == controller_settings, "B hides settings without navigating to the library")
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) == controller_settings, "B restores the same settings page")
+	await app._details({"Id": "movie"})
+	app.playing = true
+	app.screen.show()
+	var controller_details: Node = app.page.get_child(0)
+	var details_generation: int = app.page_generation
+	var detail_calls_before_toggle := api.detail_calls.size()
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(not app.panel.visible and app.page.get_child(0) == controller_details, "B hides title details instead of navigating Home")
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) == controller_details, "B restores the same title details during playback")
+	check(app.page_generation == details_generation and api.detail_calls.size() == detail_calls_before_toggle, "Toggling details does not rebuild or reload the page")
+	check(app.playing and app.screen.visible and video.stops == stops_before_library and session.opens == opens_before_library, "Toggling details leaves the playing video untouched")
+	app.playing = false
+	app.autoplay_pending = true
+	app.panel.hide()
+	app.screen.show()
+	app.world.player_loading.show_countdown("Next episode", 5)
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and not app.autoplay_pending and not app.screen.visible, "B cancels autoplay when opening the library")
+	api.token = ""
+	app._show_login()
+	var login_generation: int = app.page_generation
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.page_generation == login_generation, "B cannot bypass sign-in")
+	root.use_xr = false
+	await settle()
+
 	app.playing = false
 	app.queue_free()
 	await process_frame

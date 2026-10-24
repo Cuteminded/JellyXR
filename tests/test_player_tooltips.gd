@@ -36,6 +36,20 @@ func run_checks() -> void:
 	await process_frame
 	check(overlay.tooltip.text == "Seek to a time", "The playback timeline also shows its tooltip inside the player")
 	pointer.cancel()
+	var tracks: Button = button.get_parent().get_child(5)
+	var actions: Array[String] = []
+	overlay.action.connect(func(value: String): actions.append(value))
+	pointer.sample_trigger(0.0)
+	pointer.aim(tracks.get_global_rect().get_center(), true)
+	await process_frame
+	check(overlay.tooltip.text == "Audio and subtitles (coming soon)", "The disabled track placeholder explains its unavailable state on hover")
+	pointer.sample_trigger(1.0)
+	pointer.aim(tracks.get_global_rect().get_center(), true)
+	pointer.sample_trigger(0.0)
+	pointer.aim(tracks.get_global_rect().get_center(), true)
+	await process_frame
+	check(actions.is_empty(), "The track placeholder cannot trigger playback actions")
+	pointer.cancel()
 	button.grab_focus()
 	await process_frame
 	check(overlay.tooltip.text == "Play", "Keyboard focus also exposes the button's label")
@@ -44,6 +58,7 @@ func run_checks() -> void:
 	check(overlay.tooltip.text.is_empty(), "Hiding controls clears the tooltip")
 	var row := button.get_parent()
 	for control in row.get_children():
+		if not control is Button: continue
 		check(control.icon != null and "assets/icons/material/" in control.icon.resource_path, "Every player button loads a Material Symbols SVG")
 	check(row.get_child(2).icon.resource_path.ends_with("replay_10.svg") and row.get_child(3).icon.resource_path.ends_with("forward_30.svg"), "Skip controls use symbols containing their durations")
 	overlay.queue_free()
