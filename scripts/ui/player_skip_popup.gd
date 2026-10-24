@@ -26,7 +26,16 @@ func _ready() -> void:
 	button.theme = Widgets.theme()
 	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	button.add_theme_font_size_override("font_size", 30)
-	Widgets.accent(button)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := Widgets.surface(Color("101624db"), 22, 16)
+		if state in ["hover", "pressed"]:
+			style.set_border_width_all(3)
+			style.border_color = Color("6de3cf") if state == "hover" else Color("47bda9")
+		button.add_theme_stylebox_override(state, style)
+	var focus := Widgets.surface(Color.TRANSPARENT, 22, 16)
+	focus.set_border_width_all(3)
+	focus.border_color = Color("6de3cf")
+	button.add_theme_stylebox_override("focus", focus)
 	visibility_changed.connect(func():
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 		if not is_visible_in_tree(): button.release_focus())
