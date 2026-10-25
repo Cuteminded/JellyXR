@@ -84,7 +84,7 @@ func query(values: Dictionary) -> String:
 	return "?" + "&".join(pairs)
 
 func library(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
-	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
+	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
 	if search.is_empty() and parent_id.is_empty():
 		values["SortBy"] = "DateCreated"
 		values["SortOrder"] = "Descending"

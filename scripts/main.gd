@@ -36,6 +36,11 @@ var seek_paused := false
 var timeline_elapsed := 0.0
 var decoder_ready := false
 var media_segments := MediaSegments.new()
+var photo_active := false
+var photo_item: Dictionary = {}
+var video_material: ShaderMaterial
+var photo_loader: PhotoView
+var photo_sequence := PhotoSequence.new()
 
 func _ready() -> void:
 	settings.load_settings()
@@ -279,6 +284,12 @@ func _load_libraries() -> void:
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
 func _details(item: Dictionary, season: Dictionary = {}) -> void:
+	if item.get("Type", "") == "Photo":
+		photo_sequence = PhotoSequence.new()
+		for child in page.get_children():
+			if child is LibraryView: photo_sequence.capture(child, item)
+		_show_photo(item)
+		return
 	page_generation += 1
 	var current := page_generation
 	status.text = "Loading details..."
@@ -299,6 +310,73 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	view.back_requested.connect(_show_library)
 	page.add_child(view)
 	status.text = "Ready."
+
+func _show_photo(item: Dictionary) -> void:
+	page_generation += 1
+	var current := page_generation
+	await _stop(false)
+	if current != page_generation: return
+	photo_active = true
+	photo_item = item
+	video_material = material
+	material = ShaderMaterial.new()
+	material.shader = preload("res://shaders/pc_video.gdshader")
+	screen.material_override = material
+	world.panorama.material_override = material
+	mode = PhotoView.stereo_mode(item)
+	projection_mode = VideoProjection.detect({"Path": item.get("Path", item.get("Name", ""))})
+	stereo_overridden = false
+	projection_overridden = false
+	photo_loader = PhotoView.new()
+	photo_loader.api = api
+	photo_loader.item = item
+	photo_loader.photo_ready.connect(_photo_ready)
+	photo_loader.failed.connect(_photo_failed)
+	status.text = "Loading photo..."
+	add_child(photo_loader)
+	photo_loader._load()
+
+func _photo_ready(texture: Texture2D) -> void:
+	if not photo_active: return
+	material.set_shader_parameter("video_texture", texture)
+	video_size = Vector2i(texture.get_size())
+	screen.show()
+	world.set_panoramic(projection_mode != VideoProjection.Mode.SCREEN, VideoProjection.horizontal_angle(projection_mode))
+	_resize_screen()
+	status.text = ""
+	_show_playback()
+
+func _photo_failed(message: String) -> void:
+	_close_photo()
+	status.text = message + " Select the photo to try again."
+	panel.show()
+
+func _step_photo(direction: int) -> void:
+	if not photo_active or photo_sequence.busy: return
+	var current := page_generation
+	player_overlay.set_photo_navigation(false, false)
+	var result := await photo_sequence.step(direction, api)
+	if current != page_generation or not photo_active: return
+	if result.has("item"):
+		await _show_photo(result.item)
+	else:
+		player_overlay.set_photo_navigation(photo_sequence.index > 0, photo_sequence.can_next())
+		if result.has("error"): player_overlay.tooltip.text = result.error
+
+func _close_photo() -> void:
+	if not photo_active: return
+	photo_active = false
+	photo_item = {}
+	if is_instance_valid(photo_loader):
+		remove_child(photo_loader)
+		photo_loader.queue_free()
+		photo_loader = null
+	material = video_material
+	screen.material_override = material
+	world.panorama.material_override = material
+	video_material = null
+	world.set_panoramic(false)
+	player_overlay.set_photo_mode(false)
 
 func _start(item: Dictionary, from_start: bool = false) -> void:
 	if not from_start and playing and str(session.item.get("Id", "")) == str(item.get("Id", "")):
@@ -360,12 +438,17 @@ func _video_prepared() -> void:
 func _show_playback() -> void:
 	keyboard.hide()
 	panel.hide()
-	player_overlay.title.text = DetailsMetadata.title(session.item, "Now playing")
+	player_overlay.set_photo_mode(photo_active)
+	if photo_active: player_overlay.set_photo_navigation(photo_sequence.index > 0, photo_sequence.can_next())
+	player_overlay.title.text = DetailsMetadata.title(photo_item if photo_active else session.item, "Now playing")
 	player_overlay.show()
 	_update_timeline()
 
 func _player_action(action: String) -> void:
+	if photo_active and action in ["pause", "back", "forward", "skip_segment"]: return
 	match action:
+		"previous_photo": _step_photo(-1)
+		"next_photo": _step_photo(1)
 		"pause":
 			video.toggle_pause()
 			session.report("Progress", video.paused)
@@ -379,6 +462,9 @@ func _player_action(action: String) -> void:
 		"hide": player_overlay.hide()
 
 func _return_to_title() -> void:
+	if photo_active:
+		_show_library()
+		return
 	var item := session.item
 	if item.is_empty():
 		_show_library()
@@ -486,7 +572,7 @@ func _toggle_menu() -> void:
 	if autoplay_pending:
 		_show_library()
 		return
-	if playing:
+	if playing or photo_active:
 		if player_overlay.visible: player_overlay.hide()
 		else: _show_playback()
 	else: panel.visible = not panel.visible
@@ -502,7 +588,7 @@ func _duration_ms() -> int:
 	return duration + int(transcode_offset / 10000) if duration > 0 else 0
 
 func _update_timeline() -> void:
-	if autoplay_pending: return
+	if autoplay_pending or photo_active: return
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
 	world.player_skip_popup.update_segment(_active_segment())
 	_update_loading()
@@ -544,6 +630,7 @@ func _seek_to(milliseconds: int) -> void:
 	await session.open(session.item, true)
 
 func _stop(show_library: bool = true, completed: bool = false) -> void:
+	_close_photo()
 	media_segments.clear()
 	world.player_skip_popup.update_segment({})
 	countdown_generation += 1

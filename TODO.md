@@ -77,7 +77,8 @@ Implementation does not mean a feature has been tested on every headset.
 
 These extend beyond Jellyframe's current movie and series focus.
 
-- [ ] View photos and slideshows.
+- [x] View photos.
+- [ ] View slideshows.
 - [ ] Read books and comics.
 - [ ] Watch live TV and browse the programme guide.
 - [ ] Join or host SyncPlay sessions.

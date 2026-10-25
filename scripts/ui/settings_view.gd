@@ -186,7 +186,7 @@ func _screen_position_hint() -> String:
 	return "Set the screen size, distance, height and curve."
 
 func _build_video_format(parent: VBoxContainer) -> void:
-	Widgets.label("Video format", parent, 26)
+	Widgets.label("Picture format", parent, 26)
 	_hint("Jellyframe detects the 3D format. Choose a different format if the picture looks wrong.", parent)
 	stereo_choices = HFlowContainer.new()
 	stereo_choices.add_theme_constant_override("h_separation", 12)

@@ -27,7 +27,7 @@ func _ready() -> void:
 	add_child(artwork)
 	var tools := HBoxContainer.new()
 	add_child(tools)
-	field = Widgets.input("Search " + ("movies and shows" if library_id.is_empty() else library_name), tools)
+	field = Widgets.input("Search " + library_name, tools)
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.text_submitted.connect(refresh)
 	Widgets.button("Search", func(): refresh(field.text), tools)
@@ -80,9 +80,9 @@ func _more(current: int) -> void:
 		return
 	var items: Array = result.data.get("Items", [])
 	if offset == 0:
-		if search.is_empty() and not items.is_empty():
+		if search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
 			var hero := LibraryHero.new()
-			hero.item = _choose_hero(items)
+			hero.item = _choose_hero(items.filter(func(item: Dictionary): return item.get("Type", "") != "Photo"))
 			hero.artwork = artwork
 			hero.chosen.connect(func(item: Dictionary): selected.emit(item))
 			content.add_child(hero)

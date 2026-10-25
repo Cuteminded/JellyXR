@@ -32,6 +32,8 @@ func _ready() -> void:
 	var poster := TextureRect.new()
 	poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	if item.get("Type", "") == "Photo":
+		poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_frame.add_child(poster)
 	artwork.fetch(poster, item)
@@ -41,6 +43,7 @@ func _ready() -> void:
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var user_data: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var detail := DetailsMetadata.year(item)
+	if item.get("Type", "") == "Photo": detail = ""
 	if user_data.get("Played", false):
 		_watched_badge(image_frame)
 		accessibility_name = tooltip_text + ", watched"

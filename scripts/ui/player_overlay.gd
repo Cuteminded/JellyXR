@@ -12,6 +12,14 @@ var play_icon: Texture2D
 var pause_icon: Texture2D
 var tooltip: Label
 var hovered_control: Control
+var video_controls: Array[Button] = []
+var stop_button: Button
+var controls_spacer: Control
+var controls_row: HBoxContainer
+var photo_mode := false
+var previous_photo: Button
+var next_photo: Button
+var screen_dimensions := Vector3(3.6, 16.0 / 9.0, 0.0)
 
 func _ready() -> void:
 	play_icon = load("res://assets/icons/material/play_arrow.svg")
@@ -55,22 +63,28 @@ func _ready() -> void:
 
 func _build_controls(parent: Control) -> void:
 	var row := HBoxContainer.new()
+	controls_row = row
 	row.add_theme_constant_override("separation", 12)
 	parent.add_child(row)
 	pause_button = _add_control("Pause", "pause", "pause", row)
-	_add_control("Stop", "stop", "stop", row)
+	stop_button = _add_control("Stop", "stop", "stop", row)
 	_add_control("Back 10 seconds", "back", "replay_10", row)
 	_add_control("Forward 30 seconds", "forward", "forward_30", row)
-	row.add_spacer(false)
+	controls_spacer = row.add_spacer(false)
 	var tracks := _add_control("Audio and subtitles (coming soon)", "tracks", "subtitles", row)
 	tracks.disabled = true
 	tracks.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	tracks.add_theme_color_override("icon_disabled_color", Color("8793a8"))
 	_add_control("Settings", "settings", "settings", row)
 	_add_control("Hide controls", "hide", "visibility_off", row)
+	previous_photo = _add_control("Previous photo", "previous_photo", "chevron_left", row)
+	next_photo = _add_control("Next photo", "next_photo", "chevron_right", row)
+	previous_photo.hide()
+	next_photo.hide()
 
 func _add_control(label: String, action_name: String, icon_name: String, parent: Control) -> Button:
 	var button := Widgets.button("", func(): action.emit(action_name), parent)
+	if action_name in ["pause", "back", "forward", "tracks"]: video_controls.append(button)
 	button.icon = load("res://assets/icons/material/%s.svg" % icon_name)
 	button.accessibility_name = label
 	button.custom_minimum_size = Vector2(140, 72)
@@ -81,6 +95,27 @@ func _add_control(label: String, action_name: String, icon_name: String, parent:
 	button.focus_entered.connect(_show_tooltip.bind(button))
 	button.focus_exited.connect(_hide_tooltip.bind(button))
 	return button
+
+func set_photo_mode(enabled: bool) -> void:
+	photo_mode = enabled
+	previous_photo.visible = enabled
+	next_photo.visible = enabled
+	controls_row.move_child(previous_photo, 0 if enabled else controls_row.get_child_count() - 1)
+	controls_row.move_child(next_photo, 1 if enabled else controls_row.get_child_count() - 1)
+	timeline.visible = not enabled
+	for button in video_controls: button.visible = not enabled
+	controls_spacer.visible = not enabled
+	controls_row.alignment = BoxContainer.ALIGNMENT_CENTER if enabled else BoxContainer.ALIGNMENT_BEGIN
+	stop_button.icon = load("res://assets/icons/material/logout.svg" if enabled else "res://assets/icons/material/stop.svg")
+	stop_button.accessibility_name = "Exit" if enabled else "Stop"
+	viewport.size = Vector2i(820, 210) if enabled else Vector2i(1400, 300)
+	fit_screen(screen_dimensions.x, screen_dimensions.y, screen_dimensions.z)
+	hovered_control = null
+	tooltip.text = ""
+
+func set_photo_navigation(has_previous: bool, has_next: bool) -> void:
+	previous_photo.disabled = not has_previous
+	next_photo.disabled = not has_next
 
 func _show_tooltip(control: Control) -> void:
 	hovered_control = control
@@ -99,7 +134,9 @@ func _process(_delta: float) -> void:
 		tooltip.text = hovered_control.accessibility_name
 
 func fit_screen(width: float, aspect: float, curvature: float) -> void:
-	panel_size = Vector2(width * 0.94, width * 0.94 * float(viewport.size.y) / float(viewport.size.x))
+	screen_dimensions = Vector3(width, aspect, curvature)
+	var panel_width := width * 0.94 * float(viewport.size.x) / 1400.0
+	panel_size = Vector2(panel_width, panel_width * float(viewport.size.y) / float(viewport.size.x))
 	var quad := QuadMesh.new()
 	quad.size = panel_size
 	mesh = quad

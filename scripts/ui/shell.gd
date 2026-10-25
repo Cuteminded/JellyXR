@@ -96,7 +96,7 @@ func set_libraries(items: Array) -> void:
 	clear_libraries()
 	for item in items:
 		var library_type := str(item.get("CollectionType") if item.get("CollectionType") != null else "").to_lower()
-		if library_type not in ["", "mixed", "movies", "tvshows", "homevideos"]: continue
+		if library_type not in ["", "mixed", "movies", "tvshows", "homevideos", "photos"]: continue
 		var id := str(item.get("Id", ""))
 		var title := str(item.get("Name", "Library"))
 		var button := Widgets.button(title, func(): navigate.emit(id, title), libraries)

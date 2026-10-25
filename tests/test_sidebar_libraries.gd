@@ -13,8 +13,8 @@ func run_checks() -> void:
 	items.append({"Id": "missing", "Name": "Mixed library"})
 	items.append({"Id": "null", "Name": "Mixed with null type", "CollectionType": null})
 	shell.set_libraries(items)
-	assert(shell.buttons.size() == 6, "Only supported video libraries and untyped mixed libraries are shown")
-	for id in ["movies", "tvshows", "homevideos", "mixed", "missing", "null"]:
+	assert(shell.buttons.size() == 7, "Supported video, photo and untyped mixed libraries are shown")
+	for id in ["movies", "tvshows", "homevideos", "photos", "mixed", "missing", "null"]:
 		assert(shell.buttons.has(id))
 		assert(shell.buttons[id].icon != null, "Each library has a leading icon")
 		assert("assets/icons/material/" in shell.buttons[id].icon.resource_path, "Each library uses a Material Symbols icon")
