@@ -10,13 +10,17 @@ Jellyframe is a free, open source app for browsing your Jellyfin library and wat
 
 ## From JellyQuest to Jellyframe
 
-This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I renamed it Jellyframe because I plan to switch to Steam Frame. 
+This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I renamed it Jellyframe because I plan to switch to Steam Frame.
 
-Despite the name and focus on Steam Frame, Jellyframe aims to work on as many VR platforms as possible, 
-*including*
+I'm still undecided about keeping the name. It ties the app to Steam Frame, even though I want to support other VR platforms too. 
+I haven't come up with a better name yet, so Jellyframe stays for now. 
+Suggestions for a name that isn't tied to a specific platform are welcome.
+
+I want Jellyframe to work on as many VR platforms as possible, including:
+
 - [SteamVR](https://store.steampowered.com/steamvr)
 - [Android XR](https://www.android.com/intl/en_us/xr/)
-- [Quest Headsets running Horizon OS](https://www.meta.com/quest/)
+- [Quest headsets running Horizon OS](https://www.meta.com/quest/)
 
 Steam Frame remains the primary development target, with support for other platforms wherever possible.
 
