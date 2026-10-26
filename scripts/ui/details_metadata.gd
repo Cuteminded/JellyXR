@@ -22,8 +22,6 @@ static func facts(item: Dictionary) -> Array[String]:
 	if item.get("RunTimeTicks"): values.append(duration(int(item.RunTimeTicks)))
 	if item.get("OfficialRating"): values.append(str(item.OfficialRating))
 	if item.get("CommunityRating"): values.append("Rating %.1f / 10" % float(item.CommunityRating))
-	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
-	if user.get("Played", false): values.append("Watched")
 	return values
 
 static func streams(item: Dictionary) -> Dictionary:

@@ -26,6 +26,22 @@ static func input(placeholder: String, parent: Node, secret: bool = false) -> Li
 	parent.add_child(result)
 	return result
 
+static func watched_badge(image_frame: PanelContainer) -> void:
+	var overlay := Control.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_frame.add_child(overlay)
+	var badge := TextureRect.new()
+	badge.texture = preload("res://assets/icons/watched.svg")
+	badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(badge)
+	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -36
+	badge.offset_top = 8
+	badge.offset_right = -8
+	badge.offset_bottom = 36
+
 static func theme() -> Theme:
 	var result := Theme.new()
 	result.default_font_size = 22

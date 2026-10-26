@@ -42,6 +42,8 @@ func _ready() -> void:
 	title_label = _label(DetailsMetadata.title(item, "Episode"), text, 26)
 	var facts := DetailsMetadata.facts(item)
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
+	if user.get("Played", false):
+		Widgets.watched_badge(frame)
 	var position := int(user.get("PlaybackPositionTicks", 0))
 	if position > 0: facts.append("Continue from " + DetailsMetadata.duration(position))
 	if not facts.is_empty():
@@ -50,6 +52,8 @@ func _ready() -> void:
 	play_button = Widgets.button("Resume episode" if position > 0 else "Play episode", func(): chosen.emit(item), image_column)
 	play_button.custom_minimum_size = Vector2(190, 56)
 	play_button.accessibility_name = play_button.text + " " + title_label.text
+	if user.get("Played", false):
+		play_button.accessibility_name += ", watched"
 
 func _label(value: String, parent: Node, font_size: int) -> Label:
 	var label := Widgets.label(value, parent, font_size)

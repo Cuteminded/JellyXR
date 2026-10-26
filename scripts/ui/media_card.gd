@@ -45,7 +45,7 @@ func _ready() -> void:
 	var detail := DetailsMetadata.year(item)
 	if item.get("Type", "") == "Photo": detail = ""
 	if user_data.get("Played", false):
-		_watched_badge(image_frame)
+		Widgets.watched_badge(image_frame)
 		accessibility_name = tooltip_text + ", watched"
 	if item.get("Type", "") == "Series": detail += "  /  Series"
 	var subtitle := Widgets.label(detail.trim_prefix("  /  "), body, 16)
@@ -61,19 +61,3 @@ func _ready() -> void:
 		bar.add_theme_stylebox_override("background", Widgets.surface(Color("29374b"), 2))
 		bar.add_theme_stylebox_override("fill", Widgets.surface(Color("6de3cf"), 2))
 		body.add_child(bar)
-
-func _watched_badge(image_frame: PanelContainer) -> void:
-	var overlay := Control.new()
-	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_frame.add_child(overlay)
-	var badge := TextureRect.new()
-	badge.texture = preload("res://assets/icons/watched.svg")
-	badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(badge)
-	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	badge.offset_left = -36
-	badge.offset_top = 8
-	badge.offset_right = -8
-	badge.offset_bottom = 36
