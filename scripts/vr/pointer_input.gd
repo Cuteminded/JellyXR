@@ -29,11 +29,11 @@ func aim(point: Vector2, inside: bool) -> void:
 		_button(false)
 
 func scroll(point: Vector2, amount: float, horizontal: bool = false) -> void:
-	var wheel := InputEventMouseButton.new()
 	if horizontal:
-		wheel.button_index = MOUSE_BUTTON_WHEEL_RIGHT if amount > 0 else MOUSE_BUTTON_WHEEL_LEFT
-	else:
-		wheel.button_index = MOUSE_BUTTON_WHEEL_UP if amount > 0 else MOUSE_BUTTON_WHEEL_DOWN
+		_scroll_horizontal(amount)
+		return
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP if amount > 0 else MOUSE_BUTTON_WHEEL_DOWN
 	wheel.pressed = true
 	wheel.position = point
 	wheel.global_position = point
@@ -42,6 +42,20 @@ func scroll(point: Vector2, amount: float, horizontal: bool = false) -> void:
 	var release := wheel.duplicate() as InputEventMouseButton
 	release.pressed = false
 	viewport.push_input(release, true)
+
+func _scroll_horizontal(amount: float) -> void:
+	var target: Node = viewport.gui_get_hovered_control()
+	while target != null:
+		if target.has_method("adjust_horizontal"):
+			target.adjust_horizontal(amount)
+			return
+		if target is ScrollContainer and target.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+			target.scroll_horizontal += int(signf(amount) * maxf(1.0, absf(amount) * 80.0))
+			return
+		if target is CastCarousel:
+			target.scroll.scroll_horizontal += int(signf(amount) * maxf(1.0, absf(amount) * 80.0))
+			return
+		target = target.get_parent()
 
 func cancel() -> void:
 	if previous != Vector2(-1, -1): _move(Vector2(-1, -1))

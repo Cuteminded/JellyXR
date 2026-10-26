@@ -334,7 +334,7 @@ func _slider(entry: Array, parent: Node) -> void:
 	var name_label := Widgets.label(entry[0], labels, 22)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var value_label := Widgets.label("%.2f%s" % [settings.get(entry[1]), entry[4]], labels, 20)
-	var slider := HSlider.new()
+	var slider := preload("res://scripts/ui/screen_position_slider.gd").new()
 	slider.accessibility_name = entry[0]
 	slider.custom_minimum_size.y = 48
 	slider.min_value = entry[2]

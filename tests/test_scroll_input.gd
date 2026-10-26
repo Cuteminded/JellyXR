@@ -56,5 +56,54 @@ func run_checks() -> void:
 	await process_frame
 	assert(cast.scroll.scroll_horizontal == 0, "Left joystick input must move the cast carousel back.")
 	pointer.cancel()
+	cast.queue_free()
+	shell.queue_free()
+	await process_frame
+	await check_screen_sliders(viewport, pointer)
 	feedback.player.stop()
 	quit(0 if selections == 1 else 1)
+
+func check_screen_sliders(viewport: SubViewport, pointer: PointerInput) -> void:
+	var scroller := ScrollContainer.new()
+	scroller.size = Vector2(800, 400)
+	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	viewport.add_child(scroller)
+	var body := VBoxContainer.new()
+	body.custom_minimum_size = Vector2(700, 1200)
+	scroller.add_child(body)
+	var slider := preload("res://scripts/ui/screen_position_slider.gd").new()
+	slider.custom_minimum_size = Vector2(600, 48)
+	slider.min_value = 1.5
+	slider.max_value = 7.0
+	slider.step = 0.05
+	slider.value = 3.5
+	body.add_child(slider)
+	await process_frame
+	await process_frame
+	var point := slider.get_global_rect().get_center()
+	pointer.aim(point, true)
+	for index in range(5): pointer.scroll(point, 0.2, true)
+	assert(is_equal_approx(slider.value, 3.55), "Right adjusts the hovered screen slider by one step.")
+	for index in range(5): pointer.scroll(point, -0.2, true)
+	assert(is_equal_approx(slider.value, 3.5), "Left reduces the hovered screen slider.")
+	assert(scroller.scroll_vertical == 0, "Horizontal slider input must not scroll vertically.")
+	slider.grab_focus()
+	pointer.scroll(point, -0.2)
+	assert(is_equal_approx(slider.value, 3.5), "Down must not change even a focused slider.")
+	assert(scroller.scroll_vertical > 0, "Down over a slider must scroll the page.")
+	pointer.scroll(point, 0.2)
+	assert(is_equal_approx(slider.value, 3.5), "Up must not change a slider.")
+	assert(scroller.scroll_vertical == 0, "Up over a slider must scroll the page back.")
+	slider.editable = false
+	for index in range(10): pointer.scroll(point, 0.2, true)
+	assert(is_equal_approx(slider.value, 3.5), "Disabled sliders must ignore horizontal input.")
+	point = Vector2(300, 200)
+	pointer.aim(point, true)
+	for index in range(10): pointer.scroll(point, 0.2, true)
+	assert(scroller.scroll_vertical == 0, "Horizontal input over a vertical page must not scroll down.")
+	pointer.scroll(point, -0.2)
+	var vertical_position := scroller.scroll_vertical
+	assert(vertical_position > 0, "Vertical input still scrolls the page.")
+	for index in range(10): pointer.scroll(point, -0.2, true)
+	assert(scroller.scroll_vertical == vertical_position, "Left must not scroll a vertical page up.")
+	pointer.cancel()

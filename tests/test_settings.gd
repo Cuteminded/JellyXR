@@ -183,6 +183,12 @@ func run_checks() -> void:
 	check(fixture.environment == "Passthrough", "Passthrough selection updates the saved environment.")
 	var passthrough_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	check(passthrough_slider.editable, "Passthrough uses adjustable screen controls.")
+	if "--capture" in OS.get_cmdline_user_args():
+		view._show_section(1)
+		await process_frame
+		view.scroll.scroll_vertical = 10000
+		await capture("settings-screen-position")
+		view._show_section(2)
 	theatre_choice.button_pressed = true
 	theatre_choice.pressed.emit()
 	passthrough_choice.disabled = true
