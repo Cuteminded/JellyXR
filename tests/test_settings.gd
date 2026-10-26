@@ -38,6 +38,8 @@ func run_checks() -> void:
 	settings.library_sort_by = "PremiereDate"
 	settings.library_sort_order = "Descending"
 	settings.environment = "Passthrough"
+	check(not settings.follow_screen, "Screen following is off by default.")
+	settings.follow_screen = true
 	settings.playback_mode = "original"
 	settings.transcode_resolution = 2160
 	var path := "res://dist/settings-test.cfg"
@@ -46,6 +48,7 @@ func run_checks() -> void:
 	restored.load_settings(path)
 	check(restored.library_sort_by == "PremiereDate" and restored.library_sort_order == "Descending", "Sorting survives a restart.")
 	check(restored.environment == "Passthrough", "Passthrough preference survives a restart.")
+	check(restored.follow_screen, "Screen following survives a restart.")
 	check(restored.playback_mode == "original", "Playback preference survives a restart.")
 	check(restored.transcode_resolution == 2160, "Transcoded 4K preference survives a restart.")
 	var config := ConfigFile.new()
@@ -62,9 +65,11 @@ func run_checks() -> void:
 	check(restored.playback_mode == "auto", "Invalid playback preferences fall back to Automatic.")
 	check(restored.transcode_resolution == 1080, "Invalid conversion resolutions fall back to 1080p.")
 	config.erase_section_key("playback", "transcode_resolution")
+	config.erase_section_key("screen", "follow_screen")
 	config.save(path)
 	restored.load_settings(path)
 	check(restored.transcode_resolution == 1080, "Existing settings without a resolution keep the previous 1080p quality.")
+	check(not restored.follow_screen, "Existing settings without screen following keep a stationary screen.")
 	for names in [["Theatre", "Cinema"], ["Theatre LowRes", "Theatre"]]:
 		if config.has_section_key("screen", "environment_version"):
 			config.erase_section_key("screen", "environment_version")
@@ -101,6 +106,8 @@ func run_checks() -> void:
 	shell.set_signed_in(true)
 	shell.heading.text = "Settings"
 	var view := SettingsView.new()
+	shell.set_settings_mode(true)
+	view.navigation_host = shell.settings_navigation
 	var fixture := FixtureSettings.new()
 	view.settings = fixture
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -112,14 +119,14 @@ func run_checks() -> void:
 	release_date.button_pressed = true
 	release_date.pressed.emit()
 	check(fixture.library_sort_by == "PremiereDate" and fixture.saves == 1, "Selecting a sort field updates and saves the preference.")
-	var descending: CheckBox = view.sections[0].get_child(2).get_child(1)
+	var descending: CheckBox = view.sort_order_choices.get_child(1)
 	descending.button_pressed = true
 	descending.pressed.emit()
 	check(fixture.library_sort_order == "Descending" and fixture.saves == 2, "Selecting sort order updates and saves the preference.")
 	check(view.sections[0].visible and not view.sections[1].visible, "Library sorting is the default section.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-library")
-	var screen_tab: Button = view.get_child(0).get_child(1)
+	var screen_tab: Button = view.navigation_buttons[1]
 	screen_tab.button_pressed = true
 	screen_tab.pressed.emit()
 	check(not view.sections[0].visible and view.sections[1].visible, "Screen settings are reachable through the section selector.")
@@ -146,16 +153,16 @@ func run_checks() -> void:
 	check(is_equal_approx(restored_slider.value, 3.6) and restored_format.button_pressed, "Reset updates displayed values and preserves the current video format.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-screen")
-	var environment_tab: Button = view.get_child(0).get_child(2)
+	var environment_tab: Button = view.navigation_buttons[2]
 	environment_tab.button_pressed = true
 	environment_tab.pressed.emit()
 	check(view.sections[2].visible and not view.sections[1].visible, "Environment has its own settings page.")
-	var theatre_choice: CheckBox = view.sections[2].get_child(2).get_child(1)
+	var theatre_choice: CheckBox = view.environment_buttons["Cinema"]
 	theatre_choice.button_pressed = true
 	theatre_choice.pressed.emit()
 	var theatre_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	check(not theatre_slider.editable, "Fixed Theatre projection disables Void screen positioning.")
-	var low_res_choice: CheckBox = view.sections[2].get_child(2).get_child(2)
+	var low_res_choice: CheckBox = view.environment_buttons["Theatre"]
 	low_res_choice.button_pressed = true
 	low_res_choice.pressed.emit()
 	check(fixture.environment == "Theatre" and fixture.is_theatre(), "LowRes is a separate theatre option.")
@@ -168,7 +175,7 @@ func run_checks() -> void:
 	var restored_low_res := JellyframeSettings.new()
 	restored_low_res.load_settings(low_res_path)
 	check(restored_low_res.environment == "Theatre", "LowRes selection survives restarting the app.")
-	var passthrough_choice: CheckBox = view.sections[2].get_child(2).get_child(3)
+	var passthrough_choice: CheckBox = view.environment_buttons["Passthrough"]
 	check(passthrough_choice.disabled, "Unsupported devices cannot select Passthrough.")
 	passthrough_choice.disabled = false
 	passthrough_choice.button_pressed = true
@@ -183,15 +190,24 @@ func run_checks() -> void:
 		await capture("settings-environment")
 		shell.custom_minimum_size = Vector2(760, 850)
 		root.size = Vector2i(800, 900)
-		var library_tab: Button = view.get_child(0).get_child(0)
+		var library_tab: Button = view.navigation_buttons[0]
 		library_tab.button_pressed = true
 		library_tab.pressed.emit()
 		await capture("settings-narrow")
 		check(view.sort_choices.columns == 1, "Narrow settings use a single column.")
 		check(shell.get_global_rect().end.x <= root.size.x, "Narrow settings must fit within the viewport.")
+		check(view.scroll.size.y >= 300, "Narrow settings leave usable space for the scrolling content.")
+		check(view.navigation.get_parent() == shell.settings_navigation and not shell.libraries.visible, "Settings categories stay in the main sidebar at narrow widths.")
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-narrow-bottom")
-	var playback_tab: Button = view.get_child(0).get_child(3)
+		for index in [1, 2, 3]:
+			view._show_section(index)
+			await capture("settings-narrow-" + str(index))
+			check(view.scroll.size.y >= 300 and shell.get_global_rect().end.x <= root.size.x, "Each narrow settings section remains visible and fits the window.")
+		root.size = Vector2i(1440, 900)
+		await process_frame
+		await process_frame
+	var playback_tab: Button = view.navigation_buttons[3]
 	playback_tab.button_pressed = true
 	playback_tab.pressed.emit()
 	check(view.sections[3].visible and not view.sections[2].visible, "Playback has its own settings page.")
@@ -224,6 +240,14 @@ func run_checks() -> void:
 		await capture("settings-playback")
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-playback-resolution")
+	var follow_updates := []
+	view.screen_follow_changed.connect(func(): follow_updates.append(true))
+	var follow_saves := fixture.saves
+	view.follow_switch.button_pressed = true
+	check(fixture.follow_screen and fixture.saves == follow_saves + 1 and follow_updates.size() == 1, "Enabling screen following applies and saves once.")
+	check(not view.follow_switch.disabled, "The shared follow switch remains available for Void when passthrough is unsupported.")
+	view.follow_switch.button_pressed = false
+	check(not fixture.follow_screen, "Disabling the shared switch stops screen following.")
 	print("Settings failures: ", failures)
 	quit(1 if failures else 0)
 

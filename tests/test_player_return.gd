@@ -65,6 +65,35 @@ func run_checks() -> void:
 	app.shell.set_signed_in(true)
 	app.video = video
 	app.session = session
+	app.libraries_loaded = true
+	app.shell.set_libraries([{"Id": "movies", "Name": "Movies", "CollectionType": "movies"}])
+	var library_button: Button = app.shell.buttons["movies"]
+	app._open_library("movies", "Movies")
+	await settle()
+	var browsing: LibraryView = app.page.get_child(0)
+	browsing.field.text = "Selected movie"
+	await browsing.refresh(browsing.field.text)
+	var scroll_content := Control.new()
+	scroll_content.custom_minimum_size.y = 2000
+	browsing.content.add_child(scroll_content)
+	await settle()
+	browsing.scroll.scroll_vertical = 300
+	var browsing_scroll := browsing.scroll.scroll_vertical
+	check(browsing_scroll > 0, "The return fixture starts partway down a library")
+	for attempt in range(2):
+		app._screen_settings()
+		check(app.shell.home.text == "Library", "Settings label the return button Library")
+		check(app.shell.settings_navigation.visible and not app.shell.libraries.visible, "Settings categories replace the library list")
+		check(app.shell.home.visible and not app.shell.settings_button.visible and not app.shell.logout.visible, "Library is the only regular navigation action shown in settings")
+		check(app.shell.settings_navigation.get_child_count() == 1, "Reopening settings does not duplicate category buttons")
+		app.shell.home.pressed.emit()
+		await settle()
+		check(app.page.get_child(0) == browsing and app.shell.libraries.visible, "Library returns to the same browsing page and restores the libraries")
+		check(app.shell.selected_id == "movies" and app.shell.heading.text == "Movies", "Returning restores the selected library and heading")
+		check(browsing.search == "Selected movie" and browsing.field.text == browsing.search and browsing.scroll.scroll_vertical == browsing_scroll, "Returning preserves the search and scroll position")
+		check(app.shell.home.text == "Home", "Normal browsing restores the Home button")
+		check(app.shell.buttons["movies"] == library_button, "Returning Home preserves the loaded library buttons")
+		check(app.shell.settings_navigation.get_child_count() == 0 and app.shell.settings_button.visible and app.shell.logout.visible, "Leaving settings clears categories and restores normal navigation")
 
 	await app._details({"Id": "movie"})
 	var movie_view: DetailsView = app.page.get_child(0)
@@ -95,6 +124,10 @@ func run_checks() -> void:
 	series_view.series_browser.open_season(api.seasons_list[1])
 	await settle()
 	var card: EpisodeCard = series_view.series_browser.episode_list.get_child(0)
+	app._screen_settings()
+	app.shell.home.pressed.emit()
+	await settle()
+	check(app.page.get_child(0) == series_view and series_view.series_browser.selected_season.Id == "season-two", "Library returns to the same series and selected season from settings")
 	card.play_button.pressed.emit()
 	await settle()
 	check(session.item.get("SeasonId") == "season-two", "Playback remembers which season the selected episode belongs to")
@@ -161,7 +194,10 @@ func run_checks() -> void:
 	check(app.panel.visible and app.page.get_child(0) is SettingsView, "Y reopens settings during playback")
 	check(app.playing and video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "Settings toggling leaves playback uninterrupted")
 	app.world._controller_button_pressed("by_button", &"left_hand")
-	app._show_library()
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) == controller_library, "After Y opens and closes settings, B restores the previous library page")
+	check(app.shell.libraries.visible and not app.shell.settings_navigation.visible, "B restores library navigation after hidden settings")
+	check(app.playing and video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "Returning from settings with B leaves playback uninterrupted")
 	app.panel.hide()
 	app.playing = false
 	app.screen.hide()
@@ -180,11 +216,13 @@ func run_checks() -> void:
 	check(app.panel.visible and app.page.get_child(0) == settings_view and settings_view.sections[3].visible, "Y restores the same settings page and selected section")
 	check(app.page_generation == settings_generation, "Toggling settings does not rebuild the page")
 	app._screen_settings()
-	var controller_settings: Node = app.page.get_child(0)
 	app.world._controller_button_pressed("by_button", &"right_hand")
-	check(not app.panel.visible and app.page.get_child(0) == controller_settings, "B hides settings without navigating to the library")
+	check(app.panel.visible and app.page.get_child(0) is LibraryView, "B returns to browsing when settings are visible")
+	var returned_library: Node = app.page.get_child(0)
 	app.world._controller_button_pressed("by_button", &"right_hand")
-	check(app.panel.visible and app.page.get_child(0) == controller_settings, "B restores the same settings page")
+	check(not app.panel.visible and app.page.get_child(0) == returned_library, "Pressing B again hides the restored library")
+	app.world._controller_button_pressed("by_button", &"right_hand")
+	check(app.panel.visible and app.page.get_child(0) == returned_library, "B reopens the restored library without rebuilding it")
 	await app._details({"Id": "movie"})
 	app.playing = true
 	app.screen.show()

@@ -14,6 +14,9 @@ var libraries_loaded := false
 var library_generation := 0
 var page_generation := 0
 var page: VBoxContainer
+var settings_return_page: Control
+var settings_return_heading := ""
+var settings_return_status := ""
 var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
@@ -99,12 +102,17 @@ func _setup_ui() -> void:
 	status = shell.status
 	shell.navigate.connect(_open_library)
 	shell.screen_settings.connect(_screen_settings)
+	shell.return_from_settings.connect(_return_from_settings)
 	shell.sign_out.connect(_sign_out)
 	keyboard = VRKeyboard.new()
 	viewport.add_child(keyboard)
 	keyboard.hide()
 
-func _clear_page() -> void:
+func _clear_page(keep_settings_return: bool = false) -> void:
+	if not keep_settings_return and is_instance_valid(settings_return_page):
+		settings_return_page.queue_free()
+		settings_return_page = null
+	shell.set_settings_mode(false)
 	page_generation += 1
 	countdown_generation += 1
 	_cancel_countdown()
@@ -245,6 +253,10 @@ func _toggle_controller_library() -> void:
 	if autoplay_pending:
 		_show_library()
 		return
+	for child in page.get_children():
+		if child is SettingsView:
+			_return_from_settings()
+			return
 	_toggle_panel()
 
 func _toggle_panel() -> void:
@@ -263,7 +275,11 @@ func _open_library(id: String, title: String) -> void:
 	api.library_sort_by = settings.library_sort_by
 	api.library_sort_order = settings.library_sort_order
 	library.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	library.status.connect(func(message: String): status.text = message)
+	library.status.connect(func(message: String):
+		if library == settings_return_page:
+			settings_return_status = message
+		else:
+			status.text = message)
 	library.selected.connect(_details)
 	page.add_child(library)
 	library.field.focus_entered.connect(func(): keyboard.edit.call_deferred(library.field))
@@ -510,10 +526,19 @@ func _toggle_settings() -> void:
 
 func _screen_settings() -> void:
 	if api.token.is_empty() or not shell.signed_in: return
-	_clear_page()
+	for child in page.get_children():
+		if child is LibraryView or child is DetailsView:
+			settings_return_page = child
+			settings_return_heading = shell.heading.text
+			settings_return_status = status.text
+			child.hide()
+			child.reparent(viewport)
+	_clear_page(true)
 	panel.show()
 	shell.heading.text = "Settings"
+	shell.set_settings_mode(true)
 	var view := SettingsView.new()
+	view.navigation_host = shell.settings_navigation
 	view.settings = settings
 	view.passthrough_supported = world.passthrough.is_supported()
 	view.stereo_mode = mode
@@ -521,6 +546,7 @@ func _screen_settings() -> void:
 	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.screen_changed.connect(func(): _resize_screen(); _position_screen())
+	view.screen_follow_changed.connect(_update_screen_follow)
 	view.environment_changed.connect(_change_environment)
 	view.stereo_selected.connect(_select_stereo)
 	view.projection_selected.connect(_select_projection)
@@ -528,6 +554,19 @@ func _screen_settings() -> void:
 	view.status.connect(func(message: String): status.text = message)
 	page.add_child(view)
 	status.text = "Changes take effect as you make them."
+
+func _return_from_settings() -> void:
+	if not is_instance_valid(settings_return_page):
+		_show_library()
+		return
+	var previous := settings_return_page
+	settings_return_page = null
+	_clear_page()
+	previous.reparent(page)
+	previous.show()
+	shell.heading.text = settings_return_heading
+	status.text = settings_return_status
+	panel.show()
 
 func _resize_screen() -> void:
 	var panoramic := projection_mode != VideoProjection.Mode.SCREEN
@@ -581,6 +620,12 @@ func _position_screen() -> void:
 		screen.global_transform = theatre.projection_transform()
 	else:
 		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height
+
+func _update_screen_follow() -> void:
+	if not settings.follow_screen or settings.environment not in ["Void", "Passthrough"]: return
+	if projection_mode != VideoProjection.Mode.SCREEN: return
+	screen.global_basis = camera.global_basis
+	_position_screen()
 
 func _toggle_menu() -> void:
 	if not get_viewport().use_xr: return
@@ -746,6 +791,7 @@ func _sign_out() -> void:
 	_show_login()
 
 func _process(delta: float) -> void:
+	_update_screen_follow()
 	if not playing: return
 	_update_loading()
 	timeline_elapsed += delta

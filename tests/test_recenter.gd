@@ -77,11 +77,53 @@ func run_checks() -> void:
 	assert(not app.panel.visible and app.player_overlay.visible, "Headset recenter preserves menu visibility")
 	check_menu_placement(app)
 	await check_playback_placement(app)
+	check_screen_follow(app)
 	app.playing = false
 	root.use_xr = false
 	if added_interface: XRServer.remove_interface(xr)
 	print("Startup recenter checks: PASS")
 	quit()
+
+func check_screen_follow(app: Node) -> void:
+	app.settings.follow_screen = true
+	app.settings.distance = 4.0
+	app.settings.height = 0.4
+	app.projection_mode = VideoProjection.Mode.SCREEN
+	var menu_transform: Transform3D = app.panel.global_transform
+	for environment in ["Void", "Passthrough"]:
+		app.settings.environment = environment
+		app.camera.position += Vector3(0.5, 0.2, -0.3)
+		app.camera.rotation = Vector3(0.3, 0.7, 0.2)
+		app._update_screen_follow()
+		assert(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Following tracks head rotation in adjustable environments")
+		var expected: Vector3 = app.camera.global_position - app.camera.global_basis.z * 4.0 + app.camera.global_basis.y * 0.4
+		assert(app.screen.global_position.is_equal_approx(expected), "Following tracks translation and preserves distance and height")
+		assert(app.panel.global_transform.is_equal_approx(menu_transform), "Following the movie does not move the settings window")
+	app.settings.follow_screen = false
+	var stationary: Transform3D = app.screen.global_transform
+	app.camera.position += Vector3.ONE
+	app.camera.rotate_y(0.4)
+	app._update_screen_follow()
+	assert(app.screen.global_transform.is_equal_approx(stationary), "Disabling following leaves the screen at its last position")
+	app.settings.follow_screen = true
+	for environment in ["Cinema", "Theatre"]:
+		app.settings.environment = environment
+		app._change_environment()
+		var fixed_screen: Transform3D = app.screen.global_transform
+		app.camera.position += Vector3.ONE
+		app.camera.rotate_y(0.4)
+		app._update_screen_follow()
+		assert(app.screen.global_transform.is_equal_approx(fixed_screen), "Cinema and Theatre screens never follow head movement")
+	app.settings.environment = "Void"
+	for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.EQUIRECTANGULAR]:
+		app.projection_mode = projection
+		var before: Transform3D = app.screen.global_transform
+		var panorama: Basis = app.world.panorama.global_basis
+		app.camera.rotate_y(0.4)
+		app._update_screen_follow()
+		assert(app.screen.global_transform.is_equal_approx(before) and app.world.panorama.global_basis.is_equal_approx(panorama), "Following does not rotate immersive video with the head")
+	app.settings.follow_screen = false
+	app.projection_mode = VideoProjection.Mode.SCREEN
 
 func check_playback_placement(app: Node) -> void:
 	app.video.queue_free()

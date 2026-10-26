@@ -4,9 +4,12 @@ extends HBoxContainer
 signal navigate(id: String, title: String)
 signal screen_settings
 signal sign_out
+signal return_from_settings
 var page: VBoxContainer
 var status: Label
 var libraries: VBoxContainer
+var settings_navigation: VBoxContainer
+var navigation_heading: Label
 var home: Button
 var settings_button: Button
 var logout: Button
@@ -14,6 +17,7 @@ var heading: Label
 var rail: PanelContainer
 var selected_id := ""
 var signed_in := false
+var settings_mode := false
 var buttons: Dictionary = {}
 var rail_background: StyleBoxFlat
 var main_background: StyleBoxFlat
@@ -42,17 +46,25 @@ func _ready() -> void:
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navigation.add_child(logo)
-	home = Widgets.button("Home", func(): navigate.emit("", "Home"), navigation)
+	home = Widgets.button("Home", _home_pressed, navigation)
 	_style_navigation_button(home, preload("res://assets/icons/material/home.svg"))
-	Widgets.label("LIBRARIES", navigation, 14).add_theme_color_override("font_color", Color("a4aec0"))
+	navigation_heading = Widgets.label("LIBRARIES", navigation, 14)
+	navigation_heading.add_theme_color_override("font_color", Color("a4aec0"))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 	navigation.add_child(scroll)
+	var lists := VBoxContainer.new()
+	lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(lists)
 	libraries = VBoxContainer.new()
 	libraries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	libraries.add_theme_constant_override("separation", 10)
-	scroll.add_child(libraries)
+	lists.add_child(libraries)
+	settings_navigation = VBoxContainer.new()
+	settings_navigation.hide()
+	lists.add_child(settings_navigation)
 	settings_button = Widgets.button("Settings", func(): screen_settings.emit(), navigation)
 	_style_navigation_button(settings_button, preload("res://assets/icons/material/settings.svg"))
 	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
@@ -76,6 +88,7 @@ func _ready() -> void:
 	set_signed_in(false)
 
 func set_signed_in(value: bool) -> void:
+	set_settings_mode(false)
 	signed_in = value
 	rail.visible = value
 	home.disabled = not value
@@ -85,6 +98,26 @@ func set_signed_in(value: bool) -> void:
 		heading.text = ""
 		clear_libraries()
 		Widgets.label("Sign in to browse", libraries, 17)
+
+func set_settings_mode(enabled: bool) -> void:
+	settings_mode = enabled
+	home.text = "Library" if enabled else "Home"
+	home.icon = preload("res://assets/icons/material/video_library.svg") if enabled else preload("res://assets/icons/material/home.svg")
+	libraries.visible = not enabled
+	settings_navigation.visible = enabled
+	navigation_heading.text = "SETTINGS" if enabled else "LIBRARIES"
+	settings_button.visible = not enabled
+	logout.visible = signed_in and not enabled
+	if not enabled:
+		for child in settings_navigation.get_children():
+			settings_navigation.remove_child(child)
+			child.queue_free()
+
+func _home_pressed() -> void:
+	if settings_mode:
+		return_from_settings.emit()
+	else:
+		navigate.emit("", "Home")
 
 func clear_libraries() -> void:
 	buttons.clear()

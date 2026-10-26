@@ -21,6 +21,7 @@ var distance := 3.0
 var height := 0.0
 var curvature := 0.0
 var environment := "Void"
+var follow_screen := false
 var server := ""
 var device_id := ""
 var library_sort_by := "SortName"
@@ -35,6 +36,7 @@ func load_settings(path: String = PATH) -> void:
 	distance = clampf(config.get_value("screen", "distance", distance), 1.5, 8.0)
 	height = clampf(config.get_value("screen", "height", height), -2.0, 2.0)
 	curvature = clampf(config.get_value("screen", "curvature", curvature), 0.0, 1.2)
+	follow_screen = config.get_value("screen", "follow_screen", false) == true
 	environment = config.get_value("screen", "environment", "Void")
 	if int(config.get_value("screen", "environment_version", 1)) < 2:
 		if environment == "Theatre": environment = "Cinema"
@@ -69,6 +71,7 @@ func save(path: String = PATH) -> Error:
 	for key in SCREEN_KEYS:
 		config.set_value("screen", key, get(key))
 	config.set_value("screen", "environment", environment)
+	config.set_value("screen", "follow_screen", follow_screen)
 	config.set_value("screen", "environment_version", 2)
 	config.set_value("connection", "server", server)
 	config.set_value("connection", "device_id", device_id)
