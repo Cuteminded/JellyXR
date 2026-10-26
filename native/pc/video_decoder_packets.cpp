@@ -56,7 +56,7 @@ void VideoDecoder::read_loop() {
             std::unique_lock<std::mutex> lock(mutex);
             wake.wait(lock, [this] {
                 return stopping || seek_target >= 0 || (!reader_ended &&
-                    packets.size() < 512 && buffered_bytes < 128 * 1048576 && buffered_ms < 4000);
+                    packets.size() < max_buffer_packets && buffered_bytes < max_buffer_bytes && buffered_ms < max_buffer_ms);
             });
             if (stopping) break;
             target = seek_target;

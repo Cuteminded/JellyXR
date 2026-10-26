@@ -56,7 +56,7 @@ public:
     int64_t duration_ms() const { return duration; }
     bool ended() const { return end_of_stream; }
     bool read_ahead_ready() const {
-        return reader_ended || buffered_ms >= 1000 || buffered_bytes >= 128 * 1048576 || buffered_packets >= 512;
+        return reader_ended || buffered_ms >= 1000 || buffered_bytes >= max_buffer_bytes || buffered_packets >= max_buffer_packets;
     }
     godot::Dictionary diagnostics() const;
     void set_frame_callback(void (*callback)(void *), void *owner) { frame_callback = callback; frame_owner = owner; }
@@ -64,6 +64,9 @@ public:
     uint64_t current_generation() const { return generation; }
 
 private:
+    static constexpr int64_t max_buffer_ms = 30000;
+    static constexpr uint64_t max_buffer_bytes = 256 * 1048576;
+    static constexpr size_t max_buffer_packets = 4096;
     static int interrupt(void *owner);
     void configure_hardware(const struct AVCodec *decoder);
     int open(const std::string &url, const std::string &authorization);
