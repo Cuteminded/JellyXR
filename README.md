@@ -4,13 +4,21 @@ Watch your Jellyfin movies and shows on a virtual screen in VR.
 
 Jellyframe is a free, open source app for browsing your Jellyfin library and watching videos in VR. Choose a title and position the screen where you want it. Your Jellyfin server supplies the movies and shows.
 
+> I am still on the reservation queue for Steam Frame and have not received the device yet. 
+>
+> When I do, I will update the documentation and testing status accordingly.
+
 ## From JellyQuest to Jellyframe
 
 This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I renamed it Jellyframe because I plan to switch to Steam Frame. 
 
-Steam Frame is now the main target for future development.
+Despite the name and focus on Steam Frame, Jellyframe aims to work on as many VR platforms as possible, 
+*including*
+- [SteamVR](https://store.steampowered.com/steamvr)
+- [Android XR](https://www.android.com/intl/en_us/xr/)
+- [Quest Headsets running Horizon OS](https://www.meta.com/quest/)
 
-> I do not have a Steam Frame yet, so I cannot test it on the headset. Development of the Quest version continues under the Jellyframe name.
+Steam Frame remains the primary development target, with support for other platforms wherever possible.
 
 ## What has been tested
 

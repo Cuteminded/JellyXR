@@ -100,9 +100,10 @@ These are Jellyframe features rather than Jellyfin feature gaps.
 
 These checks remain open in the project documentation even where implementation already exists.
 
-- [ ] Verify installation and playback on Steam Frame.
-- [ ] Verify top-bottom stereo on a headset.
 - [ ] Confirm Quest HLS seeking after the timeline fix.
-- [ ] Verify the new native Vulkan decoder, HDR conversion, and 4K/8K playback on Linux with a headset.
+- [ ] Verify installation and playback on Steam Frame.
+- [ ] Verify installation and playback on Android XR.
+- [ ] Verify top-bottom stereo on a headset.
 - [ ] Verify ARM64 and other Linux configurations on headsets.
 - [ ] Verify Quest and OpenGL HDR behaviour separately.
+- [ ] Verify the new native Vulkan decoder, HDR conversion, and 4K/8K playback on Linux with a headset.
