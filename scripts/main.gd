@@ -37,6 +37,7 @@ var timeline_elapsed := 0.0
 var decoder_ready := false
 var media_segments := MediaSegments.new()
 var photo_active := false
+var photo_loading := false
 var photo_item: Dictionary = {}
 var video_material: ShaderMaterial
 var photo_loader: PhotoView
@@ -333,11 +334,19 @@ func _show_photo(item: Dictionary) -> void:
 	photo_loader.photo_ready.connect(_photo_ready)
 	photo_loader.failed.connect(_photo_failed)
 	status.text = "Loading photo..."
+	photo_loading = true
+	keyboard.hide()
+	panel.hide()
+	screen.show()
+	_resize_screen()
+	_update_loading()
 	add_child(photo_loader)
 	photo_loader._load()
 
 func _photo_ready(texture: Texture2D) -> void:
 	if not photo_active: return
+	photo_loading = false
+	_update_loading()
 	material.set_shader_parameter("video_texture", texture)
 	video_size = Vector2i(texture.get_size())
 	screen.show()
@@ -355,17 +364,23 @@ func _step_photo(direction: int) -> void:
 	if not photo_active or photo_sequence.busy: return
 	var current := page_generation
 	player_overlay.set_photo_navigation(false, false)
+	photo_loading = true
+	_update_loading()
 	var result := await photo_sequence.step(direction, api)
 	if current != page_generation or not photo_active: return
 	if result.has("item"):
 		await _show_photo(result.item)
 	else:
+		photo_loading = false
+		_update_loading()
 		player_overlay.set_photo_navigation(photo_sequence.index > 0, photo_sequence.can_next())
 		if result.has("error"): player_overlay.tooltip.text = result.error
 
 func _close_photo() -> void:
 	if not photo_active: return
 	photo_active = false
+	photo_loading = false
+	world.player_loading.hide()
 	photo_item = {}
 	if is_instance_valid(photo_loader):
 		remove_child(photo_loader)
@@ -603,7 +618,9 @@ func _skip_segment() -> void:
 
 func _update_loading() -> void:
 	if autoplay_pending: return
-	if playing and (not decoder_ready or seeking):
+	if photo_active and photo_loading:
+		world.player_loading.show_photo_loading()
+	elif playing and (not decoder_ready or seeking):
 		world.player_loading.show_loading()
 	elif playing and video.is_buffering():
 		world.player_loading.show_buffering()

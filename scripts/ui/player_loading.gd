@@ -62,6 +62,9 @@ func _ready() -> void:
 func show_loading() -> void:
 	_show_waiting("Loading video...")
 
+func show_photo_loading() -> void:
+	_show_waiting("Loading photo...")
+
 func show_buffering() -> void:
 	_show_waiting("Buffering video...")
 

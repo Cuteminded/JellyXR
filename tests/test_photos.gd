@@ -57,7 +57,15 @@ func run_checks() -> void:
 	var original: ShaderMaterial = app.material
 	app.api.server = "http://127.0.0.1:18964"
 	var previous_page: Array = app.page.get_children()
+	app.panel.show()
+	app.keyboard.show()
 	await app._show_photo({"Id": "photo", "Name": "Holiday.SBS.jpg", "Type": "Photo"})
+	assert(not app.panel.visible and not app.keyboard.visible, "Opening a photo hides the library and keyboard before loading finishes")
+	var indicator: PlayerLoading = app.world.player_loading
+	assert(indicator.is_visible_in_tree(), "Photo loading is visible while the image request is pending")
+	assert(indicator.label.text == "Loading photo...")
+	app._process(0.01)
+	assert(indicator.is_visible_in_tree(), "Frame updates preserve photo loading feedback")
 	assert(app.page.get_children() == previous_page, "Photos preserve the library instead of opening a preview page")
 	var texture := ImageTexture.create_from_image(image)
 	var screen_transform: Transform3D = app.screen.global_transform
@@ -65,6 +73,7 @@ func run_checks() -> void:
 	app.camera.position += Vector3(0.5, 0.2, 0.3)
 	app.camera.rotation.y += 0.6
 	app._photo_ready(texture)
+	assert(not indicator.visible, "A ready photo clears loading feedback")
 	assert(app.screen.global_transform.is_equal_approx(screen_transform), "Opening a photo preserves screen placement after head movement")
 	assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Opening a photo does not recenter the theatre")
 	assert(app.photo_active and not app.playing)
@@ -83,6 +92,14 @@ func run_checks() -> void:
 	assert(app.material == original and app.screen.material_override == original)
 	assert(app.world.panorama.material_override == original and not app.world.panoramic)
 	assert(app.player_overlay.timeline.visible and app.player_overlay.pause_button.visible)
+	await app._show_photo({"Id": "pending", "Name": "Pending", "Type": "Photo"})
+	assert(indicator.is_visible_in_tree())
+	app._photo_failed("Test failure")
+	assert(app.panel.visible, "A failed photo returns to the library")
+	assert(not indicator.visible and not app.photo_loading, "Failed photos clear loading feedback")
+	await app._show_photo({"Id": "cancelled", "Name": "Cancelled", "Type": "Photo"})
+	await app._stop(false)
+	assert(not indicator.visible and not app.photo_loading, "Stopping a pending photo clears loading feedback")
 	app.free()
 	print("Photo viewer checks: PASS")
 	quit()
