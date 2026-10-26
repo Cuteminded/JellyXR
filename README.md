@@ -42,6 +42,10 @@ Steam Frame remains the primary development target, with support for other platf
 - Audio and subtitle selection, favourites, and collections are not available yet.
 - Manually marking titles as watched and automatically hiding playback controls are planned but not available yet.
 
+## Will it be available in a store?
+
+If we think Jellyframe is ready for a wider release, then yes. I'd be happy to put in the work to make it available on Steam or the Meta Store.
+
 ## Documentation
 
 - [Install and start](INSTALLATION.md)
