@@ -78,6 +78,7 @@ Implementation does not mean a feature has been tested on every headset.
 These extend beyond Jellyframe's current movie and series focus.
 
 - [x] View photos.
+- [x] Show loading feedback when opening photos from the library and switching photos.
 - [ ] View slideshows.
 - [ ] Read books and comics.
 - [ ] Watch live TV and browse the programme guide.
@@ -96,14 +97,15 @@ These are Jellyframe features rather than Jellyfin feature gaps.
 - [x] Save screen, environment, library sorting, and playback quality settings.
 - [ ] Implement native HDR output and display calibration.
 
-## Remaining hardware validation
+## Hardware validation
 
-These checks remain open in the project documentation even where implementation already exists.
-
-- [ ] Confirm Quest HLS seeking after the timeline fix.
 - [ ] Verify installation and playback on Steam Frame.
 - [ ] Verify installation and playback on Android XR.
-- [ ] Verify top-bottom stereo on a headset.
+- [x] Confirm Quest 3 HLS seeking and resume after the timeline fix.
+- [x] Verify top-bottom stereo and eye swapping on Quest 3.
+- [x] Verify stereoscopic 180-degree projection and recentering on Quest 3.
+- [x] Verify Quest 3 HDR content playback.
+- [x] Verify PC OpenGL HDR playback in a headset.
+- [x] Verify photo loading feedback on Quest 3, both from the library and between photos.
 - [ ] Verify ARM64 and other Linux configurations on headsets.
-- [ ] Verify Quest and OpenGL HDR behaviour separately.
 - [ ] Verify the new native Vulkan decoder, HDR conversion, and 4K/8K playback on Linux with a headset.

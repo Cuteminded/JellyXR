@@ -29,18 +29,15 @@ Steam Frame remains the primary development target, with support for other platf
 - Browsing and searching Jellyfin libraries.
 - Selecting titles and controlling playback with controllers.
 - Dark backgrounds, cinema environments, and passthrough on supported devices.
-- 2D, side-by-side 3D, 180° and 360° video.
+- 2D, side-by-side and top-bottom 3D, 180° and 360° video.
 - Automatic episode playback in series order.
 - HDR, 1080p, 4K, and 8K video playback.
 
 ## Current limitations
 
 - Steam Frame installation and playback remain untested.
-- 180° projection and top-bottom 3D still need headset testing. Desktop projection tests cannot confirm stereo output or viewing comfort in VR.
-- Quest HLS seeking still needs in-headset confirmation after the timeline fix.
 - Linux VR playback was previously tested on a Steam Machine running SteamOS with Vulkan and SteamVR. The new native Vulkan decoder, HDR conversion, and 4K/8K playback still need Linux headset testing.
 - ARM64 and other Linux systems also need headset testing.
-- Quest and OpenGL HDR behaviour still need separate testing.
 - Native HDR output and display calibration are not implemented.
 - Some files need conversion by your Jellyfin server during playback. This can fail if the server cannot handle the conversion.
 - Audio and subtitle selection, favourites, and collections are not available yet.

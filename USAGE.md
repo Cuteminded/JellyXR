@@ -35,6 +35,10 @@ On a title's details page, **Play from start** appears beside **Resume** when sa
 
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
+## View photos
+
+Select a photo in your library to open it. A "Loading photo..." indicator appears while the image loads. Use the previous and next controls to browse photos; the same indicator appears while another photo is loading. If loading fails, the app returns to the library with an error message so you can try again.
+
 ## Control playback
 
 Press **A** to show the playback controls.
