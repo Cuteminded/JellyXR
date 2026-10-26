@@ -1,4 +1,5 @@
 #include "video_decoder.h"
+#include "stream_identity.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -69,6 +70,7 @@ int VideoDecoder::open(const std::string &url, const std::string &authorization)
         av_dict_set(&options, "headers", header.c_str(), 0);
     }
     av_dict_set(&options, "tls_verify", "1", 0);
+    av_dict_set(&options, "user_agent", JELLYFRAME_STREAM_USER_AGENT, 0);
     av_dict_set(&options, "rw_timeout", "15000000", 0);
     io_deadline = av_gettime_relative() + 15000000;
     int result = avformat_open_input(&input, url.c_str(), nullptr, &options);

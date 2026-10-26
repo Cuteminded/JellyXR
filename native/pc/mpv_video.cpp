@@ -1,4 +1,5 @@
 #include "mpv_video.h"
+#include "stream_identity.h"
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/display_server.hpp>
@@ -68,7 +69,8 @@ String JellyframeMpv::initialize(int64_t start_ms) {
         {"vo", vulkan_renderer.is_valid() ? "null" : "libmpv"},
         {"hwdec", use_opengl ? "auto" : "auto-copy"}, {"osd-level", "0"},
         {"sub-auto", "no"}, {"audio-file-auto", "no"}, {"keep-open", "no"},
-        {"idle", "yes"}, {"tls-verify", "yes"}
+        {"idle", "yes"}, {"tls-verify", "yes"},
+        {"user-agent", JELLYFRAME_STREAM_USER_AGENT}
     };
     for (const auto &option : options) {
         int error = mpv_set_option_string(player, option[0], option[1]);

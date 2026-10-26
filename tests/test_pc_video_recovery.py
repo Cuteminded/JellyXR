@@ -12,7 +12,7 @@ import time
 
 class RecoveryHandler(SimpleHTTPRequestHandler):
     lock = threading.Lock()
-    video_agent = None
+    video_connection = None
     stalled = False
     byte_rate = 1
     stall_after = 4
@@ -23,8 +23,8 @@ class RecoveryHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         with self.lock:
-            if type(self).video_agent is None:
-                type(self).video_agent = self.headers.get("User-Agent")
+            if type(self).video_connection is None:
+                type(self).video_connection = self.connection
         super().do_GET()
 
     def send_head(self):
@@ -56,7 +56,7 @@ class RecoveryHandler(SimpleHTTPRequestHandler):
         return stream
 
     def copyfile(self, source, output):
-        video = self.pace_video and self.headers.get("User-Agent") == self.video_agent
+        video = self.pace_video and self.connection is self.video_connection
         started = time.monotonic()
         sent = 0
         try:
