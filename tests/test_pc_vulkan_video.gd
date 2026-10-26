@@ -2,6 +2,7 @@ extends SceneTree
 
 var decoder: Node
 var texture: Texture2D
+var screen: SubViewport
 var errors: Array[String] = []
 var ended := false
 
@@ -25,7 +26,7 @@ func wait_for_frame() -> bool:
 	return require(texture != null and errors.is_empty(), "Vulkan produces a frame: " + str(errors))
 
 func check_color(expected: Color) -> bool:
-	var image := texture.get_image()
+	var image: Image = screen.image()
 	var actual := image.get_pixel(image.get_width() / 2, image.get_height() / 2)
 	return require(absf(actual.r - expected.r) < 0.04 and absf(actual.g - expected.g) < 0.04 and absf(actual.b - expected.b) < 0.04 and actual.a > 0.99,
 		"The Vulkan shader converts the expected color: %s, got %s" % [str(expected), str(actual)])
@@ -39,10 +40,12 @@ func run_check() -> void:
 			url = argument.trim_prefix("--video=")
 	decoder = ClassDB.instantiate("JellyframeMpv")
 	root.add_child(decoder)
+	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder)
+	root.add_child(screen)
 	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
 	decoder.failed.connect(func(message: String): errors.append(message))
 	decoder.ended.connect(func(): ended = true)
-	if not require(decoder.open_video(ProjectSettings.globalize_path(url), "", 0).is_empty(), "Open the ten-bit color fixture"):
+	if not require(decoder.open_video(ProjectSettings.globalize_path(url), "", 0).is_empty(), "Open the color fixture"):
 		return
 	if not await wait_for_frame():
 		return
@@ -65,5 +68,5 @@ func run_check() -> void:
 	decoder.stop_video()
 	decoder.queue_free()
 	await process_frame
-	print("Vulkan ten-bit color and seek checks: PASS")
+	print("Vulkan color and seek checks: PASS")
 	quit()

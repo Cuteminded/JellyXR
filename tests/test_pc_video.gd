@@ -5,6 +5,7 @@ var ready_count := 0
 var ended_count := 0
 var errors: Array[String] = []
 var texture: Texture2D
+var screen: SubViewport
 var dimensions := Vector2i.ZERO
 var failures := 0
 
@@ -34,6 +35,9 @@ func run_checks() -> void:
 	backend.queue_free()
 	decoder = ClassDB.instantiate("JellyframeMpv")
 	root.add_child(decoder)
+	if DisplayServer.get_name() != "headless":
+		screen = preload("res://tests/pc_video_test_screen.gd").new(decoder, Vector2i(1920, 1080))
+		root.add_child(screen)
 	decoder.prepared.connect(func(): ready_count += 1)
 	decoder.ended.connect(func(): ended_count += 1)
 	decoder.failed.connect(func(message: String): errors.append(message))
@@ -66,7 +70,7 @@ func run_checks() -> void:
 	check(await wait_until(func(): return decoder.position_ms() > 1400), "Playback resumes and advances")
 	check(decoder.duration_ms() > 2000, "Duration is available for seeking")
 	if texture != null and DisplayServer.get_name() != "headless":
-		var image := texture.get_image()
+		var image: Image = screen.image()
 		check(not image.is_empty(), "The decoder uploads a readable texture")
 		if not image.is_empty():
 			check(image.get_pixel(240, 300).get_luminance() > 0.7, "The left stereo frame reaches the texture")

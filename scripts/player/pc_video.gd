@@ -29,7 +29,17 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 	if not error.is_empty(): failed.emit(error)
 
 func _set_texture(texture: Texture2D) -> void:
-	if material != null: material.set_shader_parameter("video_texture", texture)
+	if material == null: return
+	material.set_shader_parameter("video_texture", texture)
+	material.set_shader_parameter("direct_yuv", false)
+	var parameters: Dictionary = {}
+	if texture != null and bridge != null:
+		parameters = bridge.video_shader_parameters()
+	for parameter in parameters:
+		material.set_shader_parameter(parameter, parameters[parameter])
+	if parameters.is_empty():
+		for parameter in ["y_plane", "u_plane", "v_plane"]:
+			material.set_shader_parameter(parameter, null)
 
 func toggle_pause() -> void:
 	if bridge != null:

@@ -20,6 +20,8 @@ public:
     bool is_buffering() const;
     godot::String rendering_backend() const;
     godot::Dictionary playback_diagnostics() const;
+    // Vulkan exposes YUV planes; texture_changed carries the luma texture.
+    godot::Dictionary video_shader_parameters() const;
     void stop_video();
     void _process(double delta) override;
 

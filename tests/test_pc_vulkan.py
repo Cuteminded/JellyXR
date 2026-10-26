@@ -1,4 +1,4 @@
-"""Generate ten-bit fixtures and verify Vulkan colors, seeking, and audio timing."""
+"""Verify planar ten-bit and hardware H.264 colors, seeking, and audio timing."""
 
 import argparse
 from pathlib import Path
@@ -15,7 +15,10 @@ def main():
     output = project / "build" / "vulkan-tests"
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=output) as directory:
-        for matrix, full_range, audio in [("bt601", False, False), ("bt709", True, False), ("bt709", False, True)]:
+        cases = [("ffv1", "bt601", False, False), ("ffv1", "bt709", True, False),
+                 ("ffv1", "bt709", False, True), ("libx264", "bt601", False, False),
+                 ("libx264", "bt709", True, False), ("libx264", "bt709", False, True)]
+        for codec, matrix, full_range, audio in cases:
             video = Path(directory) / "colors.mkv"
             command = [str(args.ffmpeg.resolve()), "-v", "error"]
             for color in ("red", "lime", "blue"):
@@ -23,11 +26,14 @@ def main():
             if audio:
                 command += ["-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=6"]
             target_range = "pc" if full_range else "tv"
+            pixel_format = "yuv420p" if codec == "libx264" else "yuv420p10le"
             filters = (f"[0:v][1:v][2:v]concat=n=3:v=1:a=0,"
                        f"scale=in_color_matrix=bt601:out_color_matrix={matrix}:in_range=tv:out_range={target_range},"
-                       "format=yuv420p10le[video]")
-            command += ["-filter_complex", filters, "-map", "[video]", "-c:v", "ffv1", "-threads", "2",
+                       f"format={pixel_format}[video]")
+            command += ["-filter_complex", filters, "-map", "[video]", "-c:v", codec, "-threads", "2",
                         "-color_range", target_range, "-colorspace", "bt709" if matrix == "bt709" else "smpte170m"]
+            if codec == "libx264":
+                command += ["-preset", "ultrafast", "-crf", "0"]
             if audio:
                 command += ["-map", "3:a", "-c:a", "pcm_s16le"]
             subprocess.run([*command, "-y", str(video)], check=True, timeout=60)

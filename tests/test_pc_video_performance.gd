@@ -3,6 +3,7 @@ extends SceneTree
 var decoder: Node
 var texture: Texture2D
 var preview: TextureRect
+var screen: SubViewport
 var errors: Array[String] = []
 
 func _initialize() -> void:
@@ -21,11 +22,14 @@ func run_check() -> void:
 	Engine.max_fps = 120
 	decoder = ClassDB.instantiate("JellyframeMpv")
 	root.add_child(decoder)
+	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder)
+	root.add_child(screen)
 	preview = TextureRect.new()
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.size = Vector2(640, 360)
 	root.add_child(preview)
-	decoder.texture_changed.connect(func(value: Texture2D): texture = value; preview.texture = value)
+	preview.texture = screen.get_texture()
+	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
 	decoder.failed.connect(func(value: String): errors.append(value))
 	var error: String = decoder.open_video(ProjectSettings.globalize_path(url), "", 0)
 	if not error.is_empty(): errors.append(error)

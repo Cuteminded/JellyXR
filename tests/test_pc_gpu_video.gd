@@ -2,6 +2,8 @@ extends SceneTree
 
 var decoder: Node
 var preview: TextureRect
+var screen: SubViewport
+var video_size := Vector2i.ZERO
 var video_texture: Texture2D
 var errors: Array[String] = []
 var expected_renderer := "opengl"
@@ -42,7 +44,7 @@ func check_controls_and_reopen(url: String) -> bool:
 	deadline = Time.get_ticks_msec() + 10000
 	while video_texture == null and errors.is_empty() and Time.get_ticks_msec() < deadline:
 		await process_frame
-	return require(video_texture != null and video_texture.get_size() == Vector2(1920, 1080) and errors.is_empty(), "Reopening replaces high-resolution GPU buffers")
+	return require(video_texture != null and video_size == Vector2i(1920, 1080) and errors.is_empty(), "Reopening replaces high-resolution GPU buffers")
 
 func run_check() -> void:
 	expected_renderer = "vulkan" if RenderingServer.get_current_rendering_driver_name() == "vulkan" else "opengl"
@@ -63,11 +65,15 @@ func run_check() -> void:
 	Engine.max_fps = 120
 	decoder = ClassDB.instantiate("JellyframeMpv")
 	root.add_child(decoder)
+	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder)
+	root.add_child(screen)
+	decoder.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h))
 	preview = TextureRect.new()
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.size = Vector2(640, 360)
 	root.add_child(preview)
-	decoder.texture_changed.connect(func(value: Texture2D): video_texture = value; preview.texture = value)
+	preview.texture = screen.get_texture()
+	decoder.texture_changed.connect(func(value: Texture2D): video_texture = value)
 	decoder.failed.connect(func(message: String): errors.append(message))
 	if not require(decoder.open_video(url, "", 0).is_empty(), "Open the GPU test video"):
 		return
@@ -76,7 +82,7 @@ func run_check() -> void:
 		await process_frame
 	if not require(video_texture != null and errors.is_empty(), "GPU produces a frame: " + str(errors)):
 		return
-	if not require(video_texture.get_size() == Vector2(expected_size), "GPU rendering preserves the source resolution"):
+	if not require(video_size == expected_size, "GPU rendering preserves the source resolution"):
 		return
 	var before := int(decoder.position_ms())
 	await create_timer(3.0).timeout
@@ -84,8 +90,8 @@ func run_check() -> void:
 		return
 	if not require(decoder.position_ms() > before + 2000, "High-resolution playback continues advancing"):
 		return
-	var image := video_texture.get_image()
-	if not require(image != null and image.get_size() == expected_size, "Read the full-resolution GPU result"):
+	var image: Image = screen.image()
+	if not require(image != null and image.get_size() == screen.size, "Read the rendered video material"):
 		return
 	var screen_image := root.get_texture().get_image()
 	var brightest := 0.0

@@ -32,6 +32,7 @@ void JellyframeMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("duration_ms"), &JellyframeMpv::duration_ms);
     ClassDB::bind_method(D_METHOD("is_buffering"), &JellyframeMpv::is_buffering);
     ClassDB::bind_method(D_METHOD("rendering_backend"), &JellyframeMpv::rendering_backend);
+    ClassDB::bind_method(D_METHOD("video_shader_parameters"), &JellyframeMpv::video_shader_parameters);
     ClassDB::bind_method(D_METHOD("playback_diagnostics"), &JellyframeMpv::playback_diagnostics);
     ClassDB::bind_method(D_METHOD("stop_video"), &JellyframeMpv::stop_video);
     ADD_SIGNAL(MethodInfo("prepared"));
@@ -191,7 +192,7 @@ String JellyframeMpv::rendering_backend() const {
 Dictionary JellyframeMpv::playback_diagnostics() const {
     Dictionary values = vulkan_renderer.is_valid() ? vulkan_renderer->diagnostics() : Dictionary();
     values["renderer"] = rendering_backend();
-    values["version"] = "vulkan-planes-4";
+    values["version"] = "vulkan-direct-yuv-1";
     values["audio_position_ms"] = position;
     if (vulkan_renderer.is_valid()) {
         values["video_position_ms"] = vulkan_renderer->timestamp_ms();
@@ -268,18 +269,21 @@ bool JellyframeMpv::update_size() {
 bool JellyframeMpv::upload_frame() {
     if (vulkan_renderer.is_valid()) {
         vulkan_renderer->set_clock(position);
+        Dictionary previous_parameters = vulkan_renderer->shader_parameters();
         if (!vulkan_renderer->take_frame()) return false;
         if (uses_video_clock()) {
             if (!video_clock_started || seeking) video_clock_origin = playback_time_ms() - position;
             video_clock_started = true;
             seeking = false;
         }
-        Ref<Texture2D> next = vulkan_renderer->get_texture();
+        Ref<Texture2D> next = vulkan_renderer->shader_parameters()["y_plane"];
         if (texture != next) {
             texture = next;
-            emit_signal("size_changed", texture->get_width(), texture->get_height());
-            emit_signal("texture_changed", texture);
+            emit_signal("size_changed", vulkan_renderer->width(), vulkan_renderer->height());
             UtilityFunctions::print("PC video: ", playback_diagnostics());
+        }
+        if (!vulkan_renderer->shader_parameters().recursive_equal(previous_parameters, 0)) {
+            emit_signal("texture_changed", texture);
         }
         return true;
     }
@@ -401,4 +405,8 @@ void JellyframeMpv::_process(double) {
         active = false;
         emit_signal("failed", "Video playback stalled.");
     }
+}
+
+Dictionary JellyframeMpv::video_shader_parameters() const {
+    return vulkan_renderer.is_valid() ? vulkan_renderer->shader_parameters() : Dictionary();
 }

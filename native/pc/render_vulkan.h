@@ -17,13 +17,13 @@ public:
     bool take_frame();
     int error() const;
     bool has_audio() const { return decoder.has_audio(); }
-    int width() const { return decoder.width(); }
-    int height() const { return decoder.height(); }
+    int width() const { return presented_size.x > 0 ? presented_size.x : decoder.width(); }
+    int height() const { return presented_size.y > 0 ? presented_size.y : decoder.height(); }
     int64_t duration_ms() const { return decoder.duration_ms(); }
     bool ended() const { return decoder.ended(); }
     bool read_ahead_ready() const { return decoder.read_ahead_ready(); }
     godot::Dictionary diagnostics() const;
-    godot::Ref<godot::Texture2DRD> get_texture() const { return presented_texture; }
+    godot::Dictionary shader_parameters() const { return presented_parameters; }
 protected:
     static void _bind_methods() {}
 private:
@@ -40,18 +40,16 @@ private:
     VideoDecoder decoder;
     VideoPlanes frame;
     godot::RenderingDevice *device = nullptr;
-    godot::Ref<godot::Texture2DRD> texture;
-    godot::Ref<godot::Texture2DRD> presented_texture;
-    godot::Ref<godot::Texture2DRD> ready_texture;
+    std::array<godot::Ref<godot::Texture2DRD>, 3> textures;
+    godot::Dictionary ready_parameters;
+    godot::Dictionary presented_parameters;
+    godot::Dictionary frame_parameters() const;
+    godot::Vector2i ready_size;
+    godot::Vector2i presented_size;
     std::mutex texture_mutex;
     uint64_t ready_generation = 0;
     int64_t ready_timestamp = -1;
     int64_t presented_timestamp = -1;
-    godot::RID shader;
-    godot::RID pipeline;
-    godot::RID sampler;
-    godot::RID uniforms;
-    godot::RID output;
     std::array<godot::RID, 3> planes;
     int target_width = 0;
     int target_height = 0;

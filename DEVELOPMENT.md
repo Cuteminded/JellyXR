@@ -146,12 +146,15 @@ godot --xr-mode off --rendering-method gl_compatibility --path . --script tests/
 godot --xr-mode off --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_pc_gpu_video.gd
 godot --xr-mode off --rendering-method gl_compatibility --path . --script tests/test_pc_video_transitions.gd
 godot --xr-mode off --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_pc_video_transitions.gd
+godot --xr-mode off --rendering-method mobile --rendering-driver vulkan --path . --script tests/test_pc_yuv_material.gd
 python tests/test_pc_vulkan.py --godot 'C:/path/to/godot_console.exe' --ffmpeg 'C:/path/to/ffmpeg.exe'
 python tests/test_pc_hdr.py --godot 'C:/path/to/godot_console.exe' --ffmpeg 'C:/path/to/ffmpeg.exe'
 python tests/test_pc_streaming.py --godot 'C:/path/to/godot_console.exe' --vulkan
 ```
 
 The transition test checks the black screen before playback and after stopping, then checks that a reopened video becomes visible. The Vulkan and HDR tests generate video fixtures and check color conversion, including HDR-to-SDR tone mapping.
+
+PC Vulkan playback uploads the decoded YUV planes and samples them directly in the video material. Color conversion and HDR tone mapping run while drawing the screen or panorama, without a full-resolution RGBA intermediate texture. Hardware frames still pass through system memory before upload. OpenGL and software playback use the RGB material path. The YUV material test checks decoder padding, rotation, and stereo eye boundaries.
 
 ### Performance
 
