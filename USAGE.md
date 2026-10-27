@@ -13,14 +13,14 @@ jellyXR remembers your sign-in without saving your password. Select **Sign out**
 If you cannot sign out through the app, remove the saved sign-in file:
 
 1. Close jellyXR completely.
-2. Find the file for your computer in the table below.
+2. Open the folder listed below. On Windows, paste `%APPDATA%\jellyXR` into the address bar in File Explorer and press Enter.
 3. Delete `session.cfg`.
 4. Open jellyXR again and sign in.
 
-| Computer | Saved sign-in file |
+| Computer | Folder |
 | --- | --- |
-| Windows | `%APPDATA%\jellyXR\session.cfg` |
-| Linux | `~/.local/share/jellyXR/session.cfg` |
+| Windows | `%APPDATA%\jellyXR` |
+| Linux | `~/.local/share/jellyXR` |
 
 To reset the saved app settings as well, delete `settings.cfg` from the same folder while jellyXR is closed. You will need to enter your server address and choose your settings again. This does not delete movies, shows, or your Jellyfin account.
 
@@ -33,7 +33,7 @@ To reset the saved app settings as well, delete `settings.cfg` from the same fol
 
 On a title's details page, **Play from start** appears beside **Resume** when saved progress is available. It starts the video at the beginning, even if that title is already playing.
 
-Play and Resume use the first media version. If a movie or episode has multiple versions, select **Choose version** to play a different one. The selected version also applies to resume and transcoding.
+Play and Resume use the first available version. If a movie or episode has several versions, select **Choose version** to pick the one you want to watch.
 
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
@@ -55,7 +55,7 @@ Press **Y** on the left controller to open or close settings.
 | Forward 30 seconds | Skip ahead. |
 | Time bar | Choose a different point in the video. |
 | Settings | Change the screen, background, or playback quality. |
-| Audio and subtitles | Placeholder for future audio-track and subtitle selection. This button is currently disabled. |
+| Audio and subtitles | Choose a language, turn subtitles on or off, and adjust how they look. |
 | Hide controls | Remove the controls from your view. Press A to show them again. |
 
 Press **B** to browse your library while playback continues. Select the title that is already playing to return to the video.
@@ -64,9 +64,44 @@ When an episode finishes, a five-second countdown appears before the next availa
 
 ### Skip intros and credits
 
-With [Intro Skipper](https://github.com/intro-skipper/intro-skipper) installed on Jellyfin 10.10 or newer, a **Skip intro** or **Skip credits** popup appears at the bottom-right of the video during a detected segment. Point at it and press the trigger to skip, even with the playback controls hidden. When the controls are open, the popup sits just above them. Recap and preview segments also have skip buttons when the server supplies them. Skipping is manual.
+If Jellyfin knows where an intro or the credits begin, a **Skip intro** or **Skip credits** button appears near the bottom-right of the video. Point at it and press the trigger to skip. You can use it without opening the playback controls. Some videos also have buttons to skip a recap or preview.
 
-The server must finish analyzing the title before timestamps are available. jellyXR reads Jellyfin's media segments, so other providers using the same API also work. If there are no timestamps or the request fails, playback continues without a skip button. Older plugin-specific APIs are not supported.
+This needs setup in Jellyfin, for example with [Intro Skipper](https://github.com/intro-skipper/intro-skipper). If someone else manages your Jellyfin server, ask them to enable it. Skip buttons appear only after Jellyfin has checked the video and found the parts it can skip.
+
+## Audio and subtitles
+
+Press **A** to open the playback controls, then select **Audio and subtitles**.
+
+### Choose a language
+
+Under **Audio**, select the language or version you want to hear. The choices depend on the video. Some videos also include commentary.
+
+The video briefly reloads when you change the audio, then continues from the same point. If you paused it first, it stays paused.
+
+If the choices are unavailable, select **Use Automatic for this video**. This lets Jellyfin prepare the video for your chosen audio or subtitles. It does not change your saved playback preference.
+
+Select **Back to video** to continue watching, or press **B** to open your library.
+
+### Turn subtitles on or off
+
+Under **Subtitles**, choose one of the available options. Choose **Off** to hide them.
+
+Subtitles may take a little while to load. If loading fails, select the same option again to retry.
+
+### Make subtitles easier to read
+
+Under **Text subtitle appearance**, you can:
+
+- Change **Text size** to make the letters larger or smaller.
+- Change **Vertical position** to move the subtitles up or down.
+- Choose white, yellow, or green text.
+- Change **Delay** if the words appear at the wrong time.
+
+If the words appear too early, increase Delay with **+**. If they appear too late, decrease it with **-**. Select **Reset timing** to undo your timing changes.
+
+The app remembers your size, position, and color choices. Timing changes apply only to the current video. Subtitles move above the playback controls while those controls are visible, then return to your chosen position when you hide them.
+
+Some subtitles are saved as pictures. Choosing these briefly reloads the video, and you cannot change their size, color, position, or timing. The app tells you when those adjustments do not apply. Other subtitles may look simpler than they do in another player, without their original fonts or placement.
 
 ## Make the screen comfortable
 
@@ -124,19 +159,19 @@ Move your head to look around. For a 180° video, the space behind you stays dar
 
 The video replaces your chosen background while you watch. Screen width, distance, height, and curvature do not affect these videos. Select **Screen** under Video projection to return to a normal video screen.
 
-jellyXR can recognize some 180° and 360° videos automatically, but you can change the setting if it chooses incorrectly. A new title uses automatic detection again. Some panoramic video formats are not supported, so changing this setting cannot fix every distorted video.
+jellyXR can recognize some 180° and 360° videos automatically, but you can change the setting if it chooses incorrectly. A new title uses automatic detection again. Some videos use a picture layout the app cannot show correctly. Changing this setting will not fix those videos.
 
 ## Change playback quality
 
 Open **Settings > Playback**. The choice applies to the next video you start.
 
-- **Automatic** plays the original video when possible and asks Jellyfin to convert it when needed. Start with this option if you are unsure.
+- **Automatic** lets Jellyfin choose how to play the video on your device. Start with this option if you are unsure.
 - **Original full resolution** keeps the original video quality. Your headset or PC must be able to play the file.
-- **Transcoded** asks your Jellyfin server to convert the video. Choose **720p**, **1080p**, or **4K** under **Transcoded resolution**. This can help with files that will not play smoothly at their original quality.
+- **Transcoded** asks Jellyfin to prepare a version that is easier for your device to play. Choose **720p**, **1080p**, or **4K** under **Transcoded resolution**. This can help with files that will not play smoothly at their original quality.
 
-1080p is the default for converted videos. Choose 720p to use less data, or 4K for more detail when the source video supports it. These are maximum sizes; smaller videos are not enlarged. Higher resolutions need a faster connection and more processing power from your Jellyfin server. Your choice is saved and applies to the next video you start.
+Start with **1080p**. Try **720p** if playback keeps stopping to load, or **4K** for a sharper picture if the video was recorded at that quality. Choosing 4K cannot add detail to a lower-quality video. Higher quality needs a faster connection and a computer running Jellyfin that can keep up. The app remembers your choice for the next video you start.
 
-Picture quality depends on the video, your device, your connection, and what your Jellyfin server can handle. To use the Windows setup tested with HDR, 4K, and 8K videos, follow the [Windows launch instructions](INSTALLATION.md#try-it-on-windows-with-steamvr).
+Picture quality also depends on the video itself and your headset. For help getting started on a PC, see the [Windows launch instructions](INSTALLATION.md#try-it-on-windows-with-steamvr).
 
 ## Change the order of your library
 
@@ -151,6 +186,7 @@ Home always shows the newest additions first. The sort order does not affect Ran
 - If you see two copies of the picture, check Video format under Settings > Screen.
 - If the scene surrounds you when you wanted a normal screen, select Screen under Video projection.
 - If the video pauses with a loading message, it is waiting for more video data. Give it a moment. If this keeps happening, try Automatic or Transcoded under Settings > Playback, then start the video again.
-- Audio-language and subtitle selection are not available yet.
+- If subtitles appear too early or too late, adjust Delay under Audio and subtitles.
+- If audio or subtitle choices are unavailable, select Use Automatic for this video on that page.
 
 For setup problems, see [Install and start jellyXR](INSTALLATION.md). The [README](README.md#current-limitations) lists the remaining limitations.
