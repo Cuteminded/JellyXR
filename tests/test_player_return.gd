@@ -96,6 +96,18 @@ func run_checks() -> void:
 		check(app.shell.settings_navigation.get_child_count() == 0 and app.shell.settings_button.visible and app.shell.logout.visible, "Leaving settings clears categories and restores normal navigation")
 
 	app.playing = true
+	app._show_playback()
+	var statistics_generation: int = app.page_generation
+	for attempt in range(3):
+		app.player_overlay.statistics_button.pressed.emit()
+		await settle()
+		check(app.player_overlay.statistics_panel.visible, "The statistics button opens its player panel")
+		check(app.page.get_child(0) == browsing and app.page_generation == statistics_generation, "Statistics never replace or rebuild the library page")
+		app._toggle_controller_library()
+		await settle()
+		check(not app.player_overlay.statistics_panel.visible, "Opening the library closes statistics")
+		check(app.page.get_child(0) == browsing and browsing.search == "Selected movie" and browsing.scroll.scroll_vertical == browsing_scroll, "Statistics preserve library search and scroll")
+		app._show_playback()
 	for attempt in range(3):
 		app._show_tracks()
 		await settle()

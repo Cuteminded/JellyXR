@@ -57,6 +57,7 @@ Press **Y** on the left controller to open or close settings.
 | Settings | Change the screen, background, or playback quality. |
 | Audio and subtitles | Choose a language, turn subtitles on or off, and adjust how they look. |
 | Hide controls | Remove the controls from your view. Press A to show them again. |
+| Statistics for nerds | Use the chart button at the far right to inspect playback details and live statistics. Select it again to dismiss the panel. |
 
 Press **B** to browse your library while playback continues. Select the title that is already playing to return to the video.
 

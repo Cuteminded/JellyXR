@@ -19,6 +19,11 @@ var controls_row: HBoxContainer
 var photo_mode := false
 var previous_photo: Button
 var next_photo: Button
+var statistics_button: Button
+var statistics_panel: VBoxContainer
+var statistics_values: Dictionary = {}
+var statistics_provider: Callable
+var statistics_elapsed := 0.0
 var screen_dimensions := Vector3(3.6, 16.0 / 9.0, 0.0)
 
 func _ready() -> void:
@@ -59,6 +64,9 @@ func _ready() -> void:
 	tooltip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tooltip.custom_minimum_size.y = 28
+	_build_statistics(body)
+	visibility_changed.connect(func():
+		if not is_visible_in_tree(): set_statistics_visible(false))
 	hide()
 
 func _build_controls(parent: Control) -> void:
@@ -78,6 +86,46 @@ func _build_controls(parent: Control) -> void:
 	next_photo = _add_control("Next photo", "next_photo", "chevron_right", row)
 	previous_photo.hide()
 	next_photo.hide()
+	statistics_button = _add_control("Statistics for nerds", "statistics", "statistics", row)
+	statistics_button.toggle_mode = true
+	statistics_button.pressed.connect(func(): set_statistics_visible(not statistics_panel.visible))
+	video_controls.append(statistics_button)
+
+func _build_statistics(parent: Control) -> void:
+	statistics_panel = VBoxContainer.new()
+	statistics_panel.add_theme_constant_override("separation", 8)
+	parent.add_child(statistics_panel)
+	var heading := HBoxContainer.new()
+	statistics_panel.add_child(heading)
+	Widgets.label("Statistics for nerds", heading, 26).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 24)
+	grid.add_theme_constant_override("v_separation", 12)
+	statistics_panel.add_child(grid)
+	for key in ["Source video", "Playback resolution", "Playback", "Source codec", "Source bitrate", "Renderer / app FPS", "Player state", "Video decoder", "Hardware decoding", "Dropped frames", "Read ahead"]:
+		Widgets.label(key, grid, 20)
+		var value := Widgets.label("Not reported", grid, 20)
+		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		value.custom_minimum_size.x = 210
+		value.clip_text = true
+		statistics_values[key] = value
+	statistics_panel.hide()
+
+func set_statistics_visible(enabled: bool) -> void:
+	enabled = enabled and not photo_mode
+	statistics_panel.visible = enabled
+	statistics_button.set_pressed_no_signal(enabled)
+	viewport.size = Vector2i(820, 210) if photo_mode else Vector2i(1400, 620 if enabled else 300)
+	fit_screen(screen_dimensions.x, screen_dimensions.y, screen_dimensions.z)
+	statistics_elapsed = 0.0
+	if enabled: _refresh_statistics()
+
+func _refresh_statistics() -> void:
+	if not statistics_provider.is_valid(): return
+	var values: Dictionary = statistics_provider.call()
+	for key in statistics_values:
+		statistics_values[key].text = str(values.get(key, "Not reported"))
 
 func _add_control(label: String, action_name: String, icon_name: String, parent: Control) -> Button:
 	var button := Widgets.button("", func(): action.emit(action_name), parent)
@@ -95,6 +143,7 @@ func _add_control(label: String, action_name: String, icon_name: String, parent:
 
 func set_photo_mode(enabled: bool) -> void:
 	photo_mode = enabled
+	set_statistics_visible(false)
 	previous_photo.visible = enabled
 	next_photo.visible = enabled
 	controls_row.move_child(previous_photo, 0 if enabled else controls_row.get_child_count() - 1)
@@ -124,6 +173,11 @@ func _hide_tooltip(control: Control) -> void:
 	tooltip.text = ""
 
 func _process(_delta: float) -> void:
+	if is_visible_in_tree() and statistics_panel.visible:
+		statistics_elapsed += _delta
+		if statistics_elapsed >= 1.0:
+			statistics_elapsed = 0.0
+			_refresh_statistics()
 	if not is_visible_in_tree():
 		hovered_control = null
 		tooltip.text = ""

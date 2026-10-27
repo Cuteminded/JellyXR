@@ -28,6 +28,7 @@ var stereo_overridden := false
 var projection_mode := VideoProjection.Mode.SCREEN
 var projection_overridden := false
 var video_size := Vector2i(1920, 1080)
+var decoder_size := Vector2i.ZERO
 var playing := false
 var elapsed := 0.0
 var transcode_offset := 0
@@ -66,7 +67,7 @@ func _ready() -> void:
 	video.failed.connect(_video_failed)
 	video.prepared.connect(_video_prepared)
 	video.ended.connect(_ended)
-	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); _resize_screen())
+	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); decoder_size = video_size; _resize_screen())
 	_show_login()
 	await _restore_session()
 
@@ -83,6 +84,7 @@ func _setup_world() -> void:
 	player_overlay = world.player_overlay
 	subtitle_overlay.controls = player_overlay
 	player_overlay.action.connect(_player_action)
+	player_overlay.statistics_provider = func(): return preload("res://scripts/ui/playback_statistics.gd").snapshot(session, video, decoder_size if decoder_ready else Vector2i.ZERO)
 	player_overlay.seek_requested.connect(_seek_to)
 	world.player_loading.cancelled.connect(_show_library)
 	world.player_skip_popup.skip_requested.connect(_skip_segment)
@@ -481,6 +483,7 @@ func _choose_media_version(item: Dictionary) -> void:
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	var keep_menu_open := playing and panel.visible
 	decoder_ready = false
+	decoder_size = Vector2i.ZERO
 	if not seeking and not stereo_overridden: mode = Stereo.detect(source)
 	if not seeking and not projection_overridden:
 		projection_mode = VideoProjection.detect(source)

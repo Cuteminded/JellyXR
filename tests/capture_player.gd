@@ -26,4 +26,10 @@ func capture() -> void:
 	app.player_overlay._show_tooltip(app.player_overlay.pause_button)
 	await RenderingServer.frame_post_draw
 	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-controls-preview.png")
+	app.session.method = "DirectPlay"
+	app.session.source = {"Bitrate": 25000000, "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 2160, "AverageFrameRate": 23.976, "Codec": "hevc"}]}
+	app.player_overlay.set_statistics_visible(true)
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-statistics-preview.png")
 	quit()
