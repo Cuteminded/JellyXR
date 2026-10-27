@@ -4,24 +4,28 @@ Watch your Jellyfin movies and shows on a virtual screen in VR.
 
 Jellyframe is a free, open source app for browsing your Jellyfin library and watching videos in VR. Choose a title and position the screen where you want it. Your Jellyfin server supplies the movies and shows.
 
-> I am still on the reservation queue for Steam Frame and have not received the device yet. 
+## Hardware status
+
+| Device | Status | Build | Notes |
+|---|---|---|---|
+| [Quest 1](https://www.meta.com/quest/) | Pending | Android | Installed but not fully tested |
+| [Quest 3](https://www.meta.com/quest/) | Working | Android |  |
+| [Xreal aura](https://www.xreal.com/aura) | Waiting for device | Android | Not yet released in Europe |
+| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Waiting for device | Linux ARM64 | On reservation queue |
+| [SteamVR](https://store.steampowered.com/steamvr) | Partially Working | Linux X64 | Needs further testing with Vulkan |
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows | |
+
+> **Note:** If you have a device that isn't listed here, or can test Jellyframe on any of the listed devices, we'd love to hear from you! 
 >
-> When I do, I will update the documentation and testing status accordingly.
+> Please [open an issue](https://github.com/Cuteminded/jellyframe/issues) to share your results and help us keep the hardware compatibility list accurate and up to date.
+
 
 ## From JellyQuest to Jellyframe
 
-This project started as JellyQuest, a Jellyfin VR app for the Quest 3. I renamed it Jellyframe because I plan to switch to Steam Frame.
-
+This project started as **JellyQuest**, a Jellyfin VR app for the Quest. I renamed it Jellyframe because I plan to switch to Steam Frame.
 I'm still undecided about keeping the name. It ties the app to Steam Frame, even though I want to support other VR platforms too. 
 I haven't come up with a better name yet, so Jellyframe stays for now. 
 Suggestions for a name that isn't tied to a specific platform are welcome.
-
-I want Jellyframe to work on as many VR platforms as possible, including:
-
-- [SteamVR](https://store.steampowered.com/steamvr)
-- [Android XR](https://www.android.com/intl/en_us/xr/)
-- [Quest headsets running Horizon OS](https://www.meta.com/quest/)
-
 Steam Frame remains the primary development target, with support for other platforms wherever possible.
 
 ## What has been tested
@@ -33,7 +37,7 @@ Steam Frame remains the primary development target, with support for other platf
 - Automatic episode playback in series order.
 - HDR, 1080p, 4K, and 8K video playback.
 
-## Current limitations
+## Parts still in development
 
 - Steam Frame installation and playback remain untested.
 - Linux VR playback was previously tested on a Steam Machine running SteamOS with Vulkan and SteamVR. The new native Vulkan decoder, HDR conversion, and 4K/8K playback still need Linux headset testing.
