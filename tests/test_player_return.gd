@@ -11,7 +11,7 @@ class FixtureApi extends JellyfinClient:
 	func details(id: String) -> Dictionary:
 		detail_calls.append(id)
 		await get_tree().process_frame
-		return {"ok": true, "data": {"Id": id, "Name": "Selected series" if id == "show" else "Selected movie", "Type": "Series" if id == "show" else "Movie", "UserData": {"PlaybackPositionTicks": 7200000000}}}
+		return {"ok": true, "data": {"Id": id, "Name": "Selected series" if id == "show" else "Selected movie", "Type": "Series" if id == "show" else "Movie", "MediaSources": [], "UserData": {"PlaybackPositionTicks": 7200000000}}}
 
 	func seasons(_series_id: String) -> Dictionary:
 		await get_tree().process_frame
@@ -272,6 +272,30 @@ func run_checks() -> void:
 	root.use_xr = false
 	await settle()
 
+	app.playing = false
+	api.token = "fixture"
+	var versions := {"Id": "versions", "Type": "Movie", "Name": "Multiple versions", "UserData": {"PlaybackPositionTicks": 7200000000}, "MediaSources": [{"Id": "one", "Name": "1080p"}, {"Id": "two", "Name": "4K director's cut"}]}
+	var opens_before_versions := session.opens
+	await app._start(versions, true)
+	await settle()
+	check(session.opens == opens_before_versions + 1 and not session.item.has("SelectedMediaSourceId"), "Play starts the default version without a picker")
+	app._choose_media_version(versions)
+	await settle()
+	check(app.panel.visible and session.opens == opens_before_versions + 1, "Choose version opens the picker without starting playback")
+	var version_scroll: ScrollContainer = app.page.get_child(3)
+	var choices: VBoxContainer = version_scroll.get_child(0)
+	check(choices.get_child_count() == 2 and choices.get_child(1).text == "4K director's cut", "The picker shows the server's version names")
+	if "--capture-versions" in OS.get_cmdline_user_args():
+		root.size = Vector2i(1536, 960)
+		app.viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		app.shell.show()
+		await settle()
+		await RenderingServer.frame_post_draw
+		app.viewport.get_texture().get_image().save_png("res://dist/media-versions-preview.png")
+	choices.get_child(1).pressed.emit()
+	await settle()
+	check(session.item.get("SelectedMediaSourceId") == "two" and session.item.UserData.PlaybackPositionTicks == 7200000000, "Choosing another version switches playback and preserves saved progress")
+	check(versions.UserData.PlaybackPositionTicks == 7200000000 and not versions.has("SelectedMediaSourceId"), "Version selection leaves the original item unchanged")
 	app.playing = false
 	app.queue_free()
 	await process_frame

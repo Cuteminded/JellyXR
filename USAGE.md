@@ -33,6 +33,8 @@ To reset the saved app settings as well, delete `settings.cfg` from the same fol
 
 On a title's details page, **Play from start** appears beside **Resume** when saved progress is available. It starts the video at the beginning, even if that title is already playing.
 
+Play and Resume use the first media version. If a movie or episode has multiple versions, select **Choose version** to play a different one. The selected version also applies to resume and transcoding.
+
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
 ## View photos

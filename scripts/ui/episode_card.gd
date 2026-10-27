@@ -2,10 +2,12 @@ class_name EpisodeCard
 extends PanelContainer
 
 signal chosen(item: Dictionary)
+signal version_requested(item: Dictionary)
 
 var item: Dictionary
 var artwork: ArtworkLoader
 var play_button: Button
+var version_button: Button
 var thumbnail: TextureRect
 var title_label: Label
 
@@ -54,6 +56,10 @@ func _ready() -> void:
 	play_button.accessibility_name = play_button.text + " " + title_label.text
 	if user.get("Played", false):
 		play_button.accessibility_name += ", watched"
+	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
+	if sources.size() > 1:
+		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), image_column)
+		version_button.accessibility_name = "Choose version of " + title_label.text
 
 func _label(value: String, parent: Node, font_size: int) -> Label:
 	var label := Widgets.label(value, parent, font_size)

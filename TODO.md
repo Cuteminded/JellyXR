@@ -48,7 +48,7 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Start a partially watched title from the beginning.
 - [x] Report playback start, progress, pause state, and stop events to Jellyfin.
 - [ ] Manually mark a movie, episode, season, or series as watched or unwatched.
-- [ ] Select between multiple media versions. Playback currently uses the first returned media source.
+- [x] Select between multiple media versions
 - [ ] Browse and play trailers and extras.
 
 ## Video playback

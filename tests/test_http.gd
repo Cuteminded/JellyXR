@@ -63,7 +63,7 @@ func run_checks() -> void:
 	check(last_request.begins_with("GET /jellyfin/Shows/show%20id/Seasons?"), "Seasons load from the selected series with an escaped ID")
 	await api.episodes("show id", "season & id", 100)
 	check("SeasonId=season%20%26%20id" in last_request and "StartIndex=100" in last_request, "Episode pagination stays inside the selected season")
-	check("Fields=Overview%2CUserData" in last_request and "IsMissing=false" in last_request, "Episode cards request summaries and exclude missing episodes")
+	check("Fields=Overview%2CUserData%2CMediaSources" in last_request and "IsMissing=false" in last_request, "Episode cards request versions and summaries and exclude missing episodes")
 	code = 401
 	payload = ""
 	result = await api.request("/Users/Me")

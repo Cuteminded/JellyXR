@@ -137,7 +137,7 @@ func seasons(series_id: String) -> Dictionary:
 	return await request("/Shows/%s/Seasons" % series_id.uri_encode() + query({"UserId": user_id, "Fields": "Overview,UserData", "EnableUserData": "true"}))
 
 func episodes(series_id: String, season_id: String, offset: int = 0) -> Dictionary:
-	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "SeasonId": season_id, "StartIndex": offset, "Limit": 100, "Fields": "Overview,UserData", "EnableUserData": "true", "IsMissing": "false"}))
+	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "SeasonId": season_id, "StartIndex": offset, "Limit": 100, "Fields": "Overview,UserData,MediaSources", "EnableUserData": "true", "IsMissing": "false"}))
 
 func next_episode(item: Dictionary) -> Dictionary:
 	var series_id := str(item.get("SeriesId", ""))

@@ -2,6 +2,7 @@ class_name SeriesBrowser
 extends VBoxContainer
 
 signal play_requested(item: Dictionary)
+signal version_requested(item: Dictionary)
 signal section_changed
 
 var api: JellyfinClient
@@ -102,6 +103,7 @@ func open_season(season: Dictionary) -> void:
 			card.item["ParentIndexNumber"] = season.get("IndexNumber")
 		card.artwork = artwork
 		card.chosen.connect(func(chosen: Dictionary): play_requested.emit(chosen))
+		card.version_requested.connect(func(chosen: Dictionary): version_requested.emit(chosen))
 		episode_list.add_child(card)
 	section_changed.emit()
 

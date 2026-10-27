@@ -324,6 +324,7 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.play_requested.connect(_start)
 	view.play_from_start_requested.connect(_start.bind(true))
+	view.version_requested.connect(_choose_media_version)
 	view.back_requested.connect(_show_library)
 	page.add_child(view)
 	status.text = "Ready."
@@ -410,7 +411,8 @@ func _close_photo() -> void:
 	player_overlay.set_photo_mode(false)
 
 func _start(item: Dictionary, from_start: bool = false) -> void:
-	if not from_start and playing and str(session.item.get("Id", "")) == str(item.get("Id", "")):
+	var requested_source := str(item.get("SelectedMediaSourceId", ""))
+	if not from_start and playing and str(session.item.get("Id", "")) == str(item.get("Id", "")) and (requested_source.is_empty() or requested_source == session.media_source_id):
 		if video.paused:
 			video.toggle_pause()
 			session.report("Progress", false)
@@ -437,6 +439,38 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 		if not selected.get("UserData") is Dictionary: selected.UserData = {}
 		selected.UserData.PlaybackPositionTicks = 0
 	await session.open(selected)
+
+func _choose_media_version(item: Dictionary) -> void:
+	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
+	_clear_page()
+	shell.heading.text = "Playback"
+	panel.show()
+	player_overlay.hide()
+	Widgets.button("Back to details", _details.bind(item), page)
+	var title := Widgets.label("Choose a version", page, 36)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var name_label := Widgets.label(DetailsMetadata.title(item), page, 26)
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	page.add_child(scroll)
+	var choices := VBoxContainer.new()
+	choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	choices.add_theme_constant_override("separation", 12)
+	scroll.add_child(choices)
+	for index in range(sources.size()):
+		var source: Dictionary = sources[index]
+		var selected := item.duplicate(true)
+		selected["SelectedMediaSourceId"] = str(source.get("Id", ""))
+		var label := str(source.get("Name", "")) if source.get("Name") else "Version %d" % (index + 1)
+		var button := Widgets.button(label, _start.bind(selected), choices)
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.disabled = selected.SelectedMediaSourceId.is_empty()
+		if index == 0: button.grab_focus.call_deferred()
+	status.text = "Select the version to play."
 
 func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	var keep_menu_open := playing and panel.visible

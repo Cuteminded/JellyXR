@@ -4,9 +4,11 @@ class FixtureClient extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var direct := true
 	var transcode_path := "/Videos/fixture/master.m3u8"
+	var sources: Array = []
 
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, body: Dictionary = {}) -> Dictionary:
 		bodies.append(body)
+		if not sources.is_empty(): return {"ok": true, "data": {"MediaSources": sources, "PlaySessionId": "versions"}}
 		return {"ok": true, "data": {"MediaSources": [{"Id": "fixture-source", "SupportsDirectPlay": direct, "TranscodingUrl": transcode_path}]}}
 
 func _initialize() -> void:
@@ -43,10 +45,36 @@ func run_checks() -> void:
 	assert(api.bodies[1].DeviceProfile.TranscodingProfiles[0].Conditions == retry_profile.TranscodingProfiles[0].Conditions, "The playback request sends the conversion limits on the current platform")
 	await check_playback_choices(session, api, streams)
 	await check_transcode_resolutions(session, api, streams)
+	await check_media_versions(session, api, streams)
 	session.queue_free()
 	api.queue_free()
 	print("Playback profile checks: PASS")
 	quit()
+
+func check_media_versions(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
+	api.sources = [
+		{"Id": "first", "SupportsDirectPlay": true, "TranscodingUrl": "/first.m3u8"},
+		{"Id": "second", "SupportsDirectPlay": true, "TranscodingUrl": "/second.m3u8"}
+	]
+	var selected := {"Id": "fixture", "SelectedMediaSourceId": "second", "UserData": {"PlaybackPositionTicks": 450000000}}
+	await session.open(selected)
+	assert(api.bodies.back().MediaSourceId == "second", "Negotiation requests the selected version")
+	assert("MediaSourceId=second" in streams.back()[0] and streams.back()[1] == 45000, "Direct playback resumes the selected version even when it is returned second")
+	await session.report("Playing")
+	assert(api.bodies.back().MediaSourceId == "second", "Playback reports identify the selected version")
+	await session.retry_transcode()
+	assert(api.bodies.back().MediaSourceId == "second" and streams.back()[0].contains("/second.m3u8"), "Decoder fallback keeps the selected version")
+	session.position_ticks = 900000000
+	await session.open(selected, true)
+	assert(api.bodies.back().MediaSourceId == "second" and streams.back()[1] == 90000, "Transcoded seeks keep the version and absolute position")
+	var errors: Array = []
+	session.failed.connect(func(message: String): errors.append(message))
+	api.sources.remove_at(1)
+	var count := streams.size()
+	await session.open(selected)
+	assert(streams.size() == count and errors.size() == 1, "A missing version fails instead of playing another version")
+	await session.open({"Id": "another-item"})
+	assert(not api.bodies.back().has("MediaSourceId") and session.media_source_id == "first", "A new item clears the previous version choice")
 
 func check_playback_choices(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
 	session.settings = JellyXRSettings.new()

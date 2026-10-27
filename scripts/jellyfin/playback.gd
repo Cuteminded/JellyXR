@@ -15,10 +15,12 @@ var method := "DirectPlay"
 var position_ticks := 0
 var started := false
 var fallback_attempted := false
+var media_source_id := ""
 
 func open(selected: Dictionary, transcode: bool = false) -> void:
 	item = selected
 	if not transcode:
+		media_source_id = str(item.get("SelectedMediaSourceId", ""))
 		position_ticks = int(item.get("UserData", {}).get("PlaybackPositionTicks", 0))
 		fallback_attempted = false
 		active_playback_mode = settings.playback_mode if settings != null else "auto"
@@ -27,19 +29,29 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 	var use_transcode := transcode or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
 	var profile := _device_profile(use_transcode, original)
-	var result := await api.request("/Items/%s/PlaybackInfo" % str(item.Id).uri_encode(), HTTPClient.METHOD_POST, {
+	var body := {
 		"UserId": api.user_id, "StartTimeTicks": position_ticks, "IsPlayback": true,
 		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode, "EnableDirectStream": false,
 		"EnableTranscoding": not original, "AllowVideoStreamCopy": not use_transcode,
 		"DeviceProfile": profile, "MaxStreamingBitrate": profile.MaxStreamingBitrate
-	})
+	}
+	if not media_source_id.is_empty(): body["MediaSourceId"] = media_source_id
+	var result := await api.request("/Items/%s/PlaybackInfo" % str(item.Id).uri_encode(), HTTPClient.METHOD_POST, body)
 	if not result.ok:
 		failed.emit(result.error)
 		return
 	if result.data.get("MediaSources", []).is_empty():
 		failed.emit("Jellyfin could not provide a video stream. Check your account's playback permissions.")
 		return
-	source = result.data.MediaSources[0]
+	source = {}
+	for candidate in result.data.MediaSources:
+		if media_source_id.is_empty() or str(candidate.get("Id", "")) == media_source_id:
+			source = candidate
+			break
+	if source.is_empty():
+		failed.emit("The selected version is no longer available. Reopen the item and choose another version.")
+		return
+	media_source_id = str(source.Id)
 	session_id = result.data.get("PlaySessionId", "")
 	var url: String
 	var start_ms := int(position_ticks / 10000)

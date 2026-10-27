@@ -22,6 +22,8 @@ class FixtureApi extends JellyfinClient:
 		if not empty_episodes:
 			for index in range(offset, mini(offset + 2, 4)):
 				items.append({"Id": season_id + str(index), "Name": ["Seekest Thou the Road", "Circle Sewn with Fate", "Through the trials", "The final chapter"][index], "IndexNumber": index + 1, "RunTimeTicks": 24000000000, "CommunityRating": 7.0, "Overview": "Agatha and her companions face another trial on the Witches' Road.", "UserData": {"PlaybackPositionTicks": 3000000000 if index == 0 else 0, "Played": index == 1}})
+		if offset == 0 and not items.is_empty():
+			items[0]["MediaSources"] = [{"Id": "first"}, {"Id": "second"}]
 		return {"ok": true, "data": {"Items": items, "TotalRecordCount": 0 if empty_episodes else 4}}
 
 var failures := 0
@@ -73,6 +75,11 @@ func run_checks() -> void:
 	check(first.play_button.text == "Resume episode", "Started episodes must offer Resume.")
 	first.play_button.pressed.emit()
 	check(selected.back().Id == "one0", "Playback must receive the selected episode, not the series or season.")
+	var version_requests: Array = []
+	view.version_requested.connect(func(item: Dictionary): version_requests.append(item))
+	first.version_button.pressed.emit()
+	check(version_requests.size() == 1 and version_requests[0].Id == "one0" and selected.size() == 1, "Episode version requests reach the details view without starting playback.")
+	check(browser.episode_list.get_child(1).version_button == null, "Episodes without multiple versions have no version button.")
 	check(browser.episode_list.get_child(1).play_button.text == "Play episode", "Unstarted episodes must offer Play.")
 	await capture("res://dist/episodes-preview.png")
 	for width in [1280, 960]:

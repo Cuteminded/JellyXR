@@ -60,6 +60,7 @@ func run_checks() -> void:
 	var view := show_details(shell, item)
 	await settle()
 	check(view.play_button.text == "Resume", "Saved playback must offer Resume.")
+	check(view.version_button == null, "A title without multiple versions does not show Choose version.")
 	view.play_button.pressed.emit()
 	check(selected == [item], "Resume must pass the original item to playback.")
 	check(view.play_from_start_button != null and view.play_from_start_button.text == "Play from start", "Saved playback also offers Play from start.")
@@ -77,13 +78,24 @@ func run_checks() -> void:
 		root.get_texture().get_image().save_png("res://dist/details-preview.png")
 	item.Name = "A very long movie title that should wrap clearly without hiding its final words"
 	item.Overview = "A long synopsis must remain available while scrolling. ".repeat(30)
+	item.MediaSources = [{"Id": "first", "Name": "1080p"}, {"Id": "second", "Name": "4K"}]
 	view = show_details(shell, item)
+	await settle()
+	var version_requests: Array = []
+	view.version_requested.connect(func(chosen: Dictionary): version_requests.append(chosen))
+	check(view.version_button != null, "Multiple versions offer a separate Choose version button.")
+	view.version_button.pressed.emit()
+	check(version_requests == [item] and selected.size() == 1, "Choose version requests a picker without triggering Play.")
+	if "--capture" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://dist/details-versions-preview.png")
 	for width in [1280, 960]:
 		root.size.x = width
 		await settle()
 		check(view.body.size.x <= view.scroll.size.x, "Details must fit the available width at %d pixels." % width)
 		check(view.title_label.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Long titles must not escape the details panel.")
 		check(view.play_from_start_button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "The restart button fits narrow details panels.")
+		check(view.version_button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Choose version fits narrow details panels.")
 	root.size.x = 1536
 	view = show_details(shell, {"Id": "plain", "Name": "A movie without artwork", "Type": "Movie", "Overview": null, "UserData": null, "Genres": null, "People": null})
 	await settle()

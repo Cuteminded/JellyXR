@@ -3,6 +3,7 @@ extends VBoxContainer
 
 signal play_requested(item: Dictionary)
 signal play_from_start_requested(item: Dictionary)
+signal version_requested(item: Dictionary)
 signal back_requested
 
 var item: Dictionary
@@ -14,6 +15,7 @@ var body: VBoxContainer
 var series_browser: SeriesBrowser
 var play_button: Button
 var play_from_start_button: Button
+var version_button: Button
 var back_button: Button
 var title_label: Label
 var overview_label: Label
@@ -48,6 +50,7 @@ func _ready() -> void:
 		series_browser.series_id = str(item.Id)
 		series_browser.selected_season = initial_season
 		series_browser.play_requested.connect(func(episode: Dictionary): play_requested.emit(episode))
+		series_browser.version_requested.connect(func(episode: Dictionary): version_requested.emit(episode))
 		series_browser.section_changed.connect(_scroll_to_series)
 		body.add_child(series_browser)
 	_build_people()
@@ -133,6 +136,10 @@ func _build_playback(parent: VBoxContainer) -> void:
 		play_from_start_button = Widgets.button("Play from start", func(): play_from_start_requested.emit(item), actions)
 		play_from_start_button.custom_minimum_size = Vector2(200, 64)
 		_muted("Continue from " + DetailsMetadata.duration(position), parent, 20)
+	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
+	if sources.size() > 1:
+		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), actions)
+		version_button.custom_minimum_size = Vector2(200, 64)
 
 func _build_information() -> void:
 	var section := VBoxContainer.new()
