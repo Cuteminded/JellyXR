@@ -26,25 +26,6 @@ This project started as **JellyQuest**, a Jellyfin VR app for the Quest. I renam
 
 The goal is to support standalone headsets and devices connected to a PC. Support depends on each device's capabilities and testing. The hardware status table above shows what works today and what still needs testing.
 
-## What has been tested
-
-- Browsing and searching Jellyfin libraries.
-- Selecting titles and controlling playback with controllers.
-- Dark backgrounds, cinema environments, and passthrough on supported devices.
-- 2D, side-by-side and top-bottom 3D, 180° and 360° video.
-- Automatic episode playback in series order.
-- HDR, 1080p, 4K, and 8K video playback.
-
-## Parts still in development
-
-- Steam Frame installation and playback remain untested.
-- Linux VR playback was previously tested on a Steam Machine running SteamOS with Vulkan and SteamVR. The new native Vulkan decoder, HDR conversion, and 4K/8K playback still need Linux headset testing.
-- ARM64 and other Linux systems also need headset testing.
-- Native HDR output and display calibration are not implemented.
-- Some files need conversion by your Jellyfin server during playback. This can fail if the server cannot handle the conversion.
-- Audio and subtitle selection, favourites, and collections are not available yet.
-- Manually marking titles as watched and automatically hiding playback controls are planned but not available yet.
-
 ## Will it be available in a store?
 
 If we think jellyXR is ready for a wider release, then yes. I'd be happy to put in the work to make it available on Steam or the Meta Store.
