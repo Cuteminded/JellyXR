@@ -3,6 +3,7 @@ extends Node
 
 signal failed(message: String)
 signal stream_ready(url: String, source: Dictionary, start_ms: int)
+signal reporting_failed(message: String)
 
 var api: JellyfinClient
 var settings: JellyXRSettings
@@ -16,27 +17,43 @@ var position_ticks := 0
 var started := false
 var fallback_attempted := false
 var media_source_id := ""
+var audio_index := -1
+var subtitle_index := -1
+var burn_subtitles := false
+var generation := 0
 
-func open(selected: Dictionary, transcode: bool = false) -> void:
+func open(selected: Dictionary, transcode: bool = false, continuing: bool = false) -> void:
+	generation += 1
+	var current := generation
 	item = selected
-	if not transcode:
+	if not transcode and not continuing:
+		audio_index = -1
+		subtitle_index = -1
+		burn_subtitles = false
 		media_source_id = str(item.get("SelectedMediaSourceId", ""))
+		if media_source_id.is_empty() and item.get("MediaSources") is Array and not item.MediaSources.is_empty():
+			media_source_id = str(item.MediaSources[0].get("Id", ""))
 		position_ticks = int(item.get("UserData", {}).get("PlaybackPositionTicks", 0))
 		fallback_attempted = false
 		active_playback_mode = settings.playback_mode if settings != null else "auto"
 		active_transcode_resolution = settings.transcode_resolution if settings != null and active_playback_mode == "transcoded" else 1080
 	started = false
-	var use_transcode := transcode or active_playback_mode == "transcoded"
+	var use_transcode := transcode or burn_subtitles or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
 	var profile := _device_profile(use_transcode, original)
 	var body := {
 		"UserId": api.user_id, "StartTimeTicks": position_ticks, "IsPlayback": true,
-		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode, "EnableDirectStream": false,
+		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode and audio_index < 0, "EnableDirectStream": not use_transcode and not original,
 		"EnableTranscoding": not original, "AllowVideoStreamCopy": not use_transcode,
 		"DeviceProfile": profile, "MaxStreamingBitrate": profile.MaxStreamingBitrate
 	}
+	body["SubtitleStreamIndex"] = subtitle_index if burn_subtitles else -1
+	if burn_subtitles: body["AlwaysBurnInSubtitleWhenTranscoding"] = true
+	if audio_index >= 0: body["AudioStreamIndex"] = audio_index
 	if not media_source_id.is_empty(): body["MediaSourceId"] = media_source_id
+	var needs_source_selection := media_source_id.is_empty()
 	var result := await api.request("/Items/%s/PlaybackInfo" % str(item.Id).uri_encode(), HTTPClient.METHOD_POST, body)
+	if current != generation: return
 	if not result.ok:
 		failed.emit(result.error)
 		return
@@ -52,13 +69,16 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		failed.emit("The selected version is no longer available. Reopen the item and choose another version.")
 		return
 	media_source_id = str(source.Id)
+	if needs_source_selection and source.get("DefaultSubtitleStreamIndex") != null and int(source.DefaultSubtitleStreamIndex) >= 0:
+		await open(item, transcode, true)
+		return
 	session_id = result.data.get("PlaySessionId", "")
 	var url: String
 	var start_ms := int(position_ticks / 10000)
 	if original and not source.get("SupportsDirectPlay", false):
 		failed.emit("Jellyfin cannot provide the original video. Choose Transcoded in Settings > Playback.")
 		return
-	if source.get("SupportsDirectPlay", false) and not use_transcode:
+	if source.get("SupportsDirectPlay", false) and not use_transcode and audio_index < 0:
 		method = "DirectPlay"
 		url = api.server + "/Videos/%s/stream" % str(item.Id).uri_encode() + api.query({"Static": "true", "MediaSourceId": source.Id})
 	else:
@@ -67,6 +87,8 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 		if path.is_empty():
 			failed.emit("Jellyfin needs to convert this video but did not provide a stream.")
 			return
+		if not use_transcode and (source.get("SupportsDirectStream", false) or _copies_video(path)):
+			method = "DirectStream"
 		url = api.stream_url(path)
 		if url.is_empty():
 			failed.emit("The server returned an unsupported stream address.")
@@ -75,7 +97,7 @@ func open(selected: Dictionary, transcode: bool = false) -> void:
 	stream_ready.emit(url, source, start_ms)
 
 func is_hls() -> bool:
-	if method != "Transcode": return false
+	if method == "DirectPlay": return false
 	var protocol := str(source.get("TranscodingSubProtocol", "")).to_lower()
 	var path := str(source.get("TranscodingUrl", "")).get_slice("?", 0).to_lower()
 	return protocol == "hls" or path.ends_with(".m3u8")
@@ -98,7 +120,7 @@ func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 		"DirectPlayProfiles": [] if transcode else [direct_profile],
 		"TranscodingProfiles": [] if original else [transcoding_profile],
 		"CodecProfiles": [] if original else [{"Type": "Video", "Conditions": codec_conditions}],
-		"SubtitleProfiles": []
+		"SubtitleProfiles": [{"Format": "vtt", "Method": "External"}, {"Format": "pgssub", "Method": "Encode"}, {"Format": "dvdsub", "Method": "Encode"}, {"Format": "dvbsub", "Method": "Encode"}]
 	}
 
 func retry_transcode() -> void:
@@ -117,8 +139,26 @@ func report(event: String, paused: bool = false) -> void:
 	if event == "Playing": started = true
 	if not started: return
 	var path := "/Sessions/Playing" + ("/" + event if event != "Playing" else "")
-	await api.request(path, HTTPClient.METHOD_POST, {"ItemId": item.Id, "MediaSourceId": source.Id, "PlaySessionId": session_id, "PositionTicks": position_ticks, "IsPaused": paused, "CanSeek": true, "PlayMethod": method})
+	var body := {"ItemId": item.Id, "MediaSourceId": source.Id, "PlaySessionId": session_id, "PositionTicks": position_ticks, "IsPaused": paused, "CanSeek": true, "PlayMethod": method, "SubtitleStreamIndex": subtitle_index}
+	if audio_index >= 0:
+		body["AudioStreamIndex"] = audio_index
+	elif source.get("DefaultAudioStreamIndex") != null:
+		body["AudioStreamIndex"] = int(source.DefaultAudioStreamIndex)
+	var result := await api.request(path, HTTPClient.METHOD_POST, body)
+	if not result.ok:
+		var message := "Jellyfin playback report (%s) failed: %s" % [event, result.get("error", "Unknown error.")]
+		push_warning(message)
+		reporting_failed.emit(message)
 	if event == "Stopped":
 		started = false
-		if method == "Transcode":
+		if method != "DirectPlay":
 			await api.request("/Videos/ActiveEncodings" + api.query({"DeviceId": api.device_id, "PlaySessionId": session_id}), HTTPClient.METHOD_DELETE)
+
+func cancel_pending() -> void:
+	generation += 1
+
+func _copies_video(path: String) -> bool:
+	for pair in path.get_slice("?", 1).split("&"):
+		if pair.get_slice("=", 0).to_lower() == "videocodec":
+			return pair.get_slice("=", 1).uri_decode().to_lower() == "copy"
+	return false

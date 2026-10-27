@@ -6,7 +6,7 @@ class FixtureVideo extends VideoBackend:
 	func stop() -> void: pass
 
 class FixtureSession extends PlaybackSession:
-	func open(selected: Dictionary, _transcode: bool = false) -> void: item = selected
+	func open(selected: Dictionary, _transcode: bool = false, _continuing: bool = false) -> void: item = selected
 	func report(_event: String, _paused: bool = false) -> void: pass
 
 var calls := 0

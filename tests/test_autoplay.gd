@@ -45,7 +45,7 @@ class FixtureSession extends PlaybackSession:
 			if hold_stop: await release_stop
 			await get_tree().process_frame
 
-	func open(selected: Dictionary, _transcode: bool = false) -> void:
+	func open(selected: Dictionary, _transcode: bool = false, _continuing: bool = false) -> void:
 		item = selected
 		opened.append(selected)
 

@@ -14,7 +14,7 @@ class FakeSession extends PlaybackSession:
 	var stopped_at := -1
 	func report(event: String, _paused: bool = false) -> void:
 		if event == "Stopped": stopped_at = position_ticks
-	func open(_selected: Dictionary, _transcode: bool = false) -> void:
+	func open(_selected: Dictionary, _transcode: bool = false, _continuing: bool = false) -> void:
 		opened_at = position_ticks
 
 func _initialize() -> void:

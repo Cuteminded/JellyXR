@@ -30,7 +30,7 @@ class FixtureVideo extends VideoBackend:
 class FixtureSession extends PlaybackSession:
 	var opens := 0
 	func report(_event: String, _paused: bool = false) -> void: pass
-	func open(selected: Dictionary, _transcode: bool = false) -> void:
+	func open(selected: Dictionary, _transcode: bool = false, _continuing: bool = false) -> void:
 		item = selected
 		opens += 1
 
@@ -198,6 +198,19 @@ func run_checks() -> void:
 	check(app.panel.visible and app.page.get_child(0) == controller_library, "After Y opens and closes settings, B restores the previous library page")
 	check(app.shell.libraries.visible and not app.shell.settings_navigation.visible, "B restores library navigation after hidden settings")
 	check(app.playing and video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "Returning from settings with B leaves playback uninterrupted")
+	for hide_tracks in [false, true]:
+		app._show_tracks()
+		check(app.page.get_child(0) is TracksView, "Audio and subtitles opens its own page")
+		if hide_tracks: app._show_playback()
+		app.world._controller_button_pressed("by_button", &"right_hand")
+		check(app.panel.visible and app.page.get_child(0) is LibraryView, "B opens the library after either visible or hidden track controls")
+		check(app.shell.selected_id == "movies", "Returning from tracks keeps the selected library")
+		var tracks_return_library: Node = app.page.get_child(0)
+		app.world._controller_button_pressed("by_button", &"right_hand")
+		check(not app.panel.visible, "B closes the library after returning from tracks")
+		app.world._controller_button_pressed("by_button", &"right_hand")
+		check(app.panel.visible and app.page.get_child(0) == tracks_return_library, "B reopens the library instead of the old track page")
+	check(app.playing and video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "Returning from tracks with B leaves playback uninterrupted")
 	app.panel.hide()
 	app.playing = false
 	app.screen.hide()

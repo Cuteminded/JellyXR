@@ -71,10 +71,7 @@ func _build_controls(parent: Control) -> void:
 	_add_control("Back 10 seconds", "back", "replay_10", row)
 	_add_control("Forward 30 seconds", "forward", "forward_30", row)
 	controls_spacer = row.add_spacer(false)
-	var tracks := _add_control("Audio and subtitles (coming soon)", "tracks", "subtitles", row)
-	tracks.disabled = true
-	tracks.mouse_default_cursor_shape = Control.CURSOR_ARROW
-	tracks.add_theme_color_override("icon_disabled_color", Color("8793a8"))
+	_add_control("Audio and subtitles", "tracks", "subtitles", row)
 	_add_control("Settings", "settings", "settings", row)
 	_add_control("Hide controls", "hide", "visibility_off", row)
 	previous_photo = _add_control("Previous photo", "previous_photo", "chevron_left", row)

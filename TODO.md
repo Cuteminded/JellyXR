@@ -65,10 +65,10 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Browse the library while the current video continues playing.
 - [x] Play the next available episode automatically after a cancellable countdown.
 - [x] Manually skip intros, credits, recaps, and previews when the server supplies media segments. Requires the Jellyfin 10.10+ API and a segment provider such as Intro Skipper.
-- [ ] Enable Direct Stream/remuxing. Playback requests currently set `EnableDirectStream` to `false`.
-- [ ] Select audio tracks and languages. The audio/subtitle control is disabled.
-- [ ] Display and select embedded or external subtitles. The playback profile currently advertises no subtitle support.
-- [ ] Adjust subtitle appearance and timing.
+- [x] Enable Direct Stream/remuxing in Automatic playback.
+- [x] Select audio tracks and languages through server streaming.
+- [x] Select embedded or external text subtitles, or use server burn-in for picture subtitles.
+- [x] Adjust text subtitle size, color, vertical position, and timing.
 - [ ] Browse chapters and jump to a selected chapter.
 - [ ] Change playback speed.
 - [ ] Change playback quality during an active session.

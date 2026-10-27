@@ -68,7 +68,7 @@ String JellyXRMpv::initialize(int64_t start_ms) {
         {"ytdl", "no"}, {"input-default-bindings", "no"}, {"input-vo-keyboard", "no"},
         {"vo", vulkan_renderer.is_valid() ? "null" : "libmpv"},
         {"hwdec", use_opengl ? "auto" : "auto-copy"}, {"osd-level", "0"},
-        {"sub-auto", "no"}, {"audio-file-auto", "no"}, {"keep-open", "no"},
+        {"sid", "no"}, {"sub-auto", "no"}, {"audio-file-auto", "no"}, {"keep-open", "no"},
         {"idle", "yes"}, {"tls-verify", "yes"},
         {"cache", "yes"}, {"cache-secs", "30"}, {"demuxer-max-bytes", "256MiB"},
         {"user-agent", JELLYXR_STREAM_USER_AGENT}

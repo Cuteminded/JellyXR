@@ -105,9 +105,36 @@ func run_checks() -> void:
 	payload = "<html>Wrong proxy route</html>"
 	result = await api.request("/Users/Me")
 	check(not result.ok, "Non-JSON proxy responses are rejected")
+	await check_playback_reports(api)
 	server.stop()
 	print("HTTP integration checks: %s" % ("PASS" if failures == 0 else "%d FAILED" % failures))
 	quit(1 if failures else 0)
+
+func check_playback_reports(api: JellyfinClient) -> void:
+	var session := PlaybackSession.new()
+	session.api = api
+	session.item = {"Id": "fixture-item"}
+	session.source = JSON.parse_string('{"Id":"fixture-source","DefaultAudioStreamIndex":1}')
+	session.session_id = "fixture-session"
+	root.add_child(session)
+	code = 204
+	payload = ""
+	for event in ["Playing", "Progress", "Stopped"]:
+		await session.report(event)
+		var body := last_request.split("\r\n\r\n", true, 1)[1]
+		check('"AudioStreamIndex":1,' in body, "%s sends the parsed server audio index as a JSON integer, not 1.0" % event)
+	session.source["DefaultAudioStreamIndex"] = null
+	await session.report("Playing")
+	check('"AudioStreamIndex"' not in last_request, "Sources without a default audio track omit the optional index")
+	session.audio_index = 3
+	await session.report("Progress")
+	check('"AudioStreamIndex":3,' in last_request, "Explicit audio selection is reported as an integer")
+	var errors: Array[String] = []
+	session.reporting_failed.connect(func(message: String): errors.append(message))
+	code = 400
+	await session.report("Progress")
+	check(errors.size() == 1 and "HTTP 400" in errors[0], "Rejected playback reports are exposed instead of silently ignored")
+	session.queue_free()
 
 func check(condition: bool, message: String) -> void:
 	if not condition:

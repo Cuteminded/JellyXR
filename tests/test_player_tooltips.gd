@@ -42,13 +42,13 @@ func run_checks() -> void:
 	pointer.sample_trigger(0.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	await process_frame
-	check(overlay.tooltip.text == "Audio and subtitles (coming soon)", "The disabled track placeholder explains its unavailable state on hover")
+	check(overlay.tooltip.text == "Audio and subtitles", "The track button identifies its action on hover")
 	pointer.sample_trigger(1.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	pointer.sample_trigger(0.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	await process_frame
-	check(actions.is_empty(), "The track placeholder cannot trigger playback actions")
+	check(actions == ["tracks"], "The track button opens audio and subtitle controls")
 	pointer.cancel()
 	button.grab_focus()
 	await process_frame

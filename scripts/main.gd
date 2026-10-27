@@ -45,6 +45,8 @@ var photo_item: Dictionary = {}
 var video_material: ShaderMaterial
 var photo_loader: PhotoView
 var photo_sequence := PhotoSequence.new()
+var subtitles := SubtitleTrack.new()
+var subtitle_overlay := SubtitleOverlay.new()
 
 func _ready() -> void:
 	settings.load_settings()
@@ -54,11 +56,13 @@ func _ready() -> void:
 	session.settings = settings
 	add_child(session)
 	add_child(video)
+	add_child(subtitles)
 	_setup_world()
 	add_child(MenuFeedback.new())
 	_setup_ui()
 	session.stream_ready.connect(_play_stream)
 	session.failed.connect(_error)
+	session.reporting_failed.connect(func(message: String): status.text = message)
 	video.failed.connect(_video_failed)
 	video.prepared.connect(_video_prepared)
 	video.ended.connect(_ended)
@@ -75,7 +79,9 @@ func _setup_world() -> void:
 	viewport = world.viewport
 	panel = world.panel
 	screen = world.screen
+	screen.add_child(subtitle_overlay)
 	player_overlay = world.player_overlay
+	subtitle_overlay.controls = player_overlay
 	player_overlay.action.connect(_player_action)
 	player_overlay.seek_requested.connect(_seek_to)
 	world.player_loading.cancelled.connect(_show_library)
@@ -254,6 +260,9 @@ func _toggle_controller_library() -> void:
 		_show_library()
 		return
 	for child in page.get_children():
+		if child is TracksView:
+			_show_library()
+			return
 		if child is SettingsView:
 			_return_from_settings()
 			return
@@ -482,7 +491,7 @@ func _play_stream(url: String, source: Dictionary, start_ms: int) -> void:
 	for stream in source.get("MediaStreams", []):
 		if stream.get("Type", "") == "Video":
 			video_size = Vector2i(int(stream.get("Width", 1920)), int(stream.get("Height", 1080)))
-	transcode_offset = session.position_ticks if session.method == "Transcode" and not session.is_hls() else 0
+	transcode_offset = session.position_ticks if session.method != "DirectPlay" and not session.is_hls() else 0
 	if not seeking: _resize_screen()
 	screen.show()
 	playing = true
@@ -522,6 +531,7 @@ func _player_action(action: String) -> void:
 		"forward": _skip(30000)
 		"skip_segment": _skip_segment()
 		"stop": _stop()
+		"tracks": _show_tracks()
 		"settings": _screen_settings()
 		"library": _return_to_title()
 		"hide": player_overlay.hide()
@@ -616,6 +626,7 @@ func _resize_screen() -> void:
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
 	world.player_loading.fit_screen(dimensions.x, curvature)
 	world.skip_screen_size = Vector3(dimensions.x, aspect_ratio, curvature)
+	subtitle_overlay.fit_screen(world.skip_screen_size, settings)
 
 func _select_projection(value: int) -> void:
 	projection_mode = value
@@ -709,7 +720,7 @@ func _update_loading() -> void:
 func _seek_to(milliseconds: int) -> void:
 	if not playing or seeking or not decoder_ready: return
 	var target := clampi(milliseconds, 0, maxi(0, _duration_ms() - 1000))
-	if session.method != "Transcode" or session.is_hls():
+	if session.method == "DirectPlay" or session.is_hls():
 		video.seek(target)
 		return
 	seeking = true
@@ -723,9 +734,13 @@ func _seek_to(milliseconds: int) -> void:
 	await session.report("Stopped")
 	if generation != countdown_generation: return
 	session.position_ticks = target * 10000
-	await session.open(session.item, true)
+	await session.open(session.item, session.method == "Transcode", true)
 
 func _stop(show_library: bool = true, completed: bool = false) -> void:
+	session.cancel_pending()
+	subtitles.clear()
+	subtitles.delay_ms = 0
+	subtitle_overlay.text = ""
 	_close_photo()
 	media_segments.clear()
 	world.player_skip_popup.update_segment({})
@@ -796,6 +811,8 @@ func _video_failed(message: String) -> void:
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	subtitles.clear()
+	subtitle_overlay.text = ""
 	media_segments.clear()
 	world.player_skip_popup.update_segment({})
 	countdown_generation += 1
@@ -828,6 +845,7 @@ func _process(delta: float) -> void:
 	_update_screen_follow()
 	if not playing: return
 	_update_loading()
+	subtitle_overlay.text = subtitles.text_at(int(transcode_offset / 10000) + video.position_ms()) if decoder_ready and not seeking else ""
 	timeline_elapsed += delta
 	if timeline_elapsed >= 0.25:
 		timeline_elapsed = 0.0
@@ -841,3 +859,57 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE: _toggle_menu()
+
+func _show_tracks() -> void:
+	if not playing or photo_active: return
+	_clear_page()
+	panel.show()
+	shell.heading.text = "Audio and subtitles"
+	var view := TracksView.new()
+	view.session = session
+	view.subtitles = subtitles
+	view.settings = settings
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.closed.connect(_show_playback)
+	view.appearance_changed.connect(_resize_screen)
+	view.audio_selected.connect(_select_audio)
+	view.subtitle_selected.connect(_select_subtitle)
+	page.add_child(view)
+	status.text = "Audio changes briefly restart playback at the current position."
+
+func _select_subtitle(index: int) -> void:
+	if not playing or seeking: return
+	var burn := false
+	for stream in session.source.get("MediaStreams", []):
+		if stream.get("Type", "") == "Subtitle" and int(stream.Index) == index:
+			burn = not SubtitleTrack.supported(stream)
+	if burn and session.active_playback_mode == "original": return
+	var restart := burn or session.burn_subtitles
+	session.subtitle_index = index
+	session.burn_subtitles = burn
+	if burn:
+		subtitles.clear()
+		subtitles.index = index
+		subtitles.message = "Picture subtitles are burned into the video. Text adjustments do not apply."
+		subtitles.changed.emit()
+	else:
+		subtitles.select(api, str(session.item.Id), session.media_source_id, index)
+	if restart: await _restart_tracks()
+	else: session.report("Progress", video.paused)
+
+func _select_audio(index: int) -> void:
+	if not playing or seeking or session.active_playback_mode == "original": return
+	session.audio_index = index
+	await _restart_tracks()
+
+func _restart_tracks() -> void:
+	seeking = true
+	seek_paused = video.paused
+	decoder_ready = false
+	var current := countdown_generation
+	session.position_ticks = transcode_offset + video.position_ms() * 10000
+	video.stop()
+	await session.report("Stopped")
+	if current != countdown_generation: return
+	await session.open(session.item, false, true)
+	if current == countdown_generation and playing: _show_tracks()

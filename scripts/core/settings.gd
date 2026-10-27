@@ -28,6 +28,9 @@ var library_sort_by := "SortName"
 var library_sort_order := "Ascending"
 var playback_mode := "auto"
 var transcode_resolution := 1080
+var subtitle_size := 48
+var subtitle_color := "White"
+var subtitle_height := 0.18
 
 func load_settings(path: String = PATH) -> void:
 	var config := ConfigFile.new()
@@ -54,6 +57,10 @@ func load_settings(path: String = PATH) -> void:
 	if playback_mode not in PLAYBACK_MODES: playback_mode = "auto"
 	transcode_resolution = int(config.get_value("playback", "transcode_resolution", 1080))
 	if not TRANSCODE_PRESETS.has(transcode_resolution): transcode_resolution = 1080
+	subtitle_size = clampi(int(config.get_value("subtitles", "size", 48)), 28, 80)
+	subtitle_color = str(config.get_value("subtitles", "color", "White"))
+	if subtitle_color not in ["White", "Yellow", "Green"]: subtitle_color = "White"
+	subtitle_height = clampf(float(config.get_value("subtitles", "height", 0.18)), 0.1, 0.8)
 	if device_id.is_empty():
 		device_id = Crypto.new().generate_random_bytes(16).hex_encode()
 		save(path)
@@ -79,5 +86,8 @@ func save(path: String = PATH) -> Error:
 	config.set_value("library", "sort_order", library_sort_order)
 	config.set_value("playback", "mode", playback_mode)
 	config.set_value("playback", "transcode_resolution", transcode_resolution)
+	config.set_value("subtitles", "size", subtitle_size)
+	config.set_value("subtitles", "color", subtitle_color)
+	config.set_value("subtitles", "height", subtitle_height)
 	return config.save(path)
 
