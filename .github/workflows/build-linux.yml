@@ -75,29 +75,29 @@ jobs:
         run: |
           output="dist/linux-${ARCH}"
           mkdir -p "$output"
-          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyframe.${ARCH}"
+          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyxr.${ARCH}"
 
       - name: Verify Linux export files
         run: |
           output="dist/linux-${ARCH}"
-          test -s "$output/jellyframe.${ARCH}"
-          test -s "$output/jellyframe_mpv.linux.${ARCH}.so"
-          chmod +x "$output/jellyframe.${ARCH}"
+          test -s "$output/jellyxr.${ARCH}"
+          test -s "$output/jellyxr_mpv.linux.${ARCH}.so"
+          chmod +x "$output/jellyxr.${ARCH}"
 
       - name: Verify exported renderer settings
-        run: timeout 30 godot --headless --xr-mode off --main-pack "dist/linux-${ARCH}/jellyframe.${ARCH}" --script tests/test_export_renderer.gd
+        run: timeout 30 godot --headless --xr-mode off --main-pack "dist/linux-${ARCH}/jellyxr.${ARCH}" --script tests/test_export_renderer.gd
 
       - name: Copy Linux licenses and installation guide
         run: |
           output="dist/linux-${ARCH}"
           cp -r "build/linux/${ARCH}/licenses" "$output/"
-          cp LICENSE "$output/licenses/jellyframe.txt"
+          cp LICENSE "$output/licenses/jellyxr.txt"
           cp LICENSING.md "$output/licenses/"
 
       - name: Check Linux decoder dependencies
         run: |
           output="dist/linux-${ARCH}"
-          ldd "$output/jellyframe_mpv.linux.${ARCH}.so" | tee "$RUNNER_TEMP/dependencies.log"
+          ldd "$output/jellyxr_mpv.linux.${ARCH}.so" | tee "$RUNNER_TEMP/dependencies.log"
           if grep -q 'not found' "$RUNNER_TEMP/dependencies.log"; then
             echo 'The exported decoder has missing shared libraries.' >&2
             exit 1
@@ -108,7 +108,7 @@ jobs:
 
       - name: Package Linux build with system libraries
         run: |
-          tar -czf "dist/jellyframe-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
+          tar -czf "dist/jellyxr-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
 
       - name: Set artifact date
         id: date
@@ -117,8 +117,8 @@ jobs:
       - name: Upload Linux build with system libraries
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-system-libs
-          path: dist/jellyframe-linux-${{ matrix.arch }}.tar.gz
+          name: ${{ steps.date.outputs.date }}-jellyxr-linux-${{ matrix.arch }}-system-libs
+          path: dist/jellyxr-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 14
           archive: false
@@ -126,8 +126,8 @@ jobs:
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-linux-${{ matrix.arch }}-appimage
-          path: dist/jellyframe-linux-${{ matrix.arch }}.AppImage
+          name: ${{ steps.date.outputs.date }}-jellyxr-linux-${{ matrix.arch }}-appimage
+          path: dist/jellyxr-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
           retention-days: 14
           archive: false

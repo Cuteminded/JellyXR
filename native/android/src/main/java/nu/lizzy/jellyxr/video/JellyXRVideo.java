@@ -1,4 +1,4 @@
-package nu.lizzy.jellyframe.video;
+package nu.lizzy.jellyxr.video;
 
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.microedition.khronos.opengles.GL10;
 
-public final class JellyframeVideo extends GodotPlugin {
+public final class JellyXRVideo extends GodotPlugin {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicBoolean frameAvailable = new AtomicBoolean();
     private final float[] transform = new float[16];
@@ -39,12 +39,12 @@ public final class JellyframeVideo extends GodotPlugin {
     private volatile int readyGeneration = -1;
     private int textureGeneration = -1;
 
-    public JellyframeVideo(Godot godot) {
+    public JellyXRVideo(Godot godot) {
         super(godot);
         Matrix.setIdentityM(transform, 0);
     }
 
-    @Override public String getPluginName() { return "JellyframeVideo"; }
+    @Override public String getPluginName() { return "JellyXRVideo"; }
 
     @Override public Set<SignalInfo> getPluginSignals() {
         Set<SignalInfo> result = new HashSet<>();
@@ -112,7 +112,7 @@ public final class JellyframeVideo extends GodotPlugin {
                 if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
                     buffering = false;
                 }
-                if (what == MediaPlayer.MEDIA_INFO_VIDEO_TRACK_LAGGING) Log.w("JellyframeVideo", "Video decoder is falling behind");
+                if (what == MediaPlayer.MEDIA_INFO_VIDEO_TRACK_LAGGING) Log.w("JellyXRVideo", "Video decoder is falling behind");
                 return false;
             });
             player.setOnSeekCompleteListener(current -> {
@@ -153,7 +153,7 @@ public final class JellyframeVideo extends GodotPlugin {
             position = player.getCurrentPosition();
             if (watchdog.stalled(SystemClock.elapsedRealtime(), lastFrame, buffering || seeking)) {
                 prepared = false;
-                Log.w("JellyframeVideo", "No video frames at " + position + " ms, buffering=" + buffering + ", seeking=" + seeking);
+                Log.w("JellyXRVideo", "No video frames at " + position + " ms, buffering=" + buffering + ", seeking=" + seeking);
                 emitSignal("failed", "Video playback stalled.");
                 return;
             }

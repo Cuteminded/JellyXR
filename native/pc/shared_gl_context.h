@@ -3,9 +3,9 @@
 #include <memory>
 
 #ifdef _WIN32
-#define JELLYFRAME_GL_CALL __stdcall
+#define JELLYXR_GL_CALL __stdcall
 #else
-#define JELLYFRAME_GL_CALL
+#define JELLYXR_GL_CALL
 #endif
 
 class SharedGlContext {

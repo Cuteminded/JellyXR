@@ -14,8 +14,8 @@ android/build/
 android/.build_version
 native/local.properties
 native/**/build/
-addons/jellyframe_mpv/
-addons/jellyframe_video/bin/
+addons/jellyxr_mpv/
+addons/jellyxr_video/bin/
 addons/godotopenxrvendors/
 /tests/__pycache__
 /tools/__pycache__

@@ -95,7 +95,7 @@ jobs:
 
       - name: Verify APK signature
         run: |
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyframe-android.apk
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyxr-android.apk
 
       - name: Set artifact date
         id: date
@@ -104,8 +104,8 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyframe-android
-          path: dist/jellyframe-android.apk
+          name: ${{ steps.date.outputs.date }}-jellyxr-android
+          path: dist/jellyxr-android.apk
           if-no-files-found: error
           retention-days: 14
           archive: false

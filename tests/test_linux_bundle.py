@@ -46,7 +46,7 @@ class DependencyChecks(unittest.TestCase):
                 linux_bundle.verify_bundle(Path("plugin.so"), Path("bundle/lib"), ["libmpv.so.2"])
 
 
-@unittest.skipUnless(platform.system() == "Linux" and os.getenv("JELLYFRAME_BUNDLE_INTEGRATION") == "1", "Requires Linux build dependencies")
+@unittest.skipUnless(platform.system() == "Linux" and os.getenv("JELLYXR_BUNDLE_INTEGRATION") == "1", "Requires Linux build dependencies")
 class BundleIntegration(unittest.TestCase):
     def test_relocated_bundle_loads_decoder_and_preserves_system_package(self):
         arch = "arm64" if platform.machine() in ("aarch64", "arm64") else "x86_64"
@@ -54,7 +54,7 @@ class BundleIntegration(unittest.TestCase):
             root = Path(directory)
             original = root / "system"
             original.mkdir()
-            plugin = original / ("jellyframe_mpv.linux." + arch + ".so")
+            plugin = original / ("jellyxr_mpv.linux." + arch + ".so")
             source = root / "probe.c"
             source.write_text(
                 '#include <mpv/client.h>\n'

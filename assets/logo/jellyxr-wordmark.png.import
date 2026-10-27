@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ck4x8pltfn58j"
-path="res://.godot/imported/jellyframe-logo-transparent.png-0ef10f99e02b93d9ea3384102e1c4911.ctex"
+uid="uid://b6yvltew548ey"
+path="res://.godot/imported/jellyxr-wordmark.png-d0e48d005fe6a57844383d26386949aa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/logo/jellyframe-logo-transparent.png"
-dest_files=["res://.godot/imported/jellyframe-logo-transparent.png-0ef10f99e02b93d9ea3384102e1c4911.ctex"]
+source_file="res://assets/logo/jellyxr-wordmark.png"
+dest_files=["res://.godot/imported/jellyxr-wordmark.png-d0e48d005fe6a57844383d26386949aa.ctex"]
 
 [params]
 

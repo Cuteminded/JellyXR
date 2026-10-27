@@ -4,7 +4,7 @@ extends Node3D
 signal menu_requested
 signal settings_requested
 signal library_requested
-var settings: JellyframeSettings
+var settings: JellyXRSettings
 var camera: Camera3D
 var viewport: SubViewport
 var panel: MeshInstance3D

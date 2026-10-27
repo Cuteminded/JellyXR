@@ -41,6 +41,6 @@ printf 'Importing the Godot project...\n'
 
 printf 'Exporting the Quest 3 debug APK...\n'
 mkdir -p dist
-"$godot" --headless --xr-mode off --path . --export-debug 'Quest 3' dist/jellyframe-android.apk
-[[ -s dist/jellyframe-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
-printf 'Android APK built at %s/dist/jellyframe-android.apk\n' "$project_root"
+"$godot" --headless --xr-mode off --path . --export-debug 'Quest 3' dist/jellyxr-android.apk
+[[ -s dist/jellyxr-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
+printf 'Android APK built at %s/dist/jellyxr-android.apk\n' "$project_root"

@@ -1,11 +1,11 @@
 #include "mpv_video.h"
 
-void JellyframeMpv::apply_audio_pause() {
+void JellyXRMpv::apply_audio_pause() {
     int flag = paused || video_buffering;
     mpv_set_property_async(player, 0, "pause", MPV_FORMAT_FLAG, &flag);
 }
 
-void JellyframeMpv::update_video_buffering() {
+void JellyXRMpv::update_video_buffering() {
     if (vulkan_renderer.is_null() || uses_video_clock() || !prepared || seeking) return;
     int64_t timestamp = vulkan_renderer->timestamp_ms();
     bool waiting = video_buffering;

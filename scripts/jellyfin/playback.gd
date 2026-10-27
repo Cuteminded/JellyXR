@@ -5,7 +5,7 @@ signal failed(message: String)
 signal stream_ready(url: String, source: Dictionary, start_ms: int)
 
 var api: JellyfinClient
-var settings: JellyframeSettings
+var settings: JellyXRSettings
 var active_playback_mode := "auto"
 var active_transcode_resolution := 1080
 var item: Dictionary = {}
@@ -75,13 +75,13 @@ func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 		direct_profile["AudioCodec"] = "aac,mp3,opus,vorbis"
 	var transcoding_profile := {"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}
 	var codec_conditions := [{"Condition": "Equals", "Property": "VideoRangeType", "Value": "SDR", "IsRequired": true}]
-	var preset: Dictionary = JellyframeSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyframeSettings.TRANSCODE_PRESETS[1080])
+	var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyXRSettings.TRANSCODE_PRESETS[1080])
 	transcoding_profile["Conditions"] = []
 	for limit in [["Width", str(preset.width)], ["Height", str(preset.height)], ["VideoFramerate", "30"], ["VideoBitrate", str(preset.bitrate)]]:
 		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
 	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {
-		"Name": ("Jellyframe original " if original else "Jellyframe SDR ") + OS.get_name(),
+		"Name": ("jellyXR original " if original else "jellyXR SDR ") + OS.get_name(),
 		"MaxStreamingBitrate": 2147483647 if original else 80000000,
 		"DirectPlayProfiles": [] if transcode else [direct_profile],
 		"TranscodingProfiles": [] if original else [transcoding_profile],

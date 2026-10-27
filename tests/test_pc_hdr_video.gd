@@ -23,7 +23,7 @@ func run_check() -> void:
 	var reference := Image.load_from_file(args[1])
 	if not require(reference != null and not reference.is_empty(), "Read the FFmpeg tone-mapping reference"):
 		return
-	decoder = ClassDB.instantiate("JellyframeMpv")
+	decoder = ClassDB.instantiate("JellyXRMpv")
 	root.add_child(decoder)
 	var screen := preload("res://tests/pc_video_test_screen.gd").new(decoder, Vector2i(640, 192))
 	root.add_child(screen)

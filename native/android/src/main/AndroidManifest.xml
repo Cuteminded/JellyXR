@@ -2,8 +2,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.vr.headtracking" android:version="1" android:required="true" />
     <application android:usesCleartextTraffic="true" android:allowBackup="false">
-        <meta-data android:name="org.godotengine.plugin.v2.JellyframeVideo"
-            android:value="nu.lizzy.jellyframe.video.JellyframeVideo" />
+        <meta-data android:name="org.godotengine.plugin.v2.JellyXRVideo"
+            android:value="nu.lizzy.jellyxr.video.JellyXRVideo" />
         <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|questpro|quest2" />
     </application>
 </manifest>

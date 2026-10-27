@@ -1,28 +1,28 @@
-# Using Jellyframe
+# Using jellyXR
 
 1. Enter the address you normally use to open Jellyfin, such as `https://jellyfin.example.com`. If someone else runs the server, ask them for the address.
 2. Enter your Jellyfin username and password.
 3. Select **Sign in**.
 
-To use **Quick Connect**, select it and note the code Jellyframe displays. Open Jellyfin on your phone or computer, sign in, and approve that code using Quick Connect.
+To use **Quick Connect**, select it and note the code jellyXR displays. Open Jellyfin on your phone or computer, sign in, and approve that code using Quick Connect.
 
-Jellyframe remembers your sign-in without saving your password. Select **Sign out** before switching accounts or servers. You can use one server and account at a time.
+jellyXR remembers your sign-in without saving your password. Select **Sign out** before switching accounts or servers. You can use one server and account at a time.
 
 ## Reset your saved sign-in on PC
 
 If you cannot sign out through the app, remove the saved sign-in file:
 
-1. Close Jellyframe completely.
+1. Close jellyXR completely.
 2. Find the file for your computer in the table below.
 3. Delete `session.cfg`.
-4. Open Jellyframe again and sign in.
+4. Open jellyXR again and sign in.
 
 | Computer | Saved sign-in file |
 | --- | --- |
-| Windows | `%APPDATA%\Jellyframe\session.cfg` |
-| Linux | `~/.local/share/Jellyframe/session.cfg` |
+| Windows | `%APPDATA%\jellyXR\session.cfg` |
+| Linux | `~/.local/share/jellyXR/session.cfg` |
 
-To reset the saved app settings as well, delete `settings.cfg` from the same folder while Jellyframe is closed. You will need to enter your server address and choose your settings again. This does not delete movies, shows, or your Jellyfin account.
+To reset the saved app settings as well, delete `settings.cfg` from the same folder while jellyXR is closed. You will need to enter your server address and choose your settings again. This does not delete movies, shows, or your Jellyfin account.
 
 ## Choose something to watch
 
@@ -64,7 +64,7 @@ When an episode finishes, a five-second countdown appears before the next availa
 
 With [Intro Skipper](https://github.com/intro-skipper/intro-skipper) installed on Jellyfin 10.10 or newer, a **Skip intro** or **Skip credits** popup appears at the bottom-right of the video during a detected segment. Point at it and press the trigger to skip, even with the playback controls hidden. When the controls are open, the popup sits just above them. Recap and preview segments also have skip buttons when the server supplies them. Skipping is manual.
 
-The server must finish analyzing the title before timestamps are available. Jellyframe reads Jellyfin's media segments, so other providers using the same API also work. If there are no timestamps or the request fails, playback continues without a skip button. Older plugin-specific APIs are not supported.
+The server must finish analyzing the title before timestamps are available. jellyXR reads Jellyfin's media segments, so other providers using the same API also work. If there are no timestamps or the request fails, playback continues without a skip button. Older plugin-specific APIs are not supported.
 
 ## Make the screen comfortable
 
@@ -96,7 +96,7 @@ If your device does not support Passthrough, you cannot select it. In Cinema and
 
 ## Watch a 3D video
 
-Jellyframe usually chooses the right picture layout automatically. If you see two pictures side by side or one above the other, open **Settings > Screen** and look for **Video format**.
+jellyXR usually chooses the right picture layout automatically. If you see two pictures side by side or one above the other, open **Settings > Screen** and look for **Video format**.
 
 | Option | When to use it |
 | --- | --- |
@@ -122,7 +122,7 @@ Move your head to look around. For a 180° video, the space behind you stays dar
 
 The video replaces your chosen background while you watch. Screen width, distance, height, and curvature do not affect these videos. Select **Screen** under Video projection to return to a normal video screen.
 
-Jellyframe can recognize some 180° and 360° videos automatically, but you can change the setting if it chooses incorrectly. A new title uses automatic detection again. Some panoramic video formats are not supported, so changing this setting cannot fix every distorted video.
+jellyXR can recognize some 180° and 360° videos automatically, but you can change the setting if it chooses incorrectly. A new title uses automatic detection again. Some panoramic video formats are not supported, so changing this setting cannot fix every distorted video.
 
 ## Change playback quality
 
@@ -151,4 +151,4 @@ Home always shows the newest additions first. The sort order does not affect Ran
 - If the video pauses with a loading message, it is waiting for more video data. Give it a moment. If this keeps happening, try Automatic or Transcoded under Settings > Playback, then start the video again.
 - Audio-language and subtitle selection are not available yet.
 
-For setup problems, see [Install and start Jellyframe](INSTALLATION.md). The [README](README.md#current-limitations) lists the remaining limitations.
+For setup problems, see [Install and start jellyXR](INSTALLATION.md). The [README](README.md#current-limitations) lists the remaining limitations.

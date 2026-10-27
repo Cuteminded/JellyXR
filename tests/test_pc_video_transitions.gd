@@ -2,7 +2,7 @@ extends SceneTree
 
 class PreviewVideo extends PcVideo:
 	func available() -> bool:
-		return ClassDB.class_exists("JellyframeMpv")
+		return ClassDB.class_exists("JellyXRMpv")
 
 var video: PcVideo
 var screen: SubViewport

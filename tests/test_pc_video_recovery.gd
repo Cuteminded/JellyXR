@@ -14,7 +14,7 @@ func run_check() -> void:
 		if argument == "--expect-buffer-free": expect_buffer_free = true
 	OS.low_processor_usage_mode = false
 	Engine.max_fps = 120
-	decoder = ClassDB.instantiate("JellyframeMpv")
+	decoder = ClassDB.instantiate("JellyXRMpv")
 	root.add_child(decoder)
 	decoder.failed.connect(func(value: String): errors.append(value))
 	var error: String = decoder.open_video(url, "", 0)

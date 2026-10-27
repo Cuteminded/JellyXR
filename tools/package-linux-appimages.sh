@@ -35,27 +35,27 @@ staging="$(mktemp -d "$cache/staging-$arch.XXXXXX")"
 trap 'rm -rf -- "$staging"' EXIT
 python3 tools/bundle-linux-libraries.py --input-directory "dist/linux-$arch" --output-directory "$staging/bundle" --arch "$arch"
 
-appdir="$staging/Jellyframe.AppDir"
+appdir="$staging/jellyXR.AppDir"
 mkdir -p "$appdir/usr/bin"
 cp -a "$staging/bundle/." "$appdir/usr/bin/"
 cat > "$appdir/AppRun" <<EOF
 #!/bin/sh
 appdir=\$(CDPATH= cd -- "\$(dirname -- "\$0")" && pwd)
-exec "\$appdir/usr/bin/jellyframe.$arch" "\$@"
+exec "\$appdir/usr/bin/jellyxr.$arch" "\$@"
 EOF
 chmod +x "$appdir/AppRun"
-cat > "$appdir/jellyframe.desktop" <<EOF
+cat > "$appdir/jellyxr.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Jellyframe
+Name=jellyXR
 Exec=AppRun
-Icon=jellyframe
+Icon=jellyxr
 Categories=AudioVideo;Player;
 Terminal=false
 EOF
-cp assets/logo/jellyframe-logo.png "$appdir/jellyframe.png"
-ln -s jellyframe.png "$appdir/.DirIcon"
-output="$project_root/dist/jellyframe-linux-$arch.AppImage"
+cp assets/logo/jellyxr-logo.png "$appdir/jellyxr.png"
+ln -s jellyxr.png "$appdir/.DirIcon"
+output="$project_root/dist/jellyxr-linux-$arch.AppImage"
 ARCH="$appimage_arch" "$appimagetool" --appimage-extract-and-run "$appdir" "$output"
 [[ -s "$output" ]]
 chmod +x "$output"

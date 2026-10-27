@@ -39,9 +39,9 @@ func _ready() -> void:
 	navigation.add_theme_constant_override("separation", 12)
 	rail.add_child(navigation)
 	var logo := TextureRect.new()
-	logo.texture = preload("res://assets/logo/jellyframe-wordmark.png")
+	logo.texture = preload("res://assets/logo/jellyxr-wordmark.png")
 	logo.custom_minimum_size = Vector2(180, 72)
-	logo.accessibility_name = "Jellyframe"
+	logo.accessibility_name = "jellyXR"
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE

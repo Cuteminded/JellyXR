@@ -8,7 +8,7 @@ import subprocess
 import threading
 
 
-AUTHORIZATION = 'MediaBrowser Client="Jellyframe", Token="test-token"'
+AUTHORIZATION = 'MediaBrowser Client="jellyXR", Token="test-token"'
 
 
 class VideoHandler(SimpleHTTPRequestHandler):

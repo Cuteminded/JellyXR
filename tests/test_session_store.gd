@@ -1,6 +1,6 @@
 extends SceneTree
 
-class FixtureSettings extends JellyframeSettings:
+class FixtureSettings extends JellyXRSettings:
 	func save(_path: String = PATH) -> Error: return OK
 
 class FixtureApi extends JellyfinClient:

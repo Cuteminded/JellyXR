@@ -1,6 +1,6 @@
 extends SceneTree
 
-class FixtureSettings extends JellyframeSettings:
+class FixtureSettings extends JellyXRSettings:
 	var saves := 0
 	func save(_path: String = PATH) -> Error:
 		saves += 1
@@ -33,7 +33,7 @@ func check(condition: bool, message: String) -> void:
 		push_error(message)
 
 func run_checks() -> void:
-	var settings := JellyframeSettings.new()
+	var settings := JellyXRSettings.new()
 	settings.device_id = "test-device"
 	settings.library_sort_by = "PremiereDate"
 	settings.library_sort_order = "Descending"
@@ -44,7 +44,7 @@ func run_checks() -> void:
 	settings.transcode_resolution = 2160
 	var path := "res://dist/settings-test.cfg"
 	check(settings.save(path) == OK, "Settings can be saved.")
-	var restored := JellyframeSettings.new()
+	var restored := JellyXRSettings.new()
 	restored.load_settings(path)
 	check(restored.library_sort_by == "PremiereDate" and restored.library_sort_order == "Descending", "Sorting survives a restart.")
 	check(restored.environment == "Passthrough", "Passthrough preference survives a restart.")
@@ -167,12 +167,12 @@ func run_checks() -> void:
 	low_res_choice.pressed.emit()
 	check(fixture.environment == "Theatre" and fixture.is_theatre(), "LowRes is a separate theatre option.")
 	check(not (view.screen_dimensions.get_child(0).get_child(1) as HSlider).editable, "LowRes has a fixed screen.")
-	var saved := JellyframeSettings.new()
+	var saved := JellyXRSettings.new()
 	saved.device_id = "test-device"
 	saved.environment = "Theatre"
 	var low_res_path := "res://dist/settings-lowres-test.cfg"
 	check(saved.save(low_res_path) == OK, "LowRes selection can be saved.")
-	var restored_low_res := JellyframeSettings.new()
+	var restored_low_res := JellyXRSettings.new()
 	restored_low_res.load_settings(low_res_path)
 	check(restored_low_res.environment == "Theatre", "LowRes selection survives restarting the app.")
 	var passthrough_choice: CheckBox = view.environment_buttons["Passthrough"]

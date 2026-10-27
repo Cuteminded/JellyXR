@@ -57,18 +57,18 @@ jobs:
       - name: Export Windows build
         run: |
           New-Item -ItemType Directory -Force dist/windows | Out-Null
-          & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyframe.exe
+          & $env:GODOT --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyxr.exe
           if ($LASTEXITCODE -ne 0) { throw 'Windows export failed.' }
 
       - name: Verify Windows export files
         run: |
-          foreach ($file in 'jellyframe.exe', 'jellyframe.pck', 'jellyframe_mpv.dll', 'libmpv-2.dll', 'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll', 'swscale-9.dll', 'swresample-6.dll') {
+          foreach ($file in 'jellyxr.exe', 'jellyxr.pck', 'jellyxr_mpv.dll', 'libmpv-2.dll', 'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll', 'swscale-9.dll', 'swresample-6.dll') {
             if (-not (Test-Path "dist/windows/$file")) { throw "Export is missing $file." }
           }
 
       - name: Verify exported renderer settings
         run: |
-          & $env:GODOT --headless --xr-mode off --main-pack dist/windows/jellyframe.pck --script tests/test_export_renderer.gd
+          & $env:GODOT --headless --xr-mode off --main-pack dist/windows/jellyxr.pck --script tests/test_export_renderer.gd
           if ($LASTEXITCODE -ne 0) { throw 'Windows renderer settings check failed.' }
 
       - name: Copy Windows licenses
@@ -81,7 +81,7 @@ jobs:
       - name: Upload Windows build
         uses: actions/upload-artifact@v7
         with:
-          name: jellyframe-windows
+          name: jellyxr-windows
           path: dist/windows/
           if-no-files-found: error
           retention-days: 14

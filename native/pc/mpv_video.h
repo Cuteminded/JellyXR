@@ -7,11 +7,11 @@
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/node.hpp>
 
-class JellyframeMpv : public godot::Node {
-    GDCLASS(JellyframeMpv, godot::Node)
+class JellyXRMpv : public godot::Node {
+    GDCLASS(JellyXRMpv, godot::Node)
 
 public:
-    ~JellyframeMpv();
+    ~JellyXRMpv();
     godot::String open_video(godot::String url, godot::String authorization, int64_t start_ms);
     void set_paused(bool paused);
     void seek_to(int64_t milliseconds);

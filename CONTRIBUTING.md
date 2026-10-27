@@ -1,6 +1,6 @@
-# Contributing to Jellyframe
+# Contributing to jellyXR
 
-Contributions can include bug fixes, playback improvements, VR controls, tests, and documentation. Reports of problems you find while using Jellyframe are also welcome.
+Contributions can include bug fixes, playback improvements, VR controls, tests, and documentation. Reports of problems you find while using jellyXR are also welcome.
 
 Read the [README](README.md) for the project's scope and current limitations, and [Build from source](DEVELOPMENT.md) for setup, build commands, tests, and the code layout.
 
@@ -8,7 +8,7 @@ Read the [README](README.md) for the project's scope and current limitations, an
 
 Search the repository's issues before opening a new one. Include:
 
-- The Jellyframe build or commit you used.
+- The jellyXR build or commit you used.
 - Your operating system, headset, and OpenXR runtime, where applicable.
 - Your GPU and the OpenGL or Vulkan renderer used for PC playback.
 - Your Jellyfin server version.

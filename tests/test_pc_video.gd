@@ -24,7 +24,7 @@ func wait_until(predicate: Callable, seconds: float = 10.0) -> bool:
 	return predicate.call()
 
 func run_checks() -> void:
-	if not ClassDB.class_exists("JellyframeMpv"):
+	if not ClassDB.class_exists("JellyXRMpv"):
 		push_error("Build the PC video plugin before running this test.")
 		quit(1)
 		return
@@ -33,7 +33,7 @@ func run_checks() -> void:
 	check(not backend.available(), "Desktop preview must not enable playback")
 	check(not backend.has_android_services(), "PC playback must not call Android session services")
 	backend.queue_free()
-	decoder = ClassDB.instantiate("JellyframeMpv")
+	decoder = ClassDB.instantiate("JellyXRMpv")
 	root.add_child(decoder)
 	if DisplayServer.get_name() != "headless":
 		screen = preload("res://tests/pc_video_test_screen.gd").new(decoder, Vector2i(1920, 1080))
@@ -45,7 +45,7 @@ func run_checks() -> void:
 	decoder.texture_changed.connect(func(value: Texture2D): texture = value)
 	var url := ProjectSettings.globalize_path("res://tests/fixtures/stereo_test.mp4")
 	var authorization := ""
-	var expected_renderer := "software" if DisplayServer.get_name() == "headless" or OS.get_environment("JELLYFRAME_PC_RENDERER") == "software" else "opengl"
+	var expected_renderer := "software" if DisplayServer.get_name() == "headless" or OS.get_environment("JELLYXR_PC_RENDERER") == "software" else "opengl"
 	if expected_renderer != "software" and RenderingServer.get_current_rendering_driver_name() == "vulkan":
 		expected_renderer = "vulkan"
 	for argument in OS.get_cmdline_user_args():

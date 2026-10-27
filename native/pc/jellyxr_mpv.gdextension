@@ -1,0 +1,12 @@
+[configuration]
+entry_symbol = "jellyxr_mpv_init"
+compatibility_minimum = "4.5"
+reloadable = false
+
+[libraries]
+windows.x86_64 = "res://addons/jellyxr_mpv/bin/jellyxr_mpv.dll"
+linux.x86_64 = "res://addons/jellyxr_mpv/bin/jellyxr_mpv.linux.x86_64.so"
+linux.arm64 = "res://addons/jellyxr_mpv/bin/jellyxr_mpv.linux.arm64.so"
+
+[dependencies]
+windows.x86_64 = { "res://addons/jellyxr_mpv/bin/libmpv-2.dll": "", "res://addons/jellyxr_mpv/bin/avcodec-62.dll": "", "res://addons/jellyxr_mpv/bin/avformat-62.dll": "", "res://addons/jellyxr_mpv/bin/avutil-60.dll": "", "res://addons/jellyxr_mpv/bin/swscale-9.dll": "", "res://addons/jellyxr_mpv/bin/swresample-6.dll": "" }

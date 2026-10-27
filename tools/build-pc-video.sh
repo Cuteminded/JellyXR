@@ -45,10 +45,10 @@ fi
 cmake -S "$project_root/native/pc" -B "$build_root" -DCMAKE_BUILD_TYPE=Release "-DGODOT_CPP_PATH=$GODOT_CPP_PATH" "-DPython3_EXECUTABLE=$(command -v python3)"
 cmake --build "$build_root" --parallel "${JOBS:-4}"
 
-plugin_root="$project_root/addons/jellyframe_mpv"
+plugin_root="$project_root/addons/jellyxr_mpv"
 mkdir -p "$plugin_root/bin"
-cp "$build_root/jellyframe_mpv.linux.$arch.so" "$plugin_root/bin/"
-cp "$project_root/native/pc/jellyframe_mpv.gdextension" "$plugin_root/"
+cp "$build_root/jellyxr_mpv.linux.$arch.so" "$plugin_root/bin/"
+cp "$project_root/native/pc/jellyxr_mpv.gdextension" "$plugin_root/"
 mkdir -p "$build_root/licenses"
 cp "$GODOT_CPP_PATH/LICENSE.md" "$build_root/licenses/godot-cpp.txt"
 cp "$project_root/LICENSING.md" "$build_root/licenses/"

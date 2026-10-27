@@ -1,4 +1,4 @@
-package nu.lizzy.jellyframe.video;
+package nu.lizzy.jellyxr.video;
 
 final class PlaybackWatchdog {
     private static final long FRAME_TIMEOUT_MS = 20000;

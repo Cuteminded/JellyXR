@@ -7,8 +7,8 @@ var stream_open := false
 var frame_visible := false
 
 func _ready() -> void:
-	if not Engine.has_singleton("JellyframeVideo"): return
-	bridge = Engine.get_singleton("JellyframeVideo")
+	if not Engine.has_singleton("JellyXRVideo"): return
+	bridge = Engine.get_singleton("JellyXRVideo")
 	bridge.connect("prepared", func(): prepared.emit())
 	bridge.connect("completed", func(): ended.emit())
 	bridge.connect("failed", func(message: String): failed.emit(message))
@@ -22,7 +22,7 @@ func has_android_services() -> bool:
 	return available()
 
 func unavailable_message() -> String:
-	return "Video playback requires the Jellyframe Android plugin."
+	return "Video playback requires the jellyXR Android plugin."
 
 func open(url: String, authorization: String, start_ms: int) -> void:
 	playback_generation += 1

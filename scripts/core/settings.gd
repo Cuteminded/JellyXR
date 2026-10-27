@@ -1,4 +1,4 @@
-class_name JellyframeSettings
+class_name JellyXRSettings
 extends RefCounted
 
 const PATH := "user://settings.cfg"
@@ -62,7 +62,7 @@ func is_theatre() -> bool:
 	return environment in ["Cinema", "Theatre"]
 
 func reset_screen() -> void:
-	var defaults := JellyframeSettings.new()
+	var defaults := JellyXRSettings.new()
 	for key in SCREEN_KEYS:
 		set(key, defaults.get(key))
 

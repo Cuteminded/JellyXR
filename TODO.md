@@ -1,6 +1,6 @@
 # Jellyfin feature checklist
 
-This checklist compares Jellyframe with Jellyfin's user-facing features.
+This checklist compares jellyXR with Jellyfin's user-facing features.
 Implementation does not mean a feature has been tested on every headset.
 
 - Checked items are implemented in the current source. 
@@ -75,7 +75,7 @@ Implementation does not mean a feature has been tested on every headset.
 
 ## Other Jellyfin features
 
-These extend beyond Jellyframe's current movie and series focus.
+These extend beyond jellyXR's current movie and series focus.
 
 - [x] View photos.
 - [x] Show loading feedback when opening photos from the library and switching photos.
@@ -85,9 +85,9 @@ These extend beyond Jellyframe's current movie and series focus.
 - [ ] Join or host SyncPlay sessions.
 - [ ] Receive remote playback commands from other Jellyfin clients.
 
-## Jellyframe VR features
+## jellyXR VR features
 
-These are Jellyframe features rather than Jellyfin feature gaps.
+These are jellyXR features rather than Jellyfin feature gaps.
 
 - [x] Browse and control playback with VR controllers and an on-screen keyboard.
 - [x] Adjust screen width, distance, height, and curvature in supported environments.

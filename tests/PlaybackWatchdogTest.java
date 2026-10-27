@@ -1,4 +1,4 @@
-package nu.lizzy.jellyframe.video;
+package nu.lizzy.jellyxr.video;
 
 public final class PlaybackWatchdogTest {
     public static void main(String[] args) {

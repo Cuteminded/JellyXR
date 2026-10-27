@@ -2,11 +2,11 @@
 
 Copyright © 2026 Cuteminded.
 
-Jellyframe's source code is licensed under the [GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`).
+jellyXR's source code is licensed under the [GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`).
 
 ## Third-party components
 
-Jellyframe uses third-party software and assets under their own licenses:
+jellyXR uses third-party software and assets under their own licenses:
 
 - Godot and Android components retain their original licenses and copyright notices.
 - Icons in the player and library come from [Google's Material Symbols Rounded](https://github.com/google/material-design-icons).
@@ -14,7 +14,7 @@ Jellyframe uses third-party software and assets under their own licenses:
 
 ## Media artwork
 
-Jellyframe retrieves movie posters, backdrops, and other media artwork from the user's Jellyfin server. It does not include these assets in its source code or distribute them with the app.
+jellyXR retrieves movie posters, backdrops, and other media artwork from the user's Jellyfin server. It does not include these assets in its source code or distribute them with the app.
 
 # PC playback dependencies
 

@@ -9,7 +9,7 @@ signal projection_selected(value: int)
 signal eyes_swapped
 signal status(message: String)
 
-var settings: JellyframeSettings
+var settings: JellyXRSettings
 var stereo_mode := Stereo.Mode.MONO
 var projection_mode := VideoProjection.Mode.SCREEN
 var swap_eyes := false
@@ -144,7 +144,7 @@ func _build_library(parent: VBoxContainer) -> void:
 	sort_choices.add_theme_constant_override("v_separation", 8)
 	sort_card.add_child(sort_choices)
 	var group := ButtonGroup.new()
-	for option in JellyframeSettings.LIBRARY_SORT_OPTIONS:
+	for option in JellyXRSettings.LIBRARY_SORT_OPTIONS:
 		_choice(option[0], option[1] == settings.library_sort_by, group, sort_choices,
 			func(): settings.library_sort_by = option[1]; _save())
 
@@ -184,8 +184,8 @@ func _build_transcode_options(parent: VBoxContainer) -> void:
 	transcode_choices.add_theme_constant_override("v_separation", 12)
 	transcode_options.add_child(transcode_choices)
 	var group := ButtonGroup.new()
-	for resolution in JellyframeSettings.TRANSCODE_PRESETS:
-		var preset: Dictionary = JellyframeSettings.TRANSCODE_PRESETS[resolution]
+	for resolution in JellyXRSettings.TRANSCODE_PRESETS:
+		var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS[resolution]
 		_choice(preset.label, settings.transcode_resolution == resolution, group, transcode_choices,
 			func(): settings.transcode_resolution = resolution; _save())
 	_hint("Choose a maximum resolution. Smaller videos keep their size. Higher resolutions need a faster connection and more server processing power.", transcode_options)
@@ -236,7 +236,7 @@ func _screen_position_hint() -> String:
 
 func _build_video_format(parent: VBoxContainer) -> void:
 	parent = _card(parent, "Picture format")
-	_hint("Jellyframe detects the 3D format. Choose a different format if the picture looks wrong.", parent)
+	_hint("jellyXR detects the 3D format. Choose a different format if the picture looks wrong.", parent)
 	stereo_choices = HFlowContainer.new()
 	stereo_choices.add_theme_constant_override("h_separation", 12)
 	parent.add_child(stereo_choices)

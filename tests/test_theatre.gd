@@ -1,6 +1,6 @@
 extends SceneTree
 
-class FixtureSettings extends JellyframeSettings:
+class FixtureSettings extends JellyXRSettings:
 	func load_settings(_path: String = PATH) -> void:
 		pass
 	func save(_path: String = PATH) -> Error:
@@ -166,7 +166,7 @@ func capture(theatre: TheatreEnvironment, screen: MeshInstance3D) -> void:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_texture = load("res://assets/logo/jellyframe-wordmark.png")
+	material.albedo_texture = load("res://assets/logo/jellyxr-wordmark.png")
 	material.albedo_color = Color("d5e1ef")
 	screen.material_override = material
 	screen.show()

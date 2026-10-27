@@ -1,4 +1,4 @@
-package nu.lizzy.jellyframe.video;
+package nu.lizzy.jellyxr.video;
 
 import android.content.Context;
 import android.security.keystore.KeyGenParameterSpec;
@@ -12,7 +12,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.StandardCharsets;
 
 final class SessionStore {
-    private static final String ALIAS = "jellyframe-session";
+    private static final String ALIAS = "jellyxr-session";
     private final Context context;
 
     SessionStore(Context context) { this.context = context; }

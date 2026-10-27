@@ -2,7 +2,7 @@ class_name PcVideo
 extends VideoBackend
 
 func available() -> bool:
-	return get_viewport().use_xr and ClassDB.class_exists("JellyframeMpv")
+	return get_viewport().use_xr and ClassDB.class_exists("JellyXRMpv")
 
 func unavailable_message() -> String:
 	if not get_viewport().use_xr:
@@ -17,7 +17,7 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 		failed.emit(unavailable_message())
 		return
 	if bridge == null:
-		bridge = ClassDB.instantiate("JellyframeMpv")
+		bridge = ClassDB.instantiate("JellyXRMpv")
 		add_child(bridge)
 		bridge.prepared.connect(func(): prepared.emit())
 		bridge.ended.connect(func(): ended.emit())

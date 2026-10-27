@@ -2,6 +2,6 @@
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 
-[node name="Jellyframe" type="Node3D"]
+[node name="jellyXR" type="Node3D"]
 script = ExtResource("1")
 

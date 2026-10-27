@@ -49,7 +49,7 @@ func run_checks() -> void:
 	quit()
 
 func check_playback_choices(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
-	session.settings = JellyframeSettings.new()
+	session.settings = JellyXRSettings.new()
 	session.settings.playback_mode = "original"
 	api.direct = true
 	await session.open({"Id": "fixture"})

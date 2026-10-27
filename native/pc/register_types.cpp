@@ -7,13 +7,13 @@ static void initialize(ModuleInitializationLevel level) {
     if (level == MODULE_INITIALIZATION_LEVEL_SCENE) {
         ClassDB::register_internal_class<RenderGl>();
         ClassDB::register_internal_class<RenderVulkan>();
-        ClassDB::register_class<JellyframeMpv>();
+        ClassDB::register_class<JellyXRMpv>();
     }
 }
 
 static void terminate(ModuleInitializationLevel) {}
 
-extern "C" GDExtensionBool GDE_EXPORT jellyframe_mpv_init(
+extern "C" GDExtensionBool GDE_EXPORT jellyxr_mpv_init(
     GDExtensionInterfaceGetProcAddress get_proc_address,
     GDExtensionClassLibraryPtr library,
     GDExtensionInitialization *initialization) {

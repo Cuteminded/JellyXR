@@ -1,6 +1,6 @@
 extends Node3D
 
-var settings := JellyframeSettings.new()
+var settings := JellyXRSettings.new()
 var session_store := SessionStore.new()
 var api := JellyfinClient.new()
 var session := PlaybackSession.new()

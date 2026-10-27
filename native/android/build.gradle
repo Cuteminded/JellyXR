@@ -1,7 +1,7 @@
 plugins { id 'com.android.library' }
 
 android {
-    namespace 'nu.lizzy.jellyframe.video'
+    namespace 'nu.lizzy.jellyxr.video'
     compileSdk 35
     defaultConfig { minSdk 29 }
     compileOptions {
@@ -17,6 +17,6 @@ dependencies {
 tasks.register('stagePlugin', Copy) {
     dependsOn 'assembleRelease'
     from layout.buildDirectory.file('outputs/aar/android-release.aar')
-    into '../../addons/jellyframe_video/bin'
-    rename { 'jellyframe-video-release.aar' }
+    into '../../addons/jellyxr_video/bin'
+    rename { 'jellyxr-video-release.aar' }
 }

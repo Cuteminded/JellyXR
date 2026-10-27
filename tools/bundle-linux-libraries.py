@@ -83,7 +83,7 @@ def verify_bundle(plugin, library_directory, names):
 
 
 def bundle(input_directory, output_directory, arch):
-    plugin_name = "jellyframe_mpv.linux." + arch + ".so"
+    plugin_name = "jellyxr_mpv.linux." + arch + ".so"
     libraries = dependencies(input_directory / plugin_name)
     bundled = {name: path for name, path in libraries.items() if not HOST_LIBRARIES.match(name)}
     if "libmpv.so.2" not in bundled:

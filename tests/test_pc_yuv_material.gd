@@ -44,7 +44,7 @@ func check_corners(expected: Array, label: String) -> void:
 			push_error("%s corner %d: expected %s, got %s" % [label, index, color, actual])
 
 func run_checks() -> void:
-	var decoder := ClassDB.instantiate("JellyframeMpv") as Node
+	var decoder := ClassDB.instantiate("JellyXRMpv") as Node
 	root.add_child(decoder)
 	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder, Vector2i(64, 64))
 	root.add_child(screen)

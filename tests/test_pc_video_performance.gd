@@ -20,7 +20,7 @@ func run_check() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	OS.low_processor_usage_mode = false
 	Engine.max_fps = 120
-	decoder = ClassDB.instantiate("JellyframeMpv")
+	decoder = ClassDB.instantiate("JellyXRMpv")
 	root.add_child(decoder)
 	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder)
 	root.add_child(screen)

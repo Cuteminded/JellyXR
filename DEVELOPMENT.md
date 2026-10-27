@@ -1,8 +1,8 @@
 # Development
 
-Jellyframe uses Godot 4.7.2 and OpenXR. Install Godot and its matching export templates before building. Run the commands below from the project root, with `godot` on your `PATH`.
+jellyXR uses Godot 4.7.2 and OpenXR. Install Godot and its matching export templates before building. Run the commands below from the project root, with `godot` on your `PATH`.
 
-Build the native video plugin for your platform before importing the project. Close Jellyframe before rebuilding the plugin.
+Build the native video plugin for your platform before importing the project. Close jellyXR before rebuilding the plugin.
 
 ## Build the Quest APK
 
@@ -32,7 +32,7 @@ On Windows, use PowerShell:
   -AndroidSdk 'C:/tools/android-sdk' -JavaHome 'C:/tools/jdk-17'
 ```
 
-The scripts build the Android plugin and export `dist/jellyframe-android.apk`. They download and verify Godot OpenXR Vendors for Quest passthrough support.
+The scripts build the Android plugin and export `dist/jellyxr-android.apk`. They download and verify Godot OpenXR Vendors for Quest passthrough support.
 
 To build through GitHub Actions, select **Actions > Build Android APK > Run workflow**. Each run creates a new debug signing key. If it differs from the installed APK's key, uninstall the old build first. Uninstalling removes saved settings and sign-in.
 
@@ -44,10 +44,10 @@ Install Python 3.12, then build the PC plugin and export the app:
 ./tools/build-pc-video.ps1 -Python 'C:/path/to/python.exe'
 New-Item -ItemType Directory -Force dist/windows
 godot --headless --xr-mode off --path . --editor --import --quit
-godot --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyframe.exe
+godot --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyxr.exe
 ```
 
-The plugin script downloads pinned build tools and libraries into `build/desktop`, verifies their checksums, and generates `addons/jellyframe_mpv`. You do not need a system-wide compiler installation.
+The plugin script downloads pinned build tools and libraries into `build/desktop`, verifies their checksums, and generates `addons/jellyxr_mpv`. You do not need a system-wide compiler installation.
 
 The output is in `dist/windows`. Keep all exported files together. Include the third-party licences when distributing a build, following the copy steps in the [Windows workflow](.github/workflows/build-windows.yml).
 
@@ -61,20 +61,20 @@ bash tools/build-pc-video.sh
 godot --headless --xr-mode off --path . --editor --import --quit
 ```
 
-The script detects x64 or ARM64 and generates `addons/jellyframe_mpv`. It downloads and verifies godot-cpp, and uses the system libmpv and FFmpeg development packages. FFmpeg 6 or newer is required.
+The script detects x64 or ARM64 and generates `addons/jellyxr_mpv`. It downloads and verifies godot-cpp, and uses the system libmpv and FFmpeg development packages. FFmpeg 6 or newer is required.
 
 Export for x64:
 
 ```sh
 mkdir -p dist/linux-x86_64
-godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64/jellyframe.x86_64
+godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64/jellyxr.x86_64
 ```
 
 Export for ARM64:
 
 ```sh
 mkdir -p dist/linux-arm64
-godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linux-arm64/jellyframe.arm64
+godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linux-arm64/jellyxr.arm64
 ```
 
 Keep the executable and native decoder `.so` file together.
@@ -85,12 +85,12 @@ Install `patchelf`. Copy the licences into the export folder as shown below for 
 
 ```sh
 cp -r build/linux/x86_64/licenses dist/linux-x86_64/
-cp LICENSE dist/linux-x86_64/licenses/jellyframe.txt
+cp LICENSE dist/linux-x86_64/licenses/jellyxr.txt
 cp LICENSING.md dist/linux-x86_64/licenses/
 bash tools/package-linux-appimages.sh x86_64
 ```
 
-The packager bundles decoder libraries and licence notices. It needs network access to download appimagetool and its AppImage runtime. The output is `dist/jellyframe-linux-<arch>.AppImage`. The host supplies graphics drivers and OpenXR.
+The packager bundles decoder libraries and licence notices. It needs network access to download appimagetool and its AppImage runtime. The output is `dist/jellyxr-linux-<arch>.AppImage`. The host supplies graphics drivers and OpenXR.
 
 ## Run the app during development
 
@@ -195,11 +195,11 @@ To record a Vulkan playback log, run the exported app with SteamVR active:
 
 ```powershell
 New-Item -ItemType Directory -Force logs | Out-Null
-$env:JELLYFRAME_VIDEO_STATS = '1'
-.\dist\windows\jellyframe.exe --rendering-method mobile --rendering-driver vulkan --log-file (Join-Path $PWD 'logs/vulkan-playback.log')
+$env:JELLYXR_VIDEO_STATS = '1'
+.\dist\windows\jellyxr.exe --rendering-method mobile --rendering-driver vulkan --log-file (Join-Path $PWD 'logs/vulkan-playback.log')
 ```
 
-Set `JELLYFRAME_PC_RENDERER=software` to force the software fallback for troubleshooting. Remove access tokens and private server details before sharing logs.
+Set `JELLYXR_PC_RENDERER=software` to force the software fallback for troubleshooting. Remove access tokens and private server details before sharing logs.
 
 ## Check 180° and 360° rendering
 

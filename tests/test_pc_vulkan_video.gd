@@ -38,7 +38,7 @@ func run_check() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--video="):
 			url = argument.trim_prefix("--video=")
-	decoder = ClassDB.instantiate("JellyframeMpv")
+	decoder = ClassDB.instantiate("JellyXRMpv")
 	root.add_child(decoder)
 	screen = preload("res://tests/pc_video_test_screen.gd").new(decoder)
 	root.add_child(screen)

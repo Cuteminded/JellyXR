@@ -61,12 +61,12 @@ try {
     $env:PATH = $originalPath
 }
 
-$pluginRoot = Join-Path $projectRoot 'addons/jellyframe_mpv'
+$pluginRoot = Join-Path $projectRoot 'addons/jellyxr_mpv'
 New-Item -ItemType Directory -Force (Join-Path $pluginRoot 'bin') | Out-Null
-Copy-Item (Join-Path $buildRoot 'native/jellyframe_mpv.dll') (Join-Path $pluginRoot 'bin')
+Copy-Item (Join-Path $buildRoot 'native/jellyxr_mpv.dll') (Join-Path $pluginRoot 'bin')
 Copy-Item (Join-Path $mpvRoot 'libmpv-2.dll') (Join-Path $pluginRoot 'bin')
 foreach ($library in 'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll', 'swscale-9.dll', 'swresample-6.dll') {
     Copy-Item (Join-Path $ffmpegRoot "bin/$library") (Join-Path $pluginRoot 'bin')
 }
-Copy-Item (Join-Path $projectRoot 'native/pc/jellyframe_mpv.gdextension') $pluginRoot
+Copy-Item (Join-Path $projectRoot 'native/pc/jellyxr_mpv.gdextension') $pluginRoot
 Write-Host "PC video plugin built in $pluginRoot"
