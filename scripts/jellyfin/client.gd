@@ -12,7 +12,7 @@ var random_library_generation: Dictionary = {}
 
 func authorization() -> String:
 	var name := headset_name().replace("\\", "\\\\").replace('"', '\\"').replace("\r", " ").replace("\n", " ")
-	var value := 'MediaBrowser Client="jellyXR", Device="%s", DeviceId="%s", Version="0.1.2"' % [name, device_id]
+	var value := 'MediaBrowser Client="jellyXR", Device="%s", DeviceId="%s", Version="0.1.3"' % [name, device_id]
 	if not token.is_empty():
 		value += ', Token="%s"' % token
 	return value
