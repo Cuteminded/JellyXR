@@ -14,9 +14,9 @@ var libraries_loaded := false
 var library_generation := 0
 var page_generation := 0
 var page: VBoxContainer
-var settings_return_page: Control
-var settings_return_heading := ""
-var settings_return_status := ""
+var browsing_return_page: Control
+var browsing_return_heading := ""
+var browsing_return_status := ""
 var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
@@ -108,16 +108,16 @@ func _setup_ui() -> void:
 	status = shell.status
 	shell.navigate.connect(_open_library)
 	shell.screen_settings.connect(_screen_settings)
-	shell.return_from_settings.connect(_return_from_settings)
+	shell.return_from_settings.connect(_restore_browsing_page)
 	shell.sign_out.connect(_sign_out)
 	keyboard = VRKeyboard.new()
 	viewport.add_child(keyboard)
 	keyboard.hide()
 
-func _clear_page(keep_settings_return: bool = false) -> void:
-	if not keep_settings_return and is_instance_valid(settings_return_page):
-		settings_return_page.queue_free()
-		settings_return_page = null
+func _clear_page(keep_browsing_return: bool = false) -> void:
+	if not keep_browsing_return and is_instance_valid(browsing_return_page):
+		browsing_return_page.queue_free()
+		browsing_return_page = null
 	shell.set_settings_mode(false)
 	page_generation += 1
 	countdown_generation += 1
@@ -260,11 +260,8 @@ func _toggle_controller_library() -> void:
 		_show_library()
 		return
 	for child in page.get_children():
-		if child is TracksView:
-			_show_library()
-			return
-		if child is SettingsView:
-			_return_from_settings()
+		if child is TracksView or child is SettingsView:
+			_restore_browsing_page()
 			return
 	_toggle_panel()
 
@@ -285,8 +282,8 @@ func _open_library(id: String, title: String) -> void:
 	api.library_sort_order = settings.library_sort_order
 	library.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	library.status.connect(func(message: String):
-		if library == settings_return_page:
-			settings_return_status = message
+		if library == browsing_return_page:
+			browsing_return_status = message
 		else:
 			status.text = message)
 	library.selected.connect(_details)
@@ -537,6 +534,7 @@ func _player_action(action: String) -> void:
 		"hide": player_overlay.hide()
 
 func _return_to_title() -> void:
+	if is_instance_valid(browsing_return_page): _restore_browsing_page()
 	if photo_active:
 		_show_library()
 		return
@@ -570,14 +568,7 @@ func _toggle_settings() -> void:
 
 func _screen_settings() -> void:
 	if api.token.is_empty() or not shell.signed_in: return
-	for child in page.get_children():
-		if child is LibraryView or child is DetailsView:
-			settings_return_page = child
-			settings_return_heading = shell.heading.text
-			settings_return_status = status.text
-			child.hide()
-			child.reparent(viewport)
-	_clear_page(true)
+	_preserve_browsing_page()
 	panel.show()
 	shell.heading.text = "Settings"
 	shell.set_settings_mode(true)
@@ -599,17 +590,27 @@ func _screen_settings() -> void:
 	page.add_child(view)
 	status.text = "Changes take effect as you make them."
 
-func _return_from_settings() -> void:
-	if not is_instance_valid(settings_return_page):
+func _preserve_browsing_page() -> void:
+	for child in page.get_children():
+		if child is LibraryView or child is DetailsView:
+			browsing_return_page = child
+			browsing_return_heading = shell.heading.text
+			browsing_return_status = status.text
+			child.hide()
+			child.reparent(viewport)
+	_clear_page(true)
+
+func _restore_browsing_page() -> void:
+	if not is_instance_valid(browsing_return_page):
 		_show_library()
 		return
-	var previous := settings_return_page
-	settings_return_page = null
+	var previous := browsing_return_page
+	browsing_return_page = null
 	_clear_page()
 	previous.reparent(page)
 	previous.show()
-	shell.heading.text = settings_return_heading
-	status.text = settings_return_status
+	shell.heading.text = browsing_return_heading
+	status.text = browsing_return_status
 	panel.show()
 
 func _resize_screen() -> void:
@@ -862,7 +863,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _show_tracks() -> void:
 	if not playing or photo_active: return
-	_clear_page()
+	_preserve_browsing_page()
 	panel.show()
 	shell.heading.text = "Audio and subtitles"
 	var view := TracksView.new()

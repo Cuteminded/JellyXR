@@ -95,9 +95,24 @@ func run_checks() -> void:
 		check(app.shell.buttons["movies"] == library_button, "Returning Home preserves the loaded library buttons")
 		check(app.shell.settings_navigation.get_child_count() == 0 and app.shell.settings_button.visible and app.shell.logout.visible, "Leaving settings clears categories and restores normal navigation")
 
+	app.playing = true
+	for attempt in range(3):
+		app._show_tracks()
+		await settle()
+		if attempt == 1: app._show_playback()
+		if attempt == 2:
+			app._screen_settings()
+			app._show_tracks()
+		app._toggle_controller_library()
+		await settle()
+		check(app.page.get_child(0) == browsing, "Returning from tracks preserves the original browsing page")
+		check(browsing.search == "Selected movie" and browsing.scroll.scroll_vertical == browsing_scroll, "Tracks preserve library search and scroll, including through settings")
+	app.playing = false
+
 	await app._details({"Id": "movie"})
 	var movie_view: DetailsView = app.page.get_child(0)
 	await app._start(movie_view.item)
+	app._show_tracks()
 	app._player_action("library")
 	await settle()
 	check(app.page.get_child(0) == movie_view, "The player's Library button returns to the selected movie details")
@@ -205,6 +220,7 @@ func run_checks() -> void:
 		app.world._controller_button_pressed("by_button", &"right_hand")
 		check(app.panel.visible and app.page.get_child(0) is LibraryView, "B opens the library after either visible or hidden track controls")
 		check(app.shell.selected_id == "movies", "Returning from tracks keeps the selected library")
+		check(app.page.get_child(0) == controller_library, "Returning from tracks retains the browsing page")
 		var tracks_return_library: Node = app.page.get_child(0)
 		app.world._controller_button_pressed("by_button", &"right_hand")
 		check(not app.panel.visible, "B closes the library after returning from tracks")
