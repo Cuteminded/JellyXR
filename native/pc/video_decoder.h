@@ -124,6 +124,7 @@ private:
     VideoPlanes pending;
     VideoPlanes staging;
     bool frame_ready = false;
+    bool awaiting_first_frame = true;
     int64_t clock = 0;
     int64_t seek_target = -1;
     int64_t discard_before = -1;

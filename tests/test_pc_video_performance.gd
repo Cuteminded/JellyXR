@@ -13,10 +13,12 @@ func run_check() -> void:
 	var url := "res://build/gpu-worker/8k-av1-test.mp4"
 	var seconds := 5.0
 	var minimum_fps := 0.0
+	var maximum_gap_p95_ms := 0.0
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--video="): url = argument.trim_prefix("--video=")
 		if argument.begins_with("--seconds="): seconds = float(argument.trim_prefix("--seconds="))
 		if argument.begins_with("--minimum-fps="): minimum_fps = float(argument.trim_prefix("--minimum-fps="))
+		if argument.begins_with("--maximum-gap-p95-ms="): maximum_gap_p95_ms = float(argument.trim_prefix("--maximum-gap-p95-ms="))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	OS.low_processor_usage_mode = false
 	Engine.max_fps = 120
@@ -72,6 +74,8 @@ func run_check() -> void:
 	stats["window_focused"] = DisplayServer.window_is_focused()
 	print("Video performance: ", JSON.stringify(stats))
 	var passed: bool = errors.is_empty() and stats.get("renderer") == "vulkan" and float(stats["presented_fps"]) >= minimum_fps
+	if maximum_gap_p95_ms > 0:
+		passed = passed and not video_intervals.is_empty() and float(stats["video_gap_p95_ms"]) <= maximum_gap_p95_ms
 	decoder.stop_video()
 	decoder.queue_free()
 	await process_frame

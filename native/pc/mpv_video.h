@@ -4,6 +4,7 @@
 #include "render_gl.h"
 #include "render_vulkan.h"
 #include "playback_watchdog.h"
+#include "playback_clock.h"
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/node.hpp>
 
@@ -61,4 +62,5 @@ private:
     godot::String current_url;
     godot::String current_authorization;
     PlaybackWatchdog watchdog;
+    PlaybackClock audio_clock;
 };

@@ -150,6 +150,7 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     last_publish_us = 0;
     decoded_timestamp = 0;
     generation = 0;
+    awaiting_first_frame = true;
     rotation = 0;
     std::promise<int> initialized;
     auto result = initialized.get_future();
@@ -204,13 +205,15 @@ void VideoDecoder::seek(int64_t milliseconds) {
         reader_ended = false;
         end_of_stream = false;
         frame_ready = false;
+        awaiting_first_frame = true;
     }
     wake.notify_all();
 }
 
 bool VideoDecoder::take_frame(VideoPlanes &frame) {
     std::lock_guard<std::mutex> lock(mutex);
-    if (!frame_ready) return false;
+    if (!frame_ready || (!awaiting_first_frame && pending.timestamp > clock)) return false;
+    awaiting_first_frame = false;
     std::swap(frame, pending);
     frame_ready = false;
     wake.notify_all();
@@ -219,7 +222,7 @@ bool VideoDecoder::take_frame(VideoPlanes &frame) {
 
 bool VideoDecoder::has_frame() {
     std::lock_guard<std::mutex> lock(mutex);
-    return frame_ready;
+    return frame_ready && (awaiting_first_frame || pending.timestamp <= clock);
 }
 
 void VideoDecoder::decode_loop() {

@@ -79,12 +79,17 @@ func run_checks() -> void:
 	decoder.set_paused(true)
 	await create_timer(0.4).timeout
 	var paused_at: int = decoder.position_ms()
+	var paused_video: int = decoder.playback_diagnostics().get("video_position_ms", -1)
 	await create_timer(0.4).timeout
 	check(absi(decoder.position_ms() - paused_at) < 100, "Pause stops the clock")
+	if expected_renderer == "vulkan":
+		check(decoder.playback_diagnostics().get("video_position_ms", -1) == paused_video, "Pause stops video presentation")
 	decoder.seek_to(3000)
 	check(decoder.is_buffering(), "Native seeking shows buffering while playback restarts")
 	check(await wait_until(func(): return absi(decoder.position_ms() - 3000) < 250), "Seeking works while paused")
 	check(await wait_until(func(): return not decoder.is_buffering()), "Seek completion clears the loading state")
+	if expected_renderer == "vulkan":
+		check(await wait_until(func(): return absi(int(decoder.playback_diagnostics().get("video_position_ms", -10000)) - 3000) < 250), "Paused seeking presents the target video frame")
 	decoder.set_paused(false)
 	check(await wait_until(func(): return decoder.position_ms() > 3400), "Playback continues after seeking")
 	decoder.seek_to(decoder.duration_ms() - 500)

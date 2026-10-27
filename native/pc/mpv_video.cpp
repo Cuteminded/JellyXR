@@ -140,6 +140,7 @@ String JellyXRMpv::open_video(String url, String authorization, int64_t start_ms
         return String("Could not open the video: ") + mpv_error_string(result);
     }
     position = std::max<int64_t>(0, start_ms);
+    audio_clock.reset(position, playback_time_ms());
     duration = 0;
     active = true;
     set_process(true);
@@ -156,6 +157,7 @@ void JellyXRMpv::set_paused(bool value) {
         return;
     }
     paused = value;
+    audio_clock.reset(position, playback_time_ms());
     watchdog.reset(playback_time_ms());
     apply_audio_pause();
 }
@@ -163,6 +165,7 @@ void JellyXRMpv::set_paused(bool value) {
 void JellyXRMpv::seek_to(int64_t milliseconds) {
     if (!player || !active) return;
     seeking = true;
+    audio_clock.reset(std::max<int64_t>(0, milliseconds), playback_time_ms());
     if (vulkan_renderer.is_valid()) vulkan_renderer->seek(milliseconds);
     watchdog.reset(playback_time_ms());
     if (uses_video_clock()) {
@@ -195,7 +198,7 @@ String JellyXRMpv::rendering_backend() const {
 Dictionary JellyXRMpv::playback_diagnostics() const {
     Dictionary values = vulkan_renderer.is_valid() ? vulkan_renderer->diagnostics() : Dictionary();
     values["renderer"] = rendering_backend();
-    values["version"] = "vulkan-direct-yuv-1";
+    values["version"] = "vulkan-paced-yuv-2";
     values["audio_position_ms"] = position;
     if (vulkan_renderer.is_valid()) {
         values["video_position_ms"] = vulkan_renderer->timestamp_ms();
@@ -271,7 +274,9 @@ bool JellyXRMpv::update_size() {
 
 bool JellyXRMpv::upload_frame() {
     if (vulkan_renderer.is_valid()) {
-        vulkan_renderer->set_clock(position);
+        uint64_t now = playback_time_ms();
+        if (paused || buffering || video_buffering || seeking || !prepared) audio_clock.reset(position, now);
+        vulkan_renderer->set_clock(uses_video_clock() ? position : audio_clock.position(now));
         Dictionary previous_parameters = vulkan_renderer->shader_parameters();
         if (!vulkan_renderer->take_frame()) return false;
         if (uses_video_clock()) {
@@ -317,7 +322,12 @@ void JellyXRMpv::update_property(const mpv_event &event) {
     if (!property->data) return;
     if (property->format == MPV_FORMAT_DOUBLE) {
         int64_t milliseconds = int64_t(*static_cast<double *>(property->data) * 1000.0);
-        if (event.reply_userdata == 1) position = std::max<int64_t>(0, milliseconds);
+        if (event.reply_userdata == 1) {
+            position = std::max<int64_t>(0, milliseconds);
+            uint64_t now = playback_time_ms();
+            if (paused || buffering || video_buffering || seeking || !prepared) audio_clock.reset(position, now);
+            else audio_clock.synchronize(position, now);
+        }
         if (event.reply_userdata == 2) duration = std::max<int64_t>(0, milliseconds);
     } else if (property->format == MPV_FORMAT_FLAG) {
         bool value = *static_cast<int *>(property->data) != 0;
