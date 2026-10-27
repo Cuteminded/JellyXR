@@ -6,11 +6,28 @@ class FixtureApi extends JellyfinClient:
 	var fail_episodes := false
 	var empty_seasons := false
 	var empty_episodes := false
+	var watched_states: Dictionary = {}
+	var watched_calls: Array = []
+	var fail_watched := false
+	var hold_watched := false
+	signal release_watched
+
+	func set_watched(id: String, watched: bool) -> Dictionary:
+		watched_calls.append([id, watched])
+		if hold_watched: await release_watched
+		await get_tree().process_frame
+		if fail_watched: return {"ok": false, "error": "Offline"}
+		watched_states[id] = watched
+		if id == "agatha":
+			for season in season_items: watched_states[season.Id] = watched
+		return {"ok": true, "data": {"Played": watched}}
 	var season_items := [{"Id": "one", "Name": "Season 1", "IndexNumber": 1}, {"Id": "two", "Name": "Season 2", "IndexNumber": 2}]
 
 	func seasons(_series_id: String) -> Dictionary:
 		await get_tree().process_frame
 		if fail_seasons: return {"ok": false, "error": "Offline"}
+		for season in season_items:
+			season["UserData"] = {"Played": watched_states.get(season.Id, false)}
 		return {"ok": true, "data": {"Items": [] if empty_seasons else season_items}}
 
 	func episodes(series_id: String, season_id: String, offset: int = 0) -> Dictionary:
@@ -24,6 +41,9 @@ class FixtureApi extends JellyfinClient:
 				items.append({"Id": season_id + str(index), "Name": ["Seekest Thou the Road", "Circle Sewn with Fate", "Through the trials", "The final chapter"][index], "IndexNumber": index + 1, "RunTimeTicks": 24000000000, "CommunityRating": 7.0, "Overview": "Agatha and her companions face another trial on the Witches' Road.", "UserData": {"PlaybackPositionTicks": 3000000000 if index == 0 else 0, "Played": index == 1}})
 		if offset == 0 and not items.is_empty():
 			items[0]["MediaSources"] = [{"Id": "first"}, {"Id": "second"}]
+		if watched_states.has(season_id):
+			for item in items:
+				item.UserData = {"Played": watched_states[season_id], "PlaybackPositionTicks": 0}
 		return {"ok": true, "data": {"Items": items, "TotalRecordCount": 0 if empty_episodes else 4}}
 
 var failures := 0
@@ -87,7 +107,34 @@ func run_checks() -> void:
 		await settle()
 		check(first.size.x <= view.scroll.size.x, "Episode cards must fit the available panel width.")
 		check(first.title_label.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Episode text must remain inside the panel.")
+		check(is_equal_approx(view.back_button.global_position.y, browser.all_seasons_button.global_position.y) and is_equal_approx(view.back_button.global_position.y, browser.watched_control.button.global_position.y), "All three season navigation buttons share one row.")
+		check(browser.watched_control.get_global_rect().end.x <= view.get_global_rect().end.x, "The season watched action fits the right edge.")
 	root.size.x = 1536
+	check(browser.watched_control.button.text == "Mark as watched", "Partly watched seasons offer Mark as watched.")
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	check(api.watched_calls == [["one", true]], "The season action sends the season ID rather than an episode or series ID.")
+	check(browser.watched_control.button.text == "Mark as unwatched", "Watched seasons offer Mark as unwatched.")
+	for card in browser.episode_list.get_children():
+		check(card.watched_badge.visible and card.play_button.text == "Play episode", "All episode pages refresh their badges and progress after a season change.")
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	for card in browser.episode_list.get_children():
+		check(not card.watched_badge.visible, "Marking a season unwatched refreshes every episode.")
+	api.fail_watched = true
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	check(browser.watched_control.status.visible and not browser.watched_control.button.disabled, "A failed season change shows an error and permits retry.")
+	check(not browser.episode_list.get_child(0).watched_badge.visible, "Failed season changes preserve episode state.")
+	api.fail_watched = false
+	api.hold_watched = true
+	browser.watched_control.button.pressed.emit()
+	browser.open_season(api.season_items[1])
+	await settle()
+	api.release_watched.emit()
+	await settle()
+	check(browser.selected_season.Id == "two" and browser.episode_list.get_child(0).item.Id == "two0", "A late season update cannot replace another season's view.")
+	api.hold_watched = false
 	browser.open_season(api.season_items[0])
 	browser.all_seasons_button.pressed.emit()
 	browser.open_season(api.season_items[1])
@@ -115,6 +162,41 @@ func run_checks() -> void:
 	browser.season_grid.get_child(1).pressed.emit()
 	await settle()
 	check(browser.season_grid.get_child_count() == 2, "Retry must restore season selection.")
+	api.empty_episodes = false
+	check(browser.watched_control.item.Id == "agatha" and not browser.all_seasons_button.visible, "The overview offers a series action without All seasons.")
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	check(api.watched_calls.back() == ["agatha", true], "The overview submits the series ID for a whole-series update.")
+	check(browser.watched_control.button.text == "Mark as unwatched", "A watched series offers Mark as unwatched.")
+	for card in browser.season_grid.get_children():
+		check(card.item.UserData.Played, "The series action refreshes every season.")
+	await capture("res://dist/series-watched-preview.png")
+	browser.open_season(api.season_items[1])
+	await settle()
+	for card in browser.episode_list.get_children():
+		check(card.watched_badge.visible, "Episodes in another season reflect the whole-series update.")
+	browser.all_seasons_button.pressed.emit()
+	await settle()
+	api.fail_watched = true
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	check(browser.watched_control.status.visible and browser.watched_control.button.text == "Mark as unwatched", "A failed series change preserves state and shows an error.")
+	api.fail_watched = false
+	browser.watched_control.button.pressed.emit()
+	await settle()
+	check(api.watched_calls.back() == ["agatha", false] and browser.watched_control.button.text == "Mark as watched", "A whole series can be marked unwatched.")
+	for card in browser.season_grid.get_children():
+		check(not card.item.UserData.Played, "All seasons refresh to unwatched.")
+	api.hold_watched = true
+	browser.watched_control.button.pressed.emit()
+	browser.open_season(api.season_items[0])
+	await settle()
+	api.release_watched.emit()
+	await settle()
+	check(browser.selected_season.Id == "one" and browser.watched_control.item.Id == "one", "A late series response cannot replace the season action.")
+	api.hold_watched = false
+	browser.all_seasons_button.pressed.emit()
+	await settle()
 	api.empty_seasons = true
 	browser.load_seasons()
 	await settle()

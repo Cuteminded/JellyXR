@@ -16,6 +16,8 @@ var series_browser: SeriesBrowser
 var play_button: Button
 var play_from_start_button: Button
 var version_button: Button
+var watched_control: VBoxContainer
+var resume_label: Label
 var back_button: Button
 var title_label: Label
 var overview_label: Label
@@ -30,8 +32,10 @@ func _ready() -> void:
 		artwork.api = api
 		add_child(artwork)
 	var navigation := HBoxContainer.new()
+	navigation.add_theme_constant_override("separation", 12)
 	add_child(navigation)
 	back_button = Widgets.button("Back to library", func(): back_requested.emit(), navigation)
+	back_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -48,6 +52,8 @@ func _ready() -> void:
 		series_browser.api = api
 		series_browser.artwork = artwork
 		series_browser.series_id = str(item.Id)
+		series_browser.series_item = item
+		series_browser.navigation_host = navigation
 		series_browser.selected_season = initial_season
 		series_browser.play_requested.connect(func(episode: Dictionary): play_requested.emit(episode))
 		series_browser.version_requested.connect(func(episode: Dictionary): version_requested.emit(episode))
@@ -135,11 +141,31 @@ func _build_playback(parent: VBoxContainer) -> void:
 	if position > 0:
 		play_from_start_button = Widgets.button("Play from start", func(): play_from_start_requested.emit(item), actions)
 		play_from_start_button.custom_minimum_size = Vector2(200, 64)
-		_muted("Continue from " + DetailsMetadata.duration(position), parent, 20)
+		resume_label = _muted("Continue from " + DetailsMetadata.duration(position), parent, 20)
+	var secondary_actions := HFlowContainer.new()
+	secondary_actions.add_theme_constant_override("h_separation", 12)
+	secondary_actions.add_theme_constant_override("v_separation", 12)
+	parent.add_child(secondary_actions)
+	if item.get("Type", "") in ["Movie", "Episode"]:
+		watched_control = preload("res://scripts/ui/watched_control.gd").new()
+		watched_control.api = api
+		watched_control.item = item
+		watched_control.changed.connect(_refresh_playback_state)
+		secondary_actions.add_child(watched_control)
+		watched_control.button.custom_minimum_size.y = 64
 	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
 	if sources.size() > 1:
-		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), actions)
+		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), secondary_actions)
 		version_button.custom_minimum_size = Vector2(200, 64)
+		version_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+func _refresh_playback_state() -> void:
+	var position := int(item.UserData.get("PlaybackPositionTicks", 0))
+	play_button.text = "Resume" if position > 0 else ("Play episode" if item.get("Type") == "Episode" else "Play movie")
+	if is_instance_valid(play_from_start_button): play_from_start_button.visible = position > 0
+	if is_instance_valid(resume_label):
+		resume_label.visible = position > 0
+		resume_label.text = "Continue from " + DetailsMetadata.duration(position)
 
 func _build_information() -> void:
 	var section := VBoxContainer.new()

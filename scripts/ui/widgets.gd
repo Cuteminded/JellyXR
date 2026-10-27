@@ -26,7 +26,7 @@ static func input(placeholder: String, parent: Node, secret: bool = false) -> Li
 	parent.add_child(result)
 	return result
 
-static func watched_badge(image_frame: PanelContainer) -> void:
+static func watched_badge(image_frame: PanelContainer) -> Control:
 	var overlay := Control.new()
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_frame.add_child(overlay)
@@ -41,6 +41,7 @@ static func watched_badge(image_frame: PanelContainer) -> void:
 	badge.offset_top = 8
 	badge.offset_right = -8
 	badge.offset_bottom = 36
+	return overlay
 
 static func theme() -> Theme:
 	var result := Theme.new()

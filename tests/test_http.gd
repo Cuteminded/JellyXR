@@ -64,6 +64,13 @@ func run_checks() -> void:
 	await api.episodes("show id", "season & id", 100)
 	check("SeasonId=season%20%26%20id" in last_request and "StartIndex=100" in last_request, "Episode pagination stays inside the selected season")
 	check("Fields=Overview%2CUserData%2CMediaSources" in last_request and "IsMissing=false" in last_request, "Episode cards request versions and summaries and exclude missing episodes")
+	payload = '{"Played":true,"PlaybackPositionTicks":0}'
+	code = 200
+	result = await api.set_watched("movie id", true)
+	check(result.ok and result.data.Played and last_request.begins_with("POST /jellyfin/Users/fixture-user/PlayedItems/movie%20id "), "Mark watched sends an authenticated POST for the selected item")
+	payload = '{"Played":false,"PlaybackPositionTicks":0}'
+	result = await api.set_watched("episode id", false)
+	check(result.ok and not result.data.Played and last_request.begins_with("DELETE /jellyfin/Users/fixture-user/PlayedItems/episode%20id "), "Mark unwatched sends DELETE and returns updated user data")
 	code = 401
 	payload = ""
 	result = await api.request("/Users/Me")

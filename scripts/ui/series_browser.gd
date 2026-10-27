@@ -8,6 +8,7 @@ signal section_changed
 var api: JellyfinClient
 var artwork: ArtworkLoader
 var series_id := ""
+var series_item: Dictionary = {}
 var season_grid: HFlowContainer
 var season_section: VBoxContainer
 var episode_section: VBoxContainer
@@ -17,6 +18,10 @@ var season_description: Label
 var all_seasons_button: Button
 var generation := 0
 var selected_season: Dictionary = {}
+var navigation_host: HBoxContainer
+var navigation: HBoxContainer
+var watched_host: VBoxContainer
+var watched_control: VBoxContainer
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 20)
@@ -31,9 +36,18 @@ func _ready() -> void:
 	episode_section = VBoxContainer.new()
 	episode_section.add_theme_constant_override("separation", 18)
 	add_child(episode_section)
-	var navigation := HBoxContainer.new()
-	episode_section.add_child(navigation)
+	navigation = HBoxContainer.new()
+	navigation.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	navigation.add_theme_constant_override("separation", 12)
+	(navigation_host if navigation_host != null else self).add_child(navigation)
 	all_seasons_button = Widgets.button("All seasons", _show_seasons, navigation)
+	all_seasons_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	navigation.add_child(spacer)
+	watched_host = VBoxContainer.new()
+	navigation.add_child(watched_host)
+	navigation.hide()
 	episode_heading = _label("", episode_section, 28)
 	season_description = _label("", episode_section, 22)
 	episode_list = VBoxContainer.new()
@@ -46,6 +60,9 @@ func _ready() -> void:
 func load_seasons() -> void:
 	generation += 1
 	var current := generation
+	if series_item.is_empty(): series_item = {"Id": series_id, "Type": "Series"}
+	all_seasons_button.hide()
+	_set_watched_control(series_item, _series_watched_changed.bind(current), "Applies to every episode in every season of this series.")
 	_clear(season_grid)
 	_label("Loading seasons...", season_grid, 22)
 	var result := await api.seasons(series_id)
@@ -56,6 +73,15 @@ func load_seasons() -> void:
 		Widgets.button("Retry seasons", load_seasons, season_grid)
 		return
 	var seasons: Array = result.data.get("Items", [])
+	var all_watched := not seasons.is_empty()
+	for season in seasons:
+		var user: Dictionary = season.get("UserData", {}) if season.get("UserData") else {}
+		all_watched = all_watched and bool(user.get("Played", false))
+	var series_user: Dictionary = series_item.get("UserData", {}) if series_item.get("UserData") else {}
+	series_user["Played"] = all_watched
+	series_item["UserData"] = series_user
+	watched_control._refresh()
+	watched_control.button.disabled = seasons.is_empty()
 	if seasons.is_empty():
 		_label("No seasons available.", season_grid, 22)
 	for season in seasons:
@@ -71,6 +97,8 @@ func open_season(season: Dictionary) -> void:
 	var current := generation
 	season_section.hide()
 	episode_section.show()
+	all_seasons_button.show()
+	_set_watched_control(selected_season, _season_watched_changed.bind(current), "Applies to every episode in this season.")
 	all_seasons_button.grab_focus()
 	episode_heading.text = str(season.get("Name", "Season")) + " episodes"
 	season_description.text = str(season.get("Overview") if season.get("Overview") else "")
@@ -102,18 +130,57 @@ func open_season(season: Dictionary) -> void:
 		if card.item.get("ParentIndexNumber") == null:
 			card.item["ParentIndexNumber"] = season.get("IndexNumber")
 		card.artwork = artwork
+		card.api = api
 		card.chosen.connect(func(chosen: Dictionary): play_requested.emit(chosen))
 		card.version_requested.connect(func(chosen: Dictionary): version_requested.emit(chosen))
 		episode_list.add_child(card)
+		card.watched_control.changed.connect(_refresh_season_watched)
+	_refresh_season_watched()
 	section_changed.emit()
+
+func _refresh_season_watched() -> void:
+	if watched_control.busy: return
+	var all_watched := true
+	var count := 0
+	for card in episode_list.get_children():
+		if not card is EpisodeCard: continue
+		count += 1
+		var user: Dictionary = card.item.get("UserData", {}) if card.item.get("UserData") else {}
+		all_watched = all_watched and bool(user.get("Played", false))
+	selected_season["UserData"] = {"Played": all_watched and count > 0}
+	watched_control._refresh()
+	watched_control.button.disabled = count == 0
+
+func _set_watched_control(item: Dictionary, action: Callable, tooltip: String) -> void:
+	navigation.show()
+	_clear(watched_host)
+	watched_control = preload("res://scripts/ui/watched_control.gd").new()
+	watched_control.api = api
+	watched_control.item = item
+	watched_control.changed.connect(action)
+	watched_host.add_child(watched_control)
+	watched_control.button.disabled = true
+	watched_control.button.tooltip_text = tooltip
+
+func _series_watched_changed(current: int) -> void:
+	if not _current(current): return
+	await load_seasons()
+	if _current(current + 1): watched_control.button.grab_focus()
+
+func _season_watched_changed(current: int) -> void:
+	if not _current(current): return
+	await open_season(selected_season)
+	if _current(current + 1) and not selected_season.is_empty():
+		watched_control.button.grab_focus()
 
 func _show_seasons() -> void:
 	selected_season = {}
 	generation += 1
 	episode_section.hide()
+	navigation.hide()
 	season_section.show()
 	section_changed.emit()
-	if season_grid.get_child_count() == 0: load_seasons()
+	load_seasons()
 	if season_grid.get_child_count() > 0:
 		var first := season_grid.get_child(0) as Control
 		if first and first.focus_mode != Control.FOCUS_NONE: first.grab_focus()

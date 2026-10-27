@@ -47,7 +47,9 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Resume a movie or episode from its saved position.
 - [x] Start a partially watched title from the beginning.
 - [x] Report playback start, progress, pause state, and stop events to Jellyfin.
-- [ ] Manually mark a movie, episode, season, or series as watched or unwatched.
+- [x] Manually mark a movie or episode as watched or unwatched.
+- [x] Manually mark a season as watched or unwatched.
+- [x] Manually mark a series as watched or unwatched.
 - [x] Select between multiple media versions
 - [ ] Browse and play trailers and extras.
 

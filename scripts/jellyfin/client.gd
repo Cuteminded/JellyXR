@@ -133,6 +133,9 @@ func resume_items() -> Dictionary:
 func details(id: String) -> Dictionary:
 	return await request("/Users/%s/Items/%s" % [user_id, id.uri_encode()])
 
+func set_watched(id: String, watched: bool) -> Dictionary:
+	return await request("/Users/%s/PlayedItems/%s" % [user_id.uri_encode(), id.uri_encode()], HTTPClient.METHOD_POST if watched else HTTPClient.METHOD_DELETE)
+
 func seasons(series_id: String) -> Dictionary:
 	return await request("/Shows/%s/Seasons" % series_id.uri_encode() + query({"UserId": user_id, "Fields": "Overview,UserData", "EnableUserData": "true"}))
 

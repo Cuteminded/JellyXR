@@ -6,6 +6,10 @@ signal version_requested(item: Dictionary)
 
 var item: Dictionary
 var artwork: ArtworkLoader
+var api: JellyfinClient
+var watched_control: VBoxContainer
+var watched_badge: Control
+var facts_label: Label
 var play_button: Button
 var version_button: Button
 var thumbnail: TextureRect
@@ -44,12 +48,12 @@ func _ready() -> void:
 	title_label = _label(DetailsMetadata.title(item, "Episode"), text, 26)
 	var facts := DetailsMetadata.facts(item)
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
-	if user.get("Played", false):
-		Widgets.watched_badge(frame)
+	watched_badge = Widgets.watched_badge(frame)
+	watched_badge.visible = user.get("Played", false)
 	var position := int(user.get("PlaybackPositionTicks", 0))
 	if position > 0: facts.append("Continue from " + DetailsMetadata.duration(position))
-	if not facts.is_empty():
-		_label("  /  ".join(facts), text, 20).add_theme_color_override("font_color", Color("b0bbce"))
+	facts_label = _label("  /  ".join(facts), text, 20)
+	facts_label.add_theme_color_override("font_color", Color("b0bbce"))
 	_label(str(item.get("Overview") if item.get("Overview") else "No description available."), text, 22)
 	play_button = Widgets.button("Resume episode" if position > 0 else "Play episode", func(): chosen.emit(item), image_column)
 	play_button.custom_minimum_size = Vector2(190, 56)
@@ -60,6 +64,21 @@ func _ready() -> void:
 	if sources.size() > 1:
 		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), image_column)
 		version_button.accessibility_name = "Choose version of " + title_label.text
+	watched_control = preload("res://scripts/ui/watched_control.gd").new()
+	watched_control.api = api
+	watched_control.item = item
+	watched_control.changed.connect(_refresh_user_data)
+	text.add_child(watched_control)
+
+func _refresh_user_data() -> void:
+	var user: Dictionary = item.UserData
+	var position := int(user.get("PlaybackPositionTicks", 0))
+	var facts := DetailsMetadata.facts(item)
+	if position > 0: facts.append("Continue from " + DetailsMetadata.duration(position))
+	facts_label.text = "  /  ".join(facts)
+	watched_badge.visible = user.get("Played", false)
+	play_button.text = "Resume episode" if position > 0 else "Play episode"
+	play_button.accessibility_name = play_button.text + " " + title_label.text + (", watched" if user.get("Played", false) else "")
 
 func _label(value: String, parent: Node, font_size: int) -> Label:
 	var label := Widgets.label(value, parent, font_size)
