@@ -20,6 +20,7 @@ func capture() -> void:
 	material.albedo_texture = texture
 	app.screen.material_override = material
 	app.player_overlay.update_time(1425000, 6780000, true, true)
+	app.player_overlay.timeline.update_buffer(2300000, 6780000, true)
 	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://dist/player-preview.png")

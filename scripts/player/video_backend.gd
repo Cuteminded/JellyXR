@@ -34,6 +34,14 @@ func position_ms() -> int:
 func duration_ms() -> int:
 	return 0
 
+func buffered_position_ms() -> int:
+	if bridge == null: return -1
+	if bridge.has_method("buffered_position_ms"): return bridge.buffered_position_ms()
+	if bridge.has_method("playback_diagnostics"):
+		var values: Dictionary = bridge.playback_diagnostics()
+		if values.has("read_ahead_ms"): return position_ms() + int(values.read_ahead_ms)
+	return -1
+
 func is_buffering() -> bool:
 	return bridge != null and bridge.has_method("is_buffering") and bridge.is_buffering()
 

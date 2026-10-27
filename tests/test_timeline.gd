@@ -20,6 +20,14 @@ func run_checks() -> void:
 	timeline.update_time(5000, 0)
 	assert(not timeline.slider.editable and timeline.duration_label.text == "--:--")
 	timeline.update_time(30000, 120000)
+	timeline.update_buffer(60000, 120000, true)
+	assert(timeline.buffered_bar.value == 60000 and seeks.is_empty())
+	timeline.update_buffer(-1, 120000, true)
+	assert(timeline.buffered_bar.value == 0)
+	timeline.update_buffer(180000, 120000, true)
+	assert(timeline.buffered_bar.value == 120000)
+	timeline.update_buffer(60000, 120000, false)
+	assert(timeline.buffered_bar.value == 0)
 	await process_frame
 	await process_frame
 	var rect := timeline.slider.get_global_rect()

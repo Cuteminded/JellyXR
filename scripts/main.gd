@@ -699,6 +699,8 @@ func _duration_ms() -> int:
 func _update_timeline() -> void:
 	if autoplay_pending or photo_active: return
 	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
+	var buffered := video.buffered_position_ms() if decoder_ready and not seeking else -1
+	player_overlay.timeline.update_buffer(buffered + int(transcode_offset / 10000) if buffered >= 0 else -1, _duration_ms(), decoder_ready and not seeking)
 	world.player_skip_popup.update_segment(_active_segment())
 	_update_loading()
 

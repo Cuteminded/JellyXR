@@ -32,6 +32,7 @@ public final class JellyXRVideo extends GodotPlugin {
     private MediaPlayer player;
     private volatile int position;
     private volatile int duration;
+    private volatile int bufferedPercent = -1;
     private volatile boolean prepared;
     private volatile boolean buffering;
     private volatile boolean seeking;
@@ -104,6 +105,9 @@ public final class JellyXRVideo extends GodotPlugin {
             player.setOnVideoSizeChangedListener((current, width, height) -> {
                 if (isCurrent(current, opening)) emitSignal("video_size", width, height);
             });
+            player.setOnBufferingUpdateListener((current, percent) -> {
+                if (isCurrent(current, opening)) bufferedPercent = Math.max(0, Math.min(100, percent));
+            });
             player.setOnInfoListener((current, what, extra) -> {
                 if (!isCurrent(current, opening)) return true;
                 if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
@@ -171,6 +175,10 @@ public final class JellyXRVideo extends GodotPlugin {
 
     @UsedByGodot public int position_ms() { return position; }
     @UsedByGodot public int duration_ms() { return duration; }
+    @UsedByGodot public int buffered_position_ms() {
+        return prepared && !seeking && bufferedPercent >= 0 && duration > 0
+            ? (int) ((long) duration * bufferedPercent / 100) : -1;
+    }
     @UsedByGodot public boolean has_video_frame() { return readyGeneration >= 0 && readyGeneration == generation.get(); }
     @UsedByGodot public boolean is_buffering() { return prepared && (buffering || seeking); }
 
@@ -186,6 +194,7 @@ public final class JellyXRVideo extends GodotPlugin {
         main.post(() -> {
             if (player != null && prepared) {
                 seeking = true;
+                bufferedPercent = -1;
                 watchdog.setPaused(!player.isPlaying(), SystemClock.elapsedRealtime());
                 player.seekTo(Math.max(0, Math.min(milliseconds, player.getDuration())), MediaPlayer.SEEK_CLOSEST);
             }
@@ -204,6 +213,7 @@ public final class JellyXRVideo extends GodotPlugin {
         seeking = false;
         position = 0;
         duration = 0;
+        bufferedPercent = -1;
         if (player != null) { player.release(); player = null; }
     }
 
