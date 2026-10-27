@@ -24,6 +24,8 @@ var overview_label: Label
 var poster: TextureRect
 var backdrop: TextureRect
 var cast_carousel: CastCarousel
+var series_playback_status: Label
+var series_playback_loading := false
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 18)
@@ -118,15 +120,14 @@ func _build_header() -> void:
 	_build_playback(summary)
 
 func _build_playback(parent: VBoxContainer) -> void:
-	if item.get("Type", "") == "Series":
-		return
+	var is_series: bool = item.get("Type", "") == "Series"
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var position := int(user.get("PlaybackPositionTicks", 0))
 	var actions := HFlowContainer.new()
 	actions.add_theme_constant_override("h_separation", 12)
 	actions.add_theme_constant_override("v_separation", 12)
 	parent.add_child(actions)
-	play_button = Widgets.button("Resume" if position > 0 else "Play movie", func(): play_requested.emit(item), actions)
+	play_button = Widgets.button("Play series" if is_series else ("Resume" if position > 0 else "Play movie"), _play_item, actions)
 	play_button.custom_minimum_size = Vector2(200, 64)
 	play_button.icon = preload("res://assets/icons/material/play_arrow.svg")
 	play_button.add_theme_constant_override("icon_max_width", 28)
@@ -138,6 +139,11 @@ func _build_playback(parent: VBoxContainer) -> void:
 	focus.set_border_width_all(3)
 	focus.border_color = Color("071c20")
 	play_button.add_theme_stylebox_override("focus", focus)
+	if is_series:
+		play_button.tooltip_text = "Start the first episode or continue where you left off."
+		series_playback_status = _muted("", parent, 20)
+		series_playback_status.hide()
+		return
 	if position > 0:
 		play_from_start_button = Widgets.button("Play from start", func(): play_from_start_requested.emit(item), actions)
 		play_from_start_button.custom_minimum_size = Vector2(200, 64)
@@ -158,6 +164,34 @@ func _build_playback(parent: VBoxContainer) -> void:
 		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), secondary_actions)
 		version_button.custom_minimum_size = Vector2(200, 64)
 		version_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+func _play_item() -> void:
+	if item.get("Type", "") != "Series":
+		play_requested.emit(item)
+		return
+	if series_playback_loading: return
+	series_playback_loading = true
+	play_button.disabled = true
+	play_button.text = "Loading episode..."
+	series_playback_status.hide()
+	var result := await api.series_playback(str(item.Id))
+	if not is_inside_tree(): return
+	series_playback_loading = false
+	play_button.disabled = false
+	play_button.text = "Play series"
+	if not result.ok:
+		series_playback_status.text = "Could not load an episode. Try again."
+		series_playback_status.show()
+		return
+	var episodes: Array = result.data.get("Items", [])
+	if episodes.is_empty():
+		series_playback_status.text = "No episodes available for this series."
+		series_playback_status.show()
+		return
+	var episode: Dictionary = episodes[0].duplicate(true)
+	episode["Type"] = "Episode"
+	episode["SeriesId"] = str(item.Id)
+	play_requested.emit(episode)
 
 func _refresh_playback_state() -> void:
 	var position := int(item.UserData.get("PlaybackPositionTicks", 0))

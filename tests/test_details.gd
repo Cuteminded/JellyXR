@@ -1,6 +1,22 @@
 extends SceneTree
 
 class FixtureApi extends JellyfinClient:
+	var playback_items: Array = [{"Id": "first", "SeasonId": "season-one", "UserData": {"PlaybackPositionTicks": 0}}]
+	var fail_playback := false
+	var playback_calls := 0
+	var hold_playback := false
+	signal release_playback
+
+	func series_playback(_series_id: String) -> Dictionary:
+		playback_calls += 1
+		var tree := get_tree()
+		if hold_playback: await release_playback
+		await tree.process_frame
+		return {"ok": false} if fail_playback else {"ok": true, "data": {"Items": playback_items}}
+
+	func next_up(_series_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
 	func seasons(_series_id: String) -> Dictionary:
 		return {"ok": true, "data": {"Items": []}}
 
@@ -104,7 +120,37 @@ func run_checks() -> void:
 	check(view.overview_label.text == "No description available.", "Missing metadata must have a readable fallback.")
 	view = show_details(shell, {"Id": "series", "Name": "Example series", "Type": "Series"})
 	await settle()
-	check(view.play_button == null, "Series must select episodes instead of playing the series itself.")
+	check(view.play_button != null and view.play_button.text == "Play series", "Series headers offer a Play series button.")
+	selected.clear()
+	view.play_button.pressed.emit()
+	await settle()
+	check(selected.size() == 1 and selected.back().Id == "first" and selected.back().Type == "Episode" and selected.back().SeriesId == "series", "New series play their first episode rather than the series item.")
+	var series_api := view.api as FixtureApi
+	series_api.playback_items = [{"Id": "later", "SeasonId": "season-two", "UserData": {"PlaybackPositionTicks": 123456}}]
+	view.play_button.pressed.emit()
+	await settle()
+	check(selected.back().Id == "later" and selected.back().SeasonId == "season-two" and selected.back().UserData.PlaybackPositionTicks == 123456, "Series playback fetches current progress and preserves the episode resume position.")
+	series_api.fail_playback = true
+	view.play_button.pressed.emit()
+	await settle()
+	check(selected.size() == 2 and view.series_playback_status.visible and not view.play_button.disabled, "Failed lookups allow retry without starting playback.")
+	series_api.fail_playback = false
+	series_api.playback_items = []
+	view.play_button.pressed.emit()
+	await settle()
+	check(selected.size() == 2 and view.series_playback_status.text == "No episodes available for this series.", "Empty series show a message without playing the series item.")
+	series_api.hold_playback = true
+	view.play_button.pressed.emit()
+	var calls := series_api.playback_calls
+	view.play_button.pressed.emit()
+	check(series_api.playback_calls == calls and view.play_button.disabled, "Repeated presses cannot queue duplicate playback requests.")
+	view.get_parent().remove_child(view)
+	series_api.release_playback.emit()
+	await settle()
+	check(selected.size() == 2, "Leaving the details view prevents late responses from starting playback.")
+	view.free()
+	view = show_details(shell, {"Id": "series", "Name": "Example series", "Type": "Series"})
+	await settle()
 	check(view.play_from_start_button == null, "Series headers do not offer title playback actions.")
 	check(view.series_browser != null, "Series must show a season browser.")
 	check(view.series_browser.season_grid.get_child(0).text == "No seasons available.", "An empty series must have a readable fallback.")

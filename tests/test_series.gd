@@ -10,7 +10,17 @@ class FixtureApi extends JellyfinClient:
 	var watched_calls: Array = []
 	var fail_watched := false
 	var hold_watched := false
+	var next_up_items: Array = []
+	var fail_next_up := false
+	var hold_next_up := false
+	signal release_next_up
 	signal release_watched
+
+	func next_up(_series_id: String) -> Dictionary:
+		if hold_next_up: await release_next_up
+		await get_tree().process_frame
+		if fail_next_up: return {"ok": false, "error": "Offline"}
+		return {"ok": true, "data": {"Items": next_up_items}}
 
 	func set_watched(id: String, watched: bool) -> Dictionary:
 		watched_calls.append([id, watched])
@@ -82,6 +92,39 @@ func run_checks() -> void:
 	shell.page.add_child(view)
 	await settle()
 	var browser := view.series_browser
+	check(not browser.next_up_section.visible, "Series without a next episode hide Next Up.")
+	api.next_up_items = [{"Id": "next", "Name": "Next episode", "ParentIndexNumber": 2, "IndexNumber": 1, "SeasonId": "two", "UserData": {"PlaybackPositionTicks": 3000000000}}]
+	browser.load_seasons()
+	await settle()
+	check(browser.next_up_section.visible and browser.next_up_section.get_index() < browser.season_section.get_index(), "Next Up appears above seasons.")
+	var next_card: EpisodeCard = browser.next_up_list.get_child(0)
+	check(next_card.play_button.text == "Resume episode", "Next Up preserves episode resume progress.")
+	next_card.play_button.pressed.emit()
+	check(selected.back().Id == "next" and selected.back().SeriesId == "agatha" and selected.back().SeasonId == "two", "Next Up plays the episode with its series and season context.")
+	selected.clear()
+	api.next_up_items = []
+	next_card.watched_control.button.pressed.emit()
+	await settle()
+	check(not browser.next_up_section.visible, "Marking the next episode watched refreshes Next Up.")
+	api.watched_calls.clear()
+	api.fail_next_up = true
+	browser.load_seasons()
+	await settle()
+	check(browser.next_up_section.visible and browser.season_grid.get_child_count() == 2, "Next Up errors leave seasons available.")
+	api.fail_next_up = false
+	browser.next_up_list.get_child(1).pressed.emit()
+	await settle()
+	check(not browser.next_up_section.visible, "Next Up can recover through retry.")
+	api.hold_next_up = true
+	browser.load_seasons()
+	browser.open_season(api.season_items[0])
+	api.release_next_up.emit()
+	await settle()
+	check(not browser.next_up_section.visible, "A late Next Up response cannot reopen the section inside a season.")
+	api.hold_next_up = false
+	browser._show_seasons()
+	await settle()
+	api.calls.clear()
 	check(browser.season_grid.get_child_count() == 2, "Series must show each season as a poster card.")
 	view.scroll.ensure_control_visible(browser.season_section)
 	await settle()

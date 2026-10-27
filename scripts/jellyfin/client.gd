@@ -139,6 +139,25 @@ func set_watched(id: String, watched: bool) -> Dictionary:
 func seasons(series_id: String) -> Dictionary:
 	return await request("/Shows/%s/Seasons" % series_id.uri_encode() + query({"UserId": user_id, "Fields": "Overview,UserData", "EnableUserData": "true"}))
 
+func series_playback(series_id: String) -> Dictionary:
+	var result := await request("/Shows/NextUp" + query(_next_up_parameters(series_id)))
+	if not result.ok or not result.data.get("Items", []).is_empty(): return result
+	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "StartIndex": 0, "Limit": 1, "SortBy": "ParentIndexNumber,IndexNumber", "SortOrder": "Ascending", "Fields": "Overview,UserData,MediaSources", "EnableUserData": "true", "IsMissing": "false"}))
+
+func _next_up_parameters(series_id: String) -> Dictionary:
+	return {"UserId": user_id, "SeriesId": series_id, "Limit": 1, "Fields": "Overview,UserData,MediaSources", "EnableUserData": "true", "EnableResumable": "true", "EnableRewatching": "false"}
+
+func next_up(series_id: String) -> Dictionary:
+	var parameters := _next_up_parameters(series_id)
+	var result := await request("/Shows/NextUp" + query(parameters))
+	if not result.ok: return result
+	var items: Array = result.data.get("Items", [])
+	if items.is_empty(): return result
+	var user: Dictionary = items[0].get("UserData", {}) if items[0].get("UserData") else {}
+	if int(user.get("PlaybackPositionTicks", 0)) > 0: return result
+	parameters["DisableFirstEpisode"] = "true"
+	return await request("/Shows/NextUp" + query(parameters))
+
 func episodes(series_id: String, season_id: String, offset: int = 0) -> Dictionary:
 	return await request("/Shows/%s/Episodes" % series_id.uri_encode() + query({"UserId": user_id, "SeasonId": season_id, "StartIndex": offset, "Limit": 100, "Fields": "Overview,UserData,MediaSources", "EnableUserData": "true", "IsMissing": "false"}))
 

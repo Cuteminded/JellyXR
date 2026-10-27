@@ -22,9 +22,18 @@ var navigation_host: HBoxContainer
 var navigation: HBoxContainer
 var watched_host: VBoxContainer
 var watched_control: VBoxContainer
+var next_up_section: VBoxContainer
+var next_up_list: VBoxContainer
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 20)
+	next_up_section = VBoxContainer.new()
+	next_up_section.add_theme_constant_override("separation", 18)
+	add_child(next_up_section)
+	Widgets.label("Next Up", next_up_section, 28)
+	next_up_list = VBoxContainer.new()
+	next_up_section.add_child(next_up_list)
+	next_up_section.hide()
 	season_section = VBoxContainer.new()
 	season_section.add_theme_constant_override("separation", 18)
 	add_child(season_section)
@@ -60,6 +69,7 @@ func _ready() -> void:
 func load_seasons() -> void:
 	generation += 1
 	var current := generation
+	_load_next_up(current)
 	if series_item.is_empty(): series_item = {"Id": series_id, "Type": "Series"}
 	all_seasons_button.hide()
 	_set_watched_control(series_item, _series_watched_changed.bind(current), "Applies to every episode in every season of this series.")
@@ -91,10 +101,35 @@ func load_seasons() -> void:
 		card.chosen.connect(open_season)
 		season_grid.add_child(card)
 
+func _load_next_up(current: int) -> void:
+	next_up_section.hide()
+	_clear(next_up_list)
+	var result := await api.next_up(series_id)
+	if not _current(current): return
+	if not result.ok:
+		next_up_section.show()
+		_label("Could not load the next episode.", next_up_list, 22)
+		Widgets.button("Retry Next Up", _load_next_up.bind(current), next_up_list)
+		return
+	var items: Array = result.data.get("Items", [])
+	if items.is_empty(): return
+	var card := EpisodeCard.new()
+	card.item = items[0].duplicate(true)
+	card.item["Type"] = "Episode"
+	card.item["SeriesId"] = series_id
+	card.artwork = artwork
+	card.api = api
+	card.chosen.connect(func(chosen: Dictionary): play_requested.emit(chosen))
+	card.version_requested.connect(func(chosen: Dictionary): version_requested.emit(chosen))
+	next_up_list.add_child(card)
+	card.watched_control.changed.connect(load_seasons)
+	next_up_section.show()
+
 func open_season(season: Dictionary) -> void:
 	selected_season = season.duplicate(true)
 	generation += 1
 	var current := generation
+	next_up_section.hide()
 	season_section.hide()
 	episode_section.show()
 	all_seasons_button.show()

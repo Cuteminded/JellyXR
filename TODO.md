@@ -31,7 +31,7 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Browse titles in random order.
 - [x] Browse series by season and episode.
 - [x] Display watched indicators and saved playback progress supplied by Jellyfin.
-- [ ] Show a Next up row for series. Automatic playback of the next episode already exists.
+- [X] Show a Next up row for series. Automatic playback of the next episode already exists.
 - [ ] Filter by watched status, genre, year, or other metadata.
 - [ ] Add, remove, and browse favourites.
 - [ ] Browse collections.

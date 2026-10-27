@@ -6,6 +6,7 @@ var incoming := ""
 var payload := "{}"
 var code := 200
 var last_request := ""
+var queued_payloads: Array[String] = []
 var failures := 0
 
 func _initialize() -> void:
@@ -31,6 +32,7 @@ func _process(_delta: float) -> bool:
 			content_length = int(line.split(":")[1].strip_edges())
 	if incoming.substr(end + 4).to_utf8_buffer().size() < content_length: return false
 	last_request = incoming
+	if not queued_payloads.is_empty(): payload = queued_payloads.pop_front()
 	var response := "HTTP/1.1 %d Test\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s" % [code, payload.to_utf8_buffer().size(), payload]
 	peer.put_data(response.to_utf8_buffer())
 	peer.disconnect_from_host()
@@ -49,6 +51,17 @@ func run_checks() -> void:
 	var body: Dictionary = JSON.parse_string(last_request.split("\r\n\r\n", true, 1)[1])
 	check(body.Username == 'a"b' and body.Pw == "test-only-password", "Credentials are JSON encoded")
 	payload = '{"Items":[],"TotalRecordCount":0}'
+	queued_payloads = [payload, '{"Items":[{"Id":"first","SeasonId":"season-one","UserData":{"Played":true}}]}']
+	result = await api.series_playback("finished show")
+	check(result.ok and result.data.Items[0].Id == "first", "Completed series fall back to their first episode")
+	check(last_request.begins_with("GET /jellyfin/Shows/finished%20show/Episodes?") and "Limit=1" in last_request and "SortBy=ParentIndexNumber%2CIndexNumber" in last_request and "SortOrder=Ascending" in last_request and "IsMissing=false" in last_request, "Fallback loads the first available episode in season and episode order")
+	payload = '{"Items":[],"TotalRecordCount":0}'
+	await api.next_up("finished show")
+	check(last_request.begins_with("GET /jellyfin/Shows/NextUp?"), "The Next Up section does not fall back to watched episodes")
+	code = 500
+	result = await api.series_playback("offline show")
+	check(not result.ok and last_request.begins_with("GET /jellyfin/Shows/NextUp?"), "Failed Next Up requests do not restart a series")
+	code = 200
 	await api.library("hello & world", 24)
 	check("SearchTerm=hello%20%26%20world" in last_request, "Search escaping survives HTTP")
 	check('Token="fixture-token"' in last_request, "Authenticated calls send the token header")
@@ -61,6 +74,16 @@ func run_checks() -> void:
 	check(last_request.begins_with("GET /jellyfin/UserViews?") and "UserId=fixture-user" in last_request, "Sidebar loads the signed-in user's libraries")
 	await api.seasons("show id")
 	check(last_request.begins_with("GET /jellyfin/Shows/show%20id/Seasons?"), "Seasons load from the selected series with an escaped ID")
+	payload = '{"Items":[{"Id":"next","UserData":{"PlaybackPositionTicks":100}}]}'
+	result = await api.next_up("show & id")
+	check(result.ok and last_request.begins_with("GET /jellyfin/Shows/NextUp?") and "SeriesId=show%20%26%20id" in last_request and "UserId=fixture-user" in last_request, "Next Up is scoped to the selected series and signed-in user")
+	check("DisableFirstEpisode" not in last_request and "EnableResumable=true" in last_request, "A partially watched first episode remains resumable")
+	payload = '{"Items":[{"Id":"next","UserData":{"PlaybackPositionTicks":0}}]}'
+	result = await api.series_playback("new show")
+	check(result.ok and result.data.Items[0].Id == "next" and "SeriesId=new%20show" in last_request and "DisableFirstEpisode" not in last_request, "Series playback allows the first episode for a new show")
+	await api.next_up("show id")
+	check("DisableFirstEpisode=true" in last_request and "EnableRewatching=false" in last_request, "Unstarted episodes require prior series watch history")
+	payload = '{"Items":[],"TotalRecordCount":0}'
 	await api.episodes("show id", "season & id", 100)
 	check("SeasonId=season%20%26%20id" in last_request and "StartIndex=100" in last_request, "Episode pagination stays inside the selected season")
 	check("Fields=Overview%2CUserData%2CMediaSources" in last_request and "IsMissing=false" in last_request, "Episode cards request versions and summaries and exclude missing episodes")
