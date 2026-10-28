@@ -29,18 +29,13 @@ gradle="$(command -v "$gradle")"
 cd "$project_root"
 [[ -f android/build/gradlew ]] ||
     fail 'Install the Android build template in Godot before building.'
-
-printf 'Installing OpenXR vendors...\n'
 bash tools/setup-openxr.sh
-
-printf 'Building the Android video plugin...\n'
 "$gradle" -p native :android:stagePlugin
-
-printf 'Importing the Godot project...\n'
 "$godot" --headless --xr-mode off --path . --editor --import --quit
-
-printf 'Exporting the Quest 3 debug APK...\n'
 mkdir -p dist
-"$godot" --headless --xr-mode off --path . --export-debug 'Quest 3' dist/jellyxr-android.apk
+
+"$godot" --headless --xr-mode off --path . --export-debug 'Android' dist/jellyxr-android.apk
 [[ -s dist/jellyxr-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
-printf 'Android APK built at %s/dist/jellyxr-android.apk\n' "$project_root"
+
+"$godot" --headless --xr-mode off --path . --export-debug 'Quest 1' dist/jellyXR-quest1.apk
+[[ -s dist/jellyXR-quest1.apk ]] || fail 'Godot did not produce a nonempty Quest 1 APK.'

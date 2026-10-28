@@ -110,14 +110,10 @@ jobs:
         run: |
           tar -czf "dist/jellyxr-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
 
-      - name: Set artifact date
-        id: date
-        run: echo "date=$(date -u '+%d-%m-%Y')" >> "$GITHUB_OUTPUT"
-
       - name: Upload Linux build with system libraries
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyxr-linux-${{ matrix.arch }}-system-libs
+          name: jellyxr-linux-${{ matrix.arch }}-system-libs
           path: dist/jellyxr-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 14
@@ -126,7 +122,7 @@ jobs:
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyxr-linux-${{ matrix.arch }}-appimage
+          name: jellyxr-linux-${{ matrix.arch }}-appimage
           path: dist/jellyxr-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
           retention-days: 14

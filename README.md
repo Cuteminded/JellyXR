@@ -24,15 +24,18 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 ## Hardware status
 
-| Device | Status | Build | Notes |
-|---|---|---|---|
-| [Quest 1](https://www.meta.com/quest/) | Pending | Android | Installs but will not launch |
-| [Quest 2](https://www.meta.com/quest/) | Untested | Android |  |  |
-| [Quest 3](https://www.meta.com/quest/) | Working | Android |  |
-| [Xreal aura](https://www.xreal.com/aura) | Waiting for device | Android | Not yet released in Europe |  |
-| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Waiting for device | Linux ARM64 | On reservation queue |  |
-| [SteamVR](https://store.steampowered.com/steamvr) | Partially Working | Linux X64 | Needs further testing with Vulkan |
-| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | |
+| Device | Status | Build | Tested Version | Notes |
+|---|---|---|---|---|
+| [Quest 1](https://www.meta.com/quest) | Working  | Quest1 | 0.1.3 | Testing on the quest 1 can have some delays i need to borrow the device from someone |
+| [Quest 2](https://www.meta.com/quest) | Untested | * | * | We don't have a Quest 2 to test with |
+| [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.1.3 ||
+| [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
+| [Xreal aura](https://www.xreal.com/aura) | Waiting for device | * | * | Not yet released in Europe |
+| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Waiting for device | * | * | On reservation queue |
+| [SteamVR](https://store.steampowered.com/steamvr) | Partially Working | Linux X64 | 0.1.2 | Needs further testing with Vulkan |
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.1.3 ||
+
+
 
 > **Note:** If you have a device that isn't listed here, or can test jellyXR on any of the listed devices, we'd love to hear from you!
 >

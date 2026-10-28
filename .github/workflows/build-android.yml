@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    name: Build Android debug APK
+    name: Build Android APK
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -96,16 +96,22 @@ jobs:
       - name: Verify APK signature
         run: |
           "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyxr-android.apk
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyXR-quest1.apk
 
-      - name: Set artifact date
-        id: date
-        run: echo "date=$(date -u '+%d-%m-%Y')" >> "$GITHUB_OUTPUT"
-
-      - name: Upload APK
+      - name: Upload Android APK
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.date.outputs.date }}-jellyxr-android
+          name: jellyxr-android
           path: dist/jellyxr-android.apk
+          if-no-files-found: error
+          retention-days: 14
+          archive: false
+
+      - name: Upload Quest 1 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: jellyxr-quest1
+          path: dist/jellyxr-quest1.apk
           if-no-files-found: error
           retention-days: 14
           archive: false

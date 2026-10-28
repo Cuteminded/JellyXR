@@ -1,0 +1,67 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Read app version
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^config\/version="\([^"]*\)"\r\?$/\1/p' project.godot)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'project.godot must contain a config/version in MAJOR.MINOR.PATCH format.' >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  android:
+    needs: prepare
+    uses: ./.github/workflows/build-android.yml
+
+  linux:
+    needs: prepare
+    uses: ./.github/workflows/build-linux.yml
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/build-windows.yml
+
+  release:
+    needs: [prepare, android, linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download existing build artifacts without extracting
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          skip-decompress: true
+      - name: Create a draft Release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          name: jellyXR ${{VERSION}}
+          tag_name: v${{VERSION}}
+          working_directory: artifacts
+          files: /*

@@ -17,8 +17,10 @@ try {
     New-Item -ItemType Directory -Force -Path dist | Out-Null
     & $Godot --headless --xr-mode off --path . --editor --import --quit
     if ($LASTEXITCODE -ne 0) { throw 'Godot import failed.' }
-    & $Godot --headless --xr-mode off --path . --export-debug 'Quest 3' 'dist/jellyxr-android.apk'
+    & $Godot --headless --xr-mode off --path . --export-debug 'Android' 'dist/jellyxr-android.apk'
     if ($LASTEXITCODE -ne 0) { throw 'Android export failed.' }
+    & $Godot --headless --xr-mode off --path . --export-debug 'Quest 1' 'dist/jellyXR-quest1.apk'
+    if ($LASTEXITCODE -ne 0) { throw 'Quest 1 export failed.' }
 } finally {
     Pop-Location
 }
