@@ -61,7 +61,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           draft: true
-          name: jellyXR ${{VERSION}}
-          tag_name: v${{VERSION}}
+          name: jellyXR ${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
           working_directory: artifacts
-          files: /*
+          files: '*'
