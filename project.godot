@@ -21,6 +21,8 @@ run/main_scene="res://scenes/main.tscn"
 config/use_custom_user_dir=true
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/logo/jellyxr-logo.png"
+config/icon.windows="res://assets/logo/jellyxr-logo-transparent-crop.png"
+config/icon.linux="res://assets/logo/jellyxr-logo-transparent-crop.png"
 
 [display]
 

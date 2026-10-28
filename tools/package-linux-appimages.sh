@@ -53,7 +53,7 @@ Icon=jellyxr
 Categories=AudioVideo;Player;
 Terminal=false
 EOF
-cp assets/logo/jellyxr-logo.png "$appdir/jellyxr.png"
+cp assets/logo/jellyxr-logo-transparent-crop.png "$appdir/jellyxr.png"
 ln -s jellyxr.png "$appdir/.DirIcon"
 output="$project_root/dist/jellyxr-linux-$arch.AppImage"
 ARCH="$appimage_arch" "$appimagetool" --appimage-extract-and-run "$appdir" "$output"
