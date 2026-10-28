@@ -810,9 +810,10 @@ func _cancel_countdown() -> void:
 func _video_failed(message: String) -> void:
 	status.text = message
 	if video.available() and playing:
+		if decoder_ready:
+			session.position_ticks = transcode_offset + video.position_ms() * 10000
 		decoder_ready = false
 		_update_timeline()
-		session.position_ticks = transcode_offset + video.position_ms() * 10000
 		video.stop()
 		await session.retry_transcode()
 
@@ -856,7 +857,7 @@ func _process(delta: float) -> void:
 	if timeline_elapsed >= 0.25:
 		timeline_elapsed = 0.0
 		_update_timeline()
-	if seeking: return
+	if seeking or not decoder_ready: return
 	elapsed += delta
 	if elapsed >= 10:
 		elapsed = 0
