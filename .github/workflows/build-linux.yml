@@ -18,7 +18,7 @@ jobs:
   build:
     name: Linux ${{ matrix.arch }} build
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +44,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev patchelf libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev patchelf meson ninja-build nasm libass-dev libplacebo-dev libpulse-dev libasound2-dev libva-dev libdrm-dev libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libwayland-dev wayland-protocols libxkbcommon-dev libgnutls28-dev libdav1d-dev libluajit-5.1-dev file desktop-file-utils
 
       - name: Build PC video plugin
         run: |
@@ -103,9 +103,6 @@ jobs:
             exit 1
           fi
 
-      - name: Package Linux AppImage
-        run: bash tools/package-linux-appimages.sh "$ARCH"
-
       - name: Package Linux build with system libraries
         run: |
           tar -czf "dist/jellyxr-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
@@ -118,6 +115,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           archive: false
+
+      - name: Build Linux AppImage
+        run: |
+          bash tools/build-pc-video.sh --lgpl
+          output="dist/linux-${ARCH}-lgpl"
+          mkdir -p "$output"
+          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyxr.${ARCH}"
+          cp -r "build/linux/${ARCH}-lgpl/licenses" "$output/"
+          cp LICENSE "$output/licenses/jellyxr.txt"
+          cp LICENSING.md "$output/licenses/"
+
+      - name: Package Linux AppImage
+        run: bash tools/package-linux-appimages.sh "$ARCH" "dist/linux-${ARCH}-lgpl"
 
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
