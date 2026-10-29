@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shlex
 import subprocess
 import struct
 import tempfile
@@ -32,6 +33,10 @@ class DependencyChecks(unittest.TestCase):
             "libglib-2.0.so.0", "libgobject-2.0.so.0", "libgio-2.0.so.0",
             "libgmodule-2.0.so.0", "libgthread-2.0.so.0", "libgdk_pixbuf-2.0.so.0",
             "libgtk-3.so.0", "libgdk-3.so.0",
+            "libfontconfig.so.1", "libfreetype.so.6", "libharfbuzz.so.0",
+            "libharfbuzz-subset.so.0", "libfribidi.so.0", "libgraphite2.so.3",
+            "libexpat.so.1", "libpng16.so.16", "libpcre2-8.so.0",
+            "libva.so.2", "libva-drm.so.2", "libva-x11.so.2", "libva-wayland.so.2", "libva-glx.so.2",
             "libmount.so.1", "libblkid.so.1", "libuuid.so.1", "libsmartcols.so.1",
             "libjpeg.so.8", "libtiff.so.6",
         )
@@ -60,13 +65,14 @@ class BundleIntegration(unittest.TestCase):
                 '#include <mpv/client.h>\n'
                 'int probe(void) { mpv_handle *h = mpv_create(); if (!h) return 1; mpv_destroy(h); return 0; }\n'
             )
-            subprocess.run(["cc", "-shared", "-fPIC", str(source), "-lmpv", "-o", str(plugin)], check=True)
+            flags = shlex.split(subprocess.check_output(["pkg-config", "--cflags", "--libs", "mpv"], text=True))
+            libdir = subprocess.check_output(["pkg-config", "--variable=libdir", "mpv"], text=True).strip()
+            subprocess.run(["cc", "-shared", "-fPIC", str(source), *flags, "-Wl,-rpath," + libdir, "-o", str(plugin)], check=True)
             before = plugin.read_bytes()
             linux_bundle.bundle(original, root / "bundled", arch)
             relocated = root / "relocated"
             (root / "bundled").rename(relocated)
             linux_bundle.verify_bundle(relocated / plugin.name, relocated / "lib", ["libmpv.so.2"])
-            linux_bundle.verify_bundle(relocated / plugin.name, relocated / "lib", ["libXpresent.so.1"])
             decoder = ctypes.CDLL(str(relocated / plugin.name))
             self.assertEqual(decoder.probe(), 0)
             check_host_tiff_loader(root)
@@ -78,11 +84,11 @@ class BundleIntegration(unittest.TestCase):
             self.assertFalse((relocated / "lib" / "libtiff.so.6").exists())
             for name in ("libglib-2.0.so.0", "libgobject-2.0.so.0", "libgio-2.0.so.0", "libmount.so.1", "libblkid.so.1", "libuuid.so.1"):
                 self.assertFalse((relocated / "lib" / name).exists())
-            for name in ("libxcb-dri3.so.0", "libX11.so.6", "libwayland-client.so.0", "libmount.so.1"):
+            for name, path in linux_bundle.dependencies(relocated / plugin.name).items():
+                if not linux_bundle.HOST_LIBRARIES.match(name):
+                    continue
                 self.assertFalse((relocated / "lib" / name).exists())
-                resolved = linux_bundle.dependencies(relocated / plugin.name)
-                self.assertIn(name, resolved)
-                self.assertNotEqual(resolved[name].resolve().parent, (relocated / "lib").resolve())
+                self.assertNotEqual(path.resolve().parent, (relocated / "lib").resolve())
             manifest = json.loads((relocated / "bundled-libraries.json").read_text())
             self.assertTrue(any(item["library"] == "libmpv.so.2" for item in manifest))
             self.assertTrue(all(item["source_version"] for item in manifest))

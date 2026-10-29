@@ -46,7 +46,8 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     output.generation = frame_generation;
     std::unique_lock<std::mutex> lock(mutex);
     wake.wait(lock, [this, &output, frame_generation] {
-        return stopping || generation != frame_generation || (!frame_ready && output.timestamp <= clock + 30);
+        return stopping || generation != frame_generation ||
+            (!frame_ready && (awaiting_first_frame || output.timestamp <= clock + 30));
     });
     if (stopping) return false;
     if (generation != frame_generation) { ++dropped_frames; return true; }

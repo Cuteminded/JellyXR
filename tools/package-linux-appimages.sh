@@ -3,7 +3,8 @@ set -euo pipefail
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
-arch="${1:?Usage: bash tools/package-linux-appimages.sh x86_64|arm64}"
+arch="${1:?Usage: bash tools/package-linux-appimages.sh x86_64|arm64 [export-directory]}"
+input_directory="${2:-dist/linux-$arch}"
 case "$arch" in
     x86_64)
         appimage_arch=x86_64
@@ -33,7 +34,7 @@ chmod +x "$appimagetool"
 
 staging="$(mktemp -d "$cache/staging-$arch.XXXXXX")"
 trap 'rm -rf -- "$staging"' EXIT
-python3 tools/bundle-linux-libraries.py --input-directory "dist/linux-$arch" --output-directory "$staging/bundle" --arch "$arch"
+python3 tools/bundle-linux-libraries.py --input-directory "$input_directory" --output-directory "$staging/bundle" --arch "$arch"
 
 appdir="$staging/jellyXR.AppDir"
 mkdir -p "$appdir/usr/bin"
