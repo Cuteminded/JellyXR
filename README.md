@@ -8,7 +8,7 @@ jellyXR is a free, open source app for browsing your Jellyfin library and watchi
 
 This project started as **JellyQuest**, a Jellyfin VR app for the Quest. I renamed it **jellyXR** because I want the app to work across multiple VR and AR devices, without tying its name to a single headset or platform.
 
-The goal is to support standalone headsets and devices connected to a PC. Support depends on each device's capabilities and testing. The hardware status table above shows what works today and what still needs testing.
+The goal is to support standalone headsets and devices connected to a PC. Support depends on each device's capabilities and testing. The hardware status table below shows what has been tested.
 
 ## Will it be available in a store?
 
@@ -24,23 +24,28 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 ## Hardware status
 
-| Device | Status | Build | Tested Version | Notes |
+| Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
-| [Quest 1](https://www.meta.com/quest) | Working  | Quest1 | 0.1.3 | Testing on the quest 1 can have some delays i need to borrow the device from someone |
+| [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.1.3 | Testing depends on access to a borrowed headset. |
 | [Quest 2](https://www.meta.com/quest) | Untested | * | * | We don't have a Quest 2 to test with |
 | [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.1.3 ||
 | [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
 | [Xreal aura](https://www.xreal.com/aura) | Waiting for device | * | * | Not yet released in Europe |
 | [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Waiting for device | * | * | On reservation queue |
-| [SteamVR](https://store.steampowered.com/steamvr) | Partially Working | Linux X64 | 0.1.2 | Needs further testing with Vulkan |
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.1.4 | Tested on a Steam Machine. 8K playback can drop frames. |
 | [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.1.3 ||
 
 
 
-> **Note:** If you have a device that isn't listed here, or can test jellyXR on any of the listed devices, we'd love to hear from you!
->
-> Please [open an issue](https://github.com/Cuteminded/jellyframe/issues) to share your results and help us keep the hardware compatibility list accurate and up to date.
+To report results for a listed or unlisted device, [open an issue](https://github.com/Cuteminded/jellyframe/issues). Include the device, operating system, app version, and what you tested.
+
+## Current limitations
+
+Linux 8K playback can drop frames while copying decoded video between VAAPI and Vulkan. This also occurred with the previous GPL playback libraries.
+
+Linux ARM64 builds still need headset testing. Other untested devices are listed in the hardware table.
 
 ## Licence
 
-jellyXR uses GPL-3.0-only; see [Licence and attribution](LICENSING.md) for licence terms and third-party credits.
+jellyXR is licensed under [Apache License, Version 2.0](LICENSE)
+Third-party components retain their own licenses. See [Licence and attribution](LICENSING.md) for details.

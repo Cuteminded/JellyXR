@@ -53,4 +53,4 @@ Explain the problem and what your change does, link any related issue, and list 
 
 ## Licence
 
-Submit code contributions under the project's GPL-3.0-only licence. Include the licence, attribution, and source of any new assets or dependencies. See [Licence and attribution](LICENSING.md) and the full [licence text](LICENSE).
+Submit code contributions under the project's Apache-2.0 licence. Include the licence, attribution, and source of any new assets or dependencies. See [Licence and attribution](LICENSING.md) and the full [licence text](LICENSE).
