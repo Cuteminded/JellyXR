@@ -12,9 +12,26 @@ if [[ "$(uname -s)" != Linux ]]; then
     exit 1
 fi
 
+mode="${1:-system}"
+if [[ "$mode" != system && "$mode" != --lgpl ]]; then
+    printf 'Usage: bash tools/build-pc-video.sh [--lgpl]\n' >&2
+    exit 1
+fi
 for tool in cmake c++ pkg-config python3 curl unzip sha256sum; do
     command -v "$tool" >/dev/null || { printf 'Missing build dependency: %s\n' "$tool" >&2; exit 1; }
 done
+dependency_root="$project_root/build/linux/deps"
+build_root="$project_root/build/linux/$arch"
+if [[ "$mode" == --lgpl ]]; then
+    for tool in gcc make meson ninja nasm tar patchelf; do
+        command -v "$tool" >/dev/null || { printf 'Missing build dependency: %s\n' "$tool" >&2; exit 1; }
+    done
+    bash "$project_root/tools/build-linux-playback-dependencies.sh"
+    prefix="$project_root/build/linux/playback/prefix"
+    export PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/lib/$(gcc -dumpmachine)/pkgconfig"
+    export LD_LIBRARY_PATH="$prefix/lib:$prefix/lib/$(gcc -dumpmachine)"
+    build_root="$build_root-lgpl"
+fi
 if ! pkg-config --atleast-version=2.0 mpv; then
     printf 'Install libmpv API 2 development files, such as libmpv-dev on Ubuntu.\n' >&2
     exit 1
@@ -23,9 +40,6 @@ if ! pkg-config --exists 'libavcodec >= 60' 'libavformat >= 60' 'libavutil >= 58
     printf 'Install FFmpeg development files: libavcodec-dev libavformat-dev libavutil-dev libswscale-dev.\n' >&2
     exit 1
 fi
-
-dependency_root="$project_root/build/linux/deps"
-build_root="$project_root/build/linux/$arch"
 mkdir -p "$dependency_root" "$build_root"
 touch "$project_root/build/.gdignore"
 
@@ -42,7 +56,7 @@ if [[ -z "${GODOT_CPP_PATH:-}" ]]; then
     fi
 fi
 
-cmake -S "$project_root/native/pc" -B "$build_root" -DCMAKE_BUILD_TYPE=Release "-DGODOT_CPP_PATH=$GODOT_CPP_PATH" "-DPython3_EXECUTABLE=$(command -v python3)"
+cmake --fresh -S "$project_root/native/pc" -B "$build_root" -DCMAKE_BUILD_TYPE=Release "-DGODOT_CPP_PATH=$GODOT_CPP_PATH" "-DPython3_EXECUTABLE=$(command -v python3)"
 cmake --build "$build_root" --parallel "${JOBS:-4}"
 
 plugin_root="$project_root/addons/jellyxr_mpv"
@@ -52,5 +66,9 @@ cp "$project_root/native/pc/jellyxr_mpv.gdextension" "$plugin_root/"
 mkdir -p "$build_root/licenses"
 cp "$GODOT_CPP_PATH/LICENSE.md" "$build_root/licenses/godot-cpp.txt"
 cp "$project_root/LICENSING.md" "$build_root/licenses/"
+if [[ "$mode" == --lgpl ]]; then
+    cp -r "$project_root/build/linux/playback/licenses/." "$build_root/licenses/"
+    cp "$project_root/build/linux/playback/library-report.json" "$build_root/"
+fi
 printf 'Architecture: %s\nlibmpv API: %s\ngodot-cpp: godot-4.5-stable\n' "$arch" "$(pkg-config --modversion mpv)" > "$build_root/build-info.txt"
 printf 'PC video plugin built for Linux %s in %s\n' "$arch" "$plugin_root"

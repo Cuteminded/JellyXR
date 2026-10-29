@@ -17,6 +17,9 @@ HOST_LIBRARIES = re.compile(
     r"|lib(?:glib|gobject|gio|gmodule|gthread)-2\.0\.so\."
     r"|libgdk_pixbuf-2\.0\.so\."
     r"|lib(?:gtk|gdk)-[234]\.so\."
+    r"|lib(?:fontconfig|freetype|harfbuzz(?:-[\w]+)?|fribidi|graphite2|expat|png16)\.so\."
+    r"|libpcre2-\d+\.so\."
+    r"|libva(?:-(?:drm|x11|wayland|glx))?\.so\."
     r"|lib(?:mount|blkid|uuid|smartcols)\.so\."
     r"|lib(?:jpeg|tiff)\.so\."
     r"|lib(?:GL|EGL|GLES|OpenGL|vulkan|drm|gbm))"
@@ -90,11 +93,17 @@ def bundle(input_directory, output_directory, arch):
         raise RuntimeError("The decoder must link to libmpv.so.2.")
     packages = {}
     manifest = []
+    playback = Path(__file__).resolve().parents[1] / "build/linux/playback"
     for name, path in sorted(bundled.items()):
-        owner = package_owner(path)
-        if owner not in packages:
-            packages[owner] = package_metadata(owner)
-        manifest.append(dict(library=name, **packages[owner]))
+        if path.resolve().is_relative_to(playback / "prefix"):
+            component = "mpv" if name.startswith("libmpv.") else "ffmpeg"
+            metadata = {"source": component, "source_version": "0.41.0" if component == "mpv" else "8.1.3"}
+        else:
+            owner = package_owner(path)
+            if owner not in packages:
+                packages[owner] = package_metadata(owner)
+            metadata = packages[owner]
+        manifest.append(dict(library=name, **metadata))
     shutil.copytree(input_directory, output_directory)
     library_directory = output_directory / "lib"
     library_directory.mkdir()
@@ -106,6 +115,11 @@ def bundle(input_directory, output_directory, arch):
     run("patchelf", "--force-rpath", "--set-rpath", "$ORIGIN/lib", str(plugin))
     verify_bundle(plugin, library_directory, bundled)
     copy_notices(packages, output_directory)
+    subprocess.run([
+        "python3", str(Path(__file__).with_name("inspect-playback-libraries.py")),
+        "--platform", "linux", "--bin-directory", str(library_directory),
+        "--output", str(output_directory / "library-report.json"),
+    ], check=True)
     manifest_text = json.dumps(manifest, indent=2) + "\n"
     (output_directory / "bundled-libraries.json").write_text(manifest_text)
     print("Bundled %d shared libraries from %d packages." % (len(bundled), len(packages)))
