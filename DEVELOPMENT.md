@@ -47,13 +47,13 @@ godot --headless --xr-mode off --path . --editor --import --quit
 godot --headless --xr-mode off --path . --export-release 'Windows' dist/windows/jellyxr.exe
 ```
 
-The plugin script downloads pinned build tools and libraries into `build/desktop`, verifies their checksums, and generates `addons/jellyxr_mpv`. You do not need a system-wide compiler installation.
+The plugin script downloads pinned build tools and LGPL playback libraries into `build/desktop`, verifies their checksums, and generates `addons/jellyxr_mpv`. It checks the loaded library configurations and writes `build/desktop/library-report.json`. You do not need a system-wide compiler installation.
 
-The output is in `dist/windows`. Keep all exported files together. Include the third-party licences when distributing a build, following the copy steps in the [Windows workflow](.github/workflows/build-windows.yml).
+The output is in `dist/windows`. Keep all exported files together. Copy `build/desktop/licenses` and `build/desktop/library-report.json` into that folder. Verify the exported DLLs with `tools/inspect-playback-libraries.py`, following the [Windows workflow](.github/workflows/build-windows.yml). See [Licensing](LICENSING.md) for redistribution requirements.
 
 ## Build on Linux x64 or ARM64
 
-Build natively on the target architecture. On Ubuntu 24.04, install the dependencies and build the PC plugin:
+Build natively on the target architecture with CMake 3.24 or newer. On Ubuntu 24.04, install the dependencies and build the PC plugin:
 
 ```sh
 sudo apt-get install build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
@@ -61,7 +61,7 @@ bash tools/build-pc-video.sh
 godot --headless --xr-mode off --path . --editor --import --quit
 ```
 
-The script detects x64 or ARM64 and generates `addons/jellyxr_mpv`. It downloads and verifies godot-cpp, and uses the system libmpv and FFmpeg development packages. FFmpeg 6 or newer is required.
+The script detects x64 or ARM64 and generates `addons/jellyxr_mpv`. By default it uses the installed libmpv and FFmpeg development packages. FFmpeg 6 or newer is required. The Linux plugin uses the host C++ runtime for compatibility with graphics drivers.
 
 Export for x64:
 
@@ -79,18 +79,34 @@ godot --headless --xr-mode off --path . --export-release 'Linux ARM64' dist/linu
 
 Keep the executable and native decoder `.so` file together.
 
-### Package an AppImage
+### Package a build with system libraries
 
-Install `patchelf`. Copy the licences into the export folder as shown below for x64. Replace `x86_64` with `arm64` for an ARM64 build.
+Package the exported app without bundling playback libraries:
 
 ```sh
 cp -r build/linux/x86_64/licenses dist/linux-x86_64/
 cp LICENSE dist/linux-x86_64/licenses/jellyxr.txt
 cp LICENSING.md dist/linux-x86_64/licenses/
-bash tools/package-linux-appimages.sh x86_64
+tar -czf dist/jellyxr-linux-x86_64.tar.gz -C dist/linux-x86_64 .
 ```
 
-The packager bundles decoder libraries and licence notices. It needs network access to download appimagetool and its AppImage runtime. The output is `dist/jellyxr-linux-<arch>.AppImage`. The host supplies graphics drivers and OpenXR.
+The target system supplies libmpv and FFmpeg. The workflow uploads this as `jellyxr-linux-<arch>-system-libs`.
+
+### Package an AppImage
+
+The AppImage uses pinned LGPL playback libraries. Install the additional source-build dependencies listed in the [Linux workflow](.github/workflows/build-linux.yml), including `meson`, `ninja-build`, `nasm`, and `patchelf`. Build and export into a separate folder:
+
+```sh
+bash tools/build-pc-video.sh --lgpl
+mkdir -p dist/linux-x86_64-lgpl
+godot --headless --xr-mode off --path . --export-release 'Linux x64' dist/linux-x86_64-lgpl/jellyxr.x86_64
+cp -r build/linux/x86_64-lgpl/licenses dist/linux-x86_64-lgpl/
+cp LICENSE dist/linux-x86_64-lgpl/licenses/jellyxr.txt
+cp LICENSING.md dist/linux-x86_64-lgpl/licenses/
+bash tools/package-linux-appimages.sh x86_64 dist/linux-x86_64-lgpl
+```
+
+Replace `x86_64` with `arm64` and use the `Linux ARM64` preset for ARM64. The output is `dist/jellyxr-linux-<arch>.AppImage`. The host supplies graphics drivers, VAAPI, OpenXR, and the C++ runtime.
 
 ## Run the app during development
 

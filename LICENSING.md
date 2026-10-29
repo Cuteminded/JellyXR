@@ -2,7 +2,13 @@
 
 Copyright © 2026 Cuteminded.
 
-jellyXR's source code is licensed under the [GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`).
+jellyXR's own source code is licensed under the [Apache License, Version 2.0](LICENSE) (`Apache-2.0`). Third-party components and assets are excluded from this grant and retain their own licenses.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this work except in compliance with the License. You may obtain a copy of the License at <https://www.apache.org/licenses/LICENSE-2.0>.
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+Previously distributed GPL-licensed versions remain available under their original license terms. The Apache-2.0 grant does not revoke those rights.
 
 ## Third-party components
 
@@ -16,27 +22,21 @@ jellyXR uses third-party software and assets under their own licenses:
 
 jellyXR retrieves movie posters, backdrops, and other media artwork from the user's Jellyfin server. It does not include these assets in its source code or distribute them with the app.
 
-# PC playback dependencies
+## PC playback libraries
 
-The Windows build includes third-party libraries for video playback and integration with Godot.
+Windows and Linux AppImages use shared LGPL builds of FFmpeg and libmpv. jellyXR loads them dynamically and keeps their original filenames so users can replace them with compatible builds.
 
-The build bundles libmpv from [shinchiro's Windows builds](https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261010), release `20261010`, based on mpv revision `b2c255c13e`. It also links against godot-cpp version `godot-4.5-stable`.
+- Windows uses FFmpeg 8.1.3, revision `46d899d7a0`, from [BtbN's LGPL shared build](https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-19-13-06). Its license is LGPL version 3.
+- Windows libmpv uses revision `cf764c61d195f64528df21887298bb616d49b426`, from [upstream build 40835379230](https://github.com/mpv-player/mpv/actions/runs/40835379230). It also contains FFmpeg revision `31ba826` and other statically linked dependencies.
+- Linux AppImages build FFmpeg 8.1.3 and libmpv 0.41.0 from pinned sources, with GPL and nonfree features disabled. They bundle the playback libraries, supporting libraries, and notices. The system-libraries archive uses the installed distribution libraries instead. Graphics drivers, VAAPI, OpenXR, and the C++ runtime come from the host.
+- The PC plugin uses MIT-licensed [godot-cpp godot-4.5-stable](https://github.com/godotengine/godot-cpp/tree/godot-4.5-stable).
 
-The Vulkan video backend also links against FFmpeg. Windows builds bundle the shared libraries from [BtbN's release of October 19, 2026](https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-19-13-06), archive `ffmpeg-n8.1.3-18-g46d899d7a0-win64-gpl-shared-8.1.zip`.
+The build scripts verify source or binary archive checksums and check the loaded library configurations. Android keeps its existing playback backend.
 
-This archive uses FFmpeg revision `46d899d7a0` with GPL components enabled. The exported app includes its GPLv3 license in `licenses/ffmpeg.txt`.
+## Redistribution
 
-The [build scripts](https://github.com/BtbN/FFmpeg-Builds) describe the configuration and dependency sources. The [FFmpeg source](https://github.com/FFmpeg/FFmpeg/tree/46d899d7a0) is available separately.
+Include the bundled licenses, copyright notices, corresponding sources, patches, and build instructions required by each component's license. This includes dependencies compiled into the Windows DLLs. The upstream Windows libmpv archive does not provide their complete source and notice packet.
 
-Linux builds use distribution FFmpeg libraries. Packaging includes the notices for the bundled libraries.
+LGPL version 3 incorporates the GPL version 3 text, so Windows packages include both texts. This does not change jellyXR's Apache-2.0 license.
 
-## Sources and attribution
-
-Sources, build configurations, and license information:
-
-- [libmpv Windows binary release, 20261010](https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261010)
-- [mpv source code and copyright information, b2c255c13e](https://github.com/mpv-player/mpv/tree/b2c255c13e)
-- [Windows decoder build scripts and dependency sources](https://github.com/shinchiro/mpv-winbuild-cmake)
-- [godot-cpp source code, Godot 4.5 stable](https://github.com/godotengine/godot-cpp/tree/godot-4.5-stable)
-
-Each component keeps its own license and copyright notices.
+See the [FFmpeg distribution guidance](https://ffmpeg.org/legal.html) and [mpv copyright information](https://github.com/mpv-player/mpv/blob/v0.41.0/Copyright).
