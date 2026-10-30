@@ -67,4 +67,8 @@ jobs:
           name: jellyXR ${{ env.VERSION }}
           tag_name: v${{ env.VERSION }}
           working_directory: artifacts
-          files: '*'
+          files: |
+            *.apk
+            *.zip
+            *.tar.gz
+            *.AppImage
