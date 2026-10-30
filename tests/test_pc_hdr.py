@@ -28,6 +28,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", type=Path, required=True)
     parser.add_argument("--ffmpeg", type=Path, required=True)
+    parser.add_argument("--require-d3d11", action="store_true")
+    parser.add_argument("--require-d3d12", action="store_true")
     args = parser.parse_args()
     project = Path(__file__).resolve().parents[1]
     output = project / "build" / "hdr-tests"
@@ -61,9 +63,14 @@ def main():
                 f"tonemap=tonemap=hable:desat=0:peak={peak / 203},"
                 "zscale=transfer=iec61966-2-1:range=full,format=rgb24")
             run([ffmpeg, "-v", "error", "-i", str(video), "-vf", filters, "-frames:v", "1", "-y", str(reference)])
-            subprocess.run([str(args.godot.resolve()), "--path", str(project), "--xr-mode", "off", "--audio-driver", "Dummy",
+            command = [str(args.godot.resolve()), "--path", str(project), "--xr-mode", "off", "--audio-driver", "Dummy",
                             "--rendering-method", "mobile", "--rendering-driver", "vulkan", "--resolution", "640x360",
-                            "--script", "tests/test_pc_hdr_video.gd", "--", str(video), str(reference), transfer], check=True, timeout=30)
+                            "--script", "tests/test_pc_hdr_video.gd", "--", str(video), str(reference), transfer]
+            if args.require_d3d11:
+                command.append("--require-d3d11")
+            if args.require_d3d12:
+                command.append("--require-d3d12")
+            subprocess.run(command, check=True, timeout=30)
     print("PQ, HLG, mastering peaks, and SDR screen checks: PASS")
 
 

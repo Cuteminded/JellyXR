@@ -27,10 +27,16 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 		"Source video": "%d x %d / %.3f fps" % [width, height, fps] if width > 0 else "N/A",
 		"Source codec": str(stream.get("Codec", "N/A")).to_upper(),
 		"Source bitrate": "%.2f Mbps" % (bitrate / 1000000.0) if bitrate > 0 else "N/A",
-		"Renderer / FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
+		"Renderer / app FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
 		"Player state": "Buffering" if video.is_buffering() else ("Paused" if video.paused else "Playing"),
 		"Video decoder": str(diagnostics.get("codec", "Platform decoder")),
-		"Hardware decoding": "VAAPI" if diagnostics.get("vaapi_gpu_copy", false) else str(diagnostics.get("hardware_device", "N/A")),
-		"Dropped frames": str(diagnostics.get("dropped_frames", "0")),
+		"Hardware decoding": _hardware_decoder(diagnostics),
+		"Dropped frames": str(diagnostics.get("dropped_frames", "N/A")),
 		"Read ahead": "%.2f s" % (float(diagnostics.read_ahead_ms) / 1000.0) if diagnostics.has("read_ahead_ms") else "0",
 	}
+
+static func _hardware_decoder(diagnostics: Dictionary) -> String:
+	if diagnostics.get("d3d12_gpu_copy", false): return "D3D12VA"
+	if diagnostics.get("d3d11_gpu_copy", false): return "D3D11VA"
+	if diagnostics.get("vaapi_gpu_copy", false): return "VAAPI"
+	return str(diagnostics.get("hardware_device", "N/A"))

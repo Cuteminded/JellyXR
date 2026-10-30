@@ -7,6 +7,7 @@ var video_size := Vector2i.ZERO
 var video_texture: Texture2D
 var errors: Array[String] = []
 var expected_renderer := "opengl"
+var require_d3d12 := false
 
 func _initialize() -> void:
 	call_deferred("run_check")
@@ -52,6 +53,7 @@ func run_check() -> void:
 	var reopen_url := url
 	var expected_size := Vector2i(1920, 1080)
 	for argument in OS.get_cmdline_user_args():
+		if argument == "--require-d3d12": require_d3d12 = true
 		if argument.begins_with("--video="):
 			url = argument.trim_prefix("--video=")
 		if argument.begins_with("--size="):
@@ -84,6 +86,8 @@ func run_check() -> void:
 		return
 	if not require(video_size == expected_size, "GPU rendering preserves the source resolution"):
 		return
+	if require_d3d12 and not require(decoder.playback_diagnostics().get("d3d12_gpu_copy", false), "D3D12 GPU frames are active"):
+		return
 	var before := int(decoder.position_ms())
 	await create_timer(3.0).timeout
 	if not require(errors.is_empty() and decoder.rendering_backend() == expected_renderer, "The GPU backend stays active during playback"):
@@ -102,6 +106,8 @@ func run_check() -> void:
 	if not require(brightest > 0.5, "Godot draws the video after GPU presentation"):
 		return
 	if not await check_controls_and_reopen(reopen_url):
+		return
+	if require_d3d12 and not require(decoder.playback_diagnostics().get("d3d12_gpu_copy", false), "D3D12 remains active after reopening"):
 		return
 	decoder.stop_video()
 	decoder.queue_free()

@@ -19,6 +19,12 @@ struct AVFrame;
 struct AVPacket;
 struct SwsContext;
 class VaapiFrame;
+#ifdef _WIN32
+class D3D11Gpu;
+struct D3D11Frame;
+class D3D12Gpu;
+struct D3D12Frame;
+#endif
 
 struct VideoPlanes {
     int width = 0;
@@ -43,6 +49,10 @@ struct VideoPlanes {
     std::array<VideoPlane, 3> planes;
     std::shared_ptr<AVFrame> hardware_frame;
     std::shared_ptr<VaapiFrame> exported_frame;
+#ifdef _WIN32
+    std::shared_ptr<D3D11Frame> d3d11_frame;
+    std::shared_ptr<D3D12Frame> d3d12_frame;
+#endif
 };
 
 class VideoDecoder {
@@ -68,6 +78,10 @@ public:
     void enable_vaapi_frames(bool enabled) { vaapi_frames = enabled; }
     void set_vaapi_device(const std::string &device) { vaapi_device = device; }
     bool download_frame(VideoPlanes &frame);
+#ifdef _WIN32
+    void set_d3d11_bridge(std::shared_ptr<D3D11Gpu> bridge) { d3d11 = std::move(bridge); }
+    void set_d3d12_bridge(std::shared_ptr<D3D12Gpu> bridge) { d3d12 = std::move(bridge); }
+#endif
     uint64_t current_generation() const { return generation; }
 
 private:
@@ -76,6 +90,9 @@ private:
     static constexpr size_t max_buffer_packets = 4096;
     static int interrupt(void *owner);
     void configure_hardware(const struct AVCodec *decoder);
+#ifdef _WIN32
+    bool configure_windows_hardware(const struct AVCodec *decoder);
+#endif
     int open(const std::string &url, const std::string &authorization);
     int read_geometry();
     void decode_loop();
@@ -101,6 +118,11 @@ private:
     std::string codec_name;
     std::string hardware_device;
     std::string vaapi_device;
+#ifdef _WIN32
+    std::shared_ptr<D3D11Gpu> d3d11;
+    std::shared_ptr<D3D12Gpu> d3d12;
+    std::atomic<int> windows_device_type{0};
+#endif
     std::atomic<uint64_t> corrupt_packets{0};
     std::atomic<bool> hardware_active{false};
     std::atomic<bool> pinned_download{false};

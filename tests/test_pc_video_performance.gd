@@ -15,8 +15,12 @@ func run_check() -> void:
 	var minimum_fps := 0.0
 	var maximum_gap_p95_ms := 0.0
 	var require_vaapi := false
+	var require_d3d11 := false
+	var require_d3d12 := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--require-vaapi": require_vaapi = true
+		if argument == "--require-d3d11": require_d3d11 = true
+		if argument == "--require-d3d12": require_d3d12 = true
 		if argument.begins_with("--video="): url = argument.trim_prefix("--video=")
 		if argument.begins_with("--seconds="): seconds = float(argument.trim_prefix("--seconds="))
 		if argument.begins_with("--minimum-fps="): minimum_fps = float(argument.trim_prefix("--minimum-fps="))
@@ -82,6 +86,12 @@ func run_check() -> void:
 	var passed: bool = errors.is_empty() and stats.get("renderer") == "vulkan" and float(stats["presented_fps"]) >= minimum_fps
 	if require_vaapi:
 		passed = passed and stats.get("vaapi_gpu_copy", false) and int(stats.get("vaapi_gpu_frames", 0)) > 0
+	if require_d3d11:
+		passed = passed and stats.get("d3d11_gpu_copy", false) and int(stats.get("d3d11_gpu_frames", 0)) > 0
+		passed = passed and stats.get("hardware_device") == "d3d11va" and float(stats.get("download_ms", 0)) == 0
+	if require_d3d12:
+		passed = passed and stats.get("d3d12_gpu_copy", false) and int(stats.get("d3d12_gpu_frames", 0)) > 0
+		passed = passed and stats.get("hardware_device") == "d3d12va" and float(stats.get("download_ms", 0)) == 0
 	if maximum_gap_p95_ms > 0:
 		passed = passed and not video_intervals.is_empty() and float(stats["video_gap_p95_ms"]) <= maximum_gap_p95_ms
 	decoder.stop_video()

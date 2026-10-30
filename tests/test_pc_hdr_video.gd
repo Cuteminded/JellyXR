@@ -18,7 +18,7 @@ func require(condition: bool, message: String) -> bool:
 
 func run_check() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not require(args.size() == 3, "Pass a video, reference PNG, and expected transfer"):
+	if not require(args.size() == 3 or (args.size() == 4 and args[3] in ["--require-d3d11", "--require-d3d12"]), "Pass a video, reference PNG, and expected transfer"):
 		return
 	var reference := Image.load_from_file(args[1])
 	if not require(reference != null and not reference.is_empty(), "Read the FFmpeg tone-mapping reference"):
@@ -38,6 +38,10 @@ func run_check() -> void:
 		return
 	decoder.set_paused(true)
 	var diagnostics: Dictionary = decoder.playback_diagnostics()
+	if args.size() == 4:
+		var gpu_key := "d3d12_gpu_copy" if args[3] == "--require-d3d12" else "d3d11_gpu_copy"
+		if not require(diagnostics.get(gpu_key, false) and float(diagnostics.get("download_ms", 0)) == 0, "HDR uses Windows GPU frames without CPU download: " + str(diagnostics)):
+			return
 	if not require(diagnostics.get("renderer") == "vulkan" and diagnostics.get("transfer") == args[2], "The decoder preserves transfer metadata: " + str(diagnostics)):
 		return
 	await create_timer(0.2).timeout

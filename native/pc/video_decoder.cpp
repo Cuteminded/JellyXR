@@ -1,5 +1,9 @@
 #include "video_decoder.h"
 #include "stream_identity.h"
+#ifdef _WIN32
+#include "d3d11_gpu.h"
+#include "d3d12_gpu.h"
+#endif
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -20,6 +24,7 @@ VideoDecoder::~VideoDecoder() { stop(); }
 
 void VideoDecoder::configure_hardware(const AVCodec *decoder) {
 #ifdef _WIN32
+    if (configure_windows_hardware(decoder)) return;
     const AVHWDeviceType devices[] = {AV_HWDEVICE_TYPE_CUDA, AV_HWDEVICE_TYPE_D3D11VA};
 #else
     const AVHWDeviceType devices[] = {AV_HWDEVICE_TYPE_VAAPI, AV_HWDEVICE_TYPE_CUDA};
@@ -83,21 +88,32 @@ int VideoDecoder::open(const std::string &url, const std::string &authorization)
     stream_index = av_find_best_stream(input, AVMEDIA_TYPE_VIDEO, -1, -1, &decoder, 0);
     if (stream_index < 0) return stream_index;
     audio = av_find_best_stream(input, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) >= 0;
-    codec = avcodec_alloc_context3(nullptr);
-    if (!codec) return AVERROR(ENOMEM);
-    result = avcodec_parameters_to_context(codec, input->streams[stream_index]->codecpar);
-    if (result < 0) return result;
-    codec->thread_count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
     const AVCodec *software_decoder = decoder;
-    if (codec->codec_id == AV_CODEC_ID_AV1) {
+    const AVCodec *hardware_decoder = decoder;
+    if (input->streams[stream_index]->codecpar->codec_id == AV_CODEC_ID_AV1) {
         const AVCodec *native_decoder = avcodec_find_decoder_by_name("av1");
-        if (native_decoder) decoder = native_decoder;
+        if (native_decoder) hardware_decoder = native_decoder;
     }
-    configure_hardware(decoder);
-    if (!codec->hw_device_ctx) decoder = software_decoder;
-    else codec->thread_count = 1;
-    result = avcodec_open2(codec, decoder, nullptr);
-    if (result < 0) return result;
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        codec = avcodec_alloc_context3(nullptr);
+        if (!codec) return AVERROR(ENOMEM);
+        result = avcodec_parameters_to_context(codec, input->streams[stream_index]->codecpar);
+        if (result < 0) return result;
+        codec->thread_count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
+        configure_hardware(hardware_decoder);
+        decoder = codec->hw_device_ctx ? hardware_decoder : software_decoder;
+        if (codec->hw_device_ctx) codec->thread_count = 1;
+        result = avcodec_open2(codec, decoder, nullptr);
+        if (result >= 0) break;
+#ifdef _WIN32
+        if (windows_device_type == 12 && d3d11 && d3d11->available() && attempt == 0) {
+            d3d12->disable("D3D12 decoder could not open; using D3D11");
+            avcodec_free_context(&codec);
+            continue;
+        }
+#endif
+        return result;
+    }
     codec_name = decoder->name;
     return read_geometry();
 }
@@ -138,6 +154,9 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     hardware_active = false;
     pinned_download = false;
     hardware_device.clear();
+#ifdef _WIN32
+    windows_device_type = 0;
+#endif
     corrupt_packets = 0;
     decoded_frames = dropped_frames = converted_frames = 0;
     download_us = conversion_us = 0;

@@ -30,6 +30,10 @@ void RenderVulkan::dispatch_sync() {
 void RenderVulkan::initialize_on_render_thread() {
     device = RenderingServer::get_singleton()->get_rendering_device();
     if (!device) { render_error = MPV_ERROR_UNSUPPORTED; return; }
+#ifdef _WIN32
+    if (d3d12.initialize(device)) decoder.set_d3d12_bridge(d3d12.decoder_bridge());
+    if (d3d11.initialize(device)) decoder.set_d3d11_bridge(d3d11.decoder_bridge());
+#endif
 #ifdef __linux__
     vaapi_available = vaapi.initialize(device);
     decoder.enable_vaapi_frames(vaapi_available);
@@ -121,6 +125,16 @@ void RenderVulkan::present_frame() {
         render_error = MPV_ERROR_NOMEM;
         return;
     }
+#ifdef _WIN32
+    if (frame.d3d12_frame && d3d12.copy(frame, planes)) {
+        frame.d3d12_frame.reset();
+        return;
+    }
+    if (frame.d3d11_frame && d3d11.copy(frame, planes)) {
+        frame.d3d11_frame.reset();
+        return;
+    }
+#endif
 #ifdef __linux__
     if (frame.hardware_frame && vaapi_available) {
         if (vaapi.copy(frame, planes)) {
@@ -158,6 +172,22 @@ Dictionary RenderVulkan::diagnostics() const {
     Dictionary values = decoder.diagnostics();
     uint64_t count = presented_frames.load();
     values["direct_yuv"] = true;
+#ifdef _WIN32
+    values["d3d12_gpu_available"] = d3d12.available();
+    values["d3d12_gpu_copy"] = d3d12.available() && d3d12.copies() > 0;
+    values["d3d12_gpu_frames"] = int64_t(d3d12.copies());
+    values["d3d12_inflight_frames"] = int64_t(d3d12.outstanding());
+    values["d3d12_prepared_frames"] = int64_t(d3d12.prepared());
+    values["d3d12_prepare_ms"] = d3d12.preparation_ms();
+    values["d3d12_fallback_reason"] = String(d3d12.failure().c_str());
+    values["d3d11_gpu_available"] = d3d11.available();
+    values["d3d11_gpu_copy"] = d3d11.available() && d3d11.copies() > 0;
+    values["d3d11_gpu_frames"] = int64_t(d3d11.copies());
+    values["d3d11_inflight_frames"] = int64_t(d3d11.outstanding());
+    values["d3d11_prepared_frames"] = int64_t(d3d11.prepared());
+    values["d3d11_prepare_ms"] = d3d11.preparation_ms();
+    values["d3d11_fallback_reason"] = String(d3d11.failure().c_str());
+#endif
 #ifdef __linux__
     values["vaapi_gpu_available"] = vaapi_available.load();
     values["vaapi_gpu_copy"] = vaapi_available.load() && vaapi.copies() > 0;
@@ -177,6 +207,9 @@ int RenderVulkan::error() const {
 
 void RenderVulkan::destroy_on_render_thread() {
     if (!device) return;
+#ifdef _WIN32
+    if (d3d11.outstanding() > 0 || d3d12.outstanding() > 0) device->call("jellyxr_vulkan_drain");
+#endif
 #ifdef __linux__
     if (vaapi.outstanding() > 0) device->call("jellyxr_vulkan_drain");
 #endif

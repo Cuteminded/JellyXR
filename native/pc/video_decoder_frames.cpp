@@ -1,4 +1,8 @@
 #include "video_decoder.h"
+#ifdef _WIN32
+#include "d3d11_gpu.h"
+#include "d3d12_gpu.h"
+#endif
 #ifdef __linux__
 #include "vaapi_frame.h"
 #endif
@@ -38,6 +42,40 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     bool converted;
     output.hardware_frame.reset();
     output.exported_frame.reset();
+#ifdef _WIN32
+    output.d3d11_frame.reset();
+    output.d3d12_frame.reset();
+    if (d3d12 && d3d12->available() && frame->format == AV_PIX_FMT_D3D12 && frame->hw_frames_ctx) {
+        auto *context = reinterpret_cast<AVHWFramesContext *>(frame->hw_frames_ctx->data);
+        AVFrame description = *frame;
+        description.format = context->sw_format;
+        converted = (context->sw_format == AV_PIX_FMT_NV12 || context->sw_format == AV_PIX_FMT_P010LE) &&
+            prepare_planes(&description, output, context->width, context->height, false);
+        if (converted) {
+            output.d3d12_frame = d3d12->prepare(frame);
+            converted = bool(output.d3d12_frame);
+        }
+        if (!converted) {
+            converted = download_planes(frame, output);
+            download_us += av_gettime_relative() - started;
+        }
+    } else
+    if (d3d11 && d3d11->available() && frame->format == AV_PIX_FMT_D3D11 && frame->hw_frames_ctx) {
+        auto *context = reinterpret_cast<AVHWFramesContext *>(frame->hw_frames_ctx->data);
+        AVFrame description = *frame;
+        description.format = context->sw_format;
+        converted = (context->sw_format == AV_PIX_FMT_NV12 || context->sw_format == AV_PIX_FMT_P010LE) &&
+            prepare_planes(&description, output, context->width, context->height, false);
+        if (converted) {
+            output.d3d11_frame = d3d11->prepare(frame);
+            converted = bool(output.d3d11_frame);
+        }
+        if (!converted) {
+            converted = download_planes(frame, output);
+            download_us += av_gettime_relative() - started;
+        }
+    } else
+#endif
     if (vaapi_frames && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx) {
         auto *context = reinterpret_cast<AVHWFramesContext *>(frame->hw_frames_ctx->data);
         AVFrame description = *frame;
@@ -89,6 +127,10 @@ godot::Dictionary VideoDecoder::diagnostics() const {
     godot::Dictionary values;
     values["codec"] = godot::String(codec_name.c_str());
     values["hardware_device"] = hardware_active ? godot::String(hardware_device.c_str()) : godot::String("none");
+#ifdef _WIN32
+    if (hardware_active && windows_device_type == 12) values["hardware_device"] = "d3d12va";
+    if (hardware_active && windows_device_type == 11) values["hardware_device"] = "d3d11va";
+#endif
     values["hardware_decoding"] = hardware_active.load();
     values["pinned_download"] = pinned_download.load();
     values["transfer"] = active_transfer.load() == 1 ? "pq" : active_transfer.load() == 2 ? "hlg" : "sdr";

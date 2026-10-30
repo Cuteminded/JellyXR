@@ -40,6 +40,9 @@ $compilerRoot = Get-Dependency 'llvm.zip' `
 $bindingsRoot = Get-Dependency 'godot-cpp.zip' `
     'https://github.com/godotengine/godot-cpp/archive/refs/tags/godot-4.5-stable.zip' `
     '0316EA168750B5F4F1CAEA6457657A6C64241F890F78E2F042AEE4BE2B1085BF' 'godot-cpp-godot-4.5-stable'
+$vulkanRoot = Get-Dependency 'vulkan-headers-1.4.321.zip' `
+    'https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v1.4.321.zip' `
+    'CACE1D5832FC00287C9B10B27577C41033B2C86434E884EEF5C8DCEA098D5118' 'vulkan-headers-1.4.321'
 $mpvRoot = Get-Dependency 'mpv-lgpl.zip' `
     'https://nightly.link/mpv-player/mpv/actions/runs/40835379230/libmpv-v0.41.0-dev-gcf764c61d-40835379230-x86_64-w64-mingw32-lgpl.zip' `
     '4AB059D0C6CE2FCCC239F14F54087F9411C60B680D40B7DCCA8CDA44EA6E8366' 'mpv-lgpl'
@@ -53,7 +56,7 @@ try {
     $env:PATH = (Join-Path $compilerRoot 'bin') + ';' + $env:PATH
     & $cmake --fresh -S (Join-Path $projectRoot 'native/pc') -B (Join-Path $buildRoot 'native') `
         -G 'MinGW Makefiles' '-DCMAKE_BUILD_TYPE=Release' '-DCMAKE_CXX_COMPILER=clang++' `
-        "-DGODOT_CPP_PATH=$bindingsRoot" "-DMPV_ROOT=$mpvRoot" "-DFFMPEG_ROOT=$ffmpegRoot" "-DPython3_EXECUTABLE=$Python"
+        "-DGODOT_CPP_PATH=$bindingsRoot" "-DMPV_ROOT=$mpvRoot" "-DFFMPEG_ROOT=$ffmpegRoot" "-DVULKAN_HEADERS_ROOT=$vulkanRoot" "-DPython3_EXECUTABLE=$Python"
     if ($LASTEXITCODE -ne 0) { throw 'PC video configuration failed.' }
     & $cmake --build (Join-Path $buildRoot 'native') --parallel $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'PC video compilation failed.' }

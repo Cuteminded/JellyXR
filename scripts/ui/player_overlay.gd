@@ -105,7 +105,7 @@ func _build_statistics(parent: Control) -> void:
 	statistics_panel.add_child(grid)
 	for key in ["Source video", "Playback resolution", "Playback", "Source codec", "Source bitrate", "Renderer / app FPS", "Player state", "Video decoder", "Hardware decoding", "Dropped frames", "Read ahead"]:
 		Widgets.label(key, grid, 20)
-		var value := Widgets.label("Not reported", grid, 20)
+		var value := Widgets.label("N/A", grid, 20)
 		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		value.custom_minimum_size.x = 210
 		value.clip_text = true
@@ -125,7 +125,7 @@ func _refresh_statistics() -> void:
 	if not statistics_provider.is_valid(): return
 	var values: Dictionary = statistics_provider.call()
 	for key in statistics_values:
-		statistics_values[key].text = str(values.get(key, "Not reported"))
+		statistics_values[key].text = str(values.get(key, "N/A"))
 
 func _add_control(label: String, action_name: String, icon_name: String, parent: Control) -> Button:
 	var button := Widgets.button("", func(): action.emit(action_name), parent)

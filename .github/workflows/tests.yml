@@ -77,7 +77,7 @@ jobs:
               tests/test_pc_initial_frame.gd|tests/test_pc_video_performance.gd|\
               tests/test_pc_video_recovery.gd|tests/test_pc_video_transitions.gd|\
               tests/test_pc_vulkan_video.gd|tests/test_pc_yuv_material.gd|\
-              tests/test_vaapi_bridge.gd)
+              tests/test_vaapi_bridge.gd|tests/test_d3d11_bridge.gd)
                 continue
                 ;;
             esac

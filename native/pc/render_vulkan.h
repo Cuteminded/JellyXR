@@ -5,6 +5,10 @@
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/classes/texture2drd.hpp>
 #include <chrono>
+#ifdef _WIN32
+#include "d3d11_godot.h"
+#include "d3d12_godot.h"
+#endif
 #ifdef __linux__
 #include "vaapi_godot.h"
 #endif
@@ -30,6 +34,10 @@ public:
 protected:
     static void _bind_methods() {}
 private:
+#ifdef _WIN32
+    D3D11Godot d3d11;
+    D3D12Godot d3d12;
+#endif
     void run_sync(void (RenderVulkan::*operation)());
     void dispatch_sync();
     void initialize_on_render_thread();

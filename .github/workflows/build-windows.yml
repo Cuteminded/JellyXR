@@ -18,7 +18,7 @@ jobs:
   build:
     name: Windows x64 build
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     defaults:
       run:
         shell: pwsh
@@ -35,6 +35,9 @@ jobs:
 
       - name: Build PC video plugin
         run: ./tools/build-pc-video.ps1 -Python (Get-Command python).Source
+
+      - name: Build Godot Windows video export template
+        run: ./tools/build-godot-windows-video.ps1 -Python (Get-Command python).Source -Jobs 4
 
       - name: Install Godot and export templates
         run: |
@@ -71,9 +74,16 @@ jobs:
           & $env:GODOT --headless --xr-mode off --main-pack dist/windows/jellyxr.pck --script tests/test_export_renderer.gd
           if ($LASTEXITCODE -ne 0) { throw 'Windows renderer settings check failed.' }
 
+      - name: Verify exported Windows GPU adapter
+        run: |
+          $testScript = (Resolve-Path tests/test_d3d11_bridge.gd).Path
+          $process = Start-Process -FilePath (Resolve-Path dist/windows/jellyxr.exe).Path -ArgumentList "--headless --xr-mode off --script `"$testScript`"" -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Windows GPU adapter is missing from the exported engine.' }
+
       - name: Copy Windows licenses
         run: |
           Copy-Item build/desktop/licenses dist/windows/ -Recurse -Force
+          Copy-Item build/desktop/templates/godot-license.txt, build/desktop/templates/godot-copyright.txt dist/windows/licenses/ -Force
           python tools/inspect-playback-libraries.py --bin-directory dist/windows --output dist/windows/library-report.json
           if ($LASTEXITCODE -ne 0) { throw 'Exported LGPL library verification failed.' }
 

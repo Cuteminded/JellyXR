@@ -1,8 +1,13 @@
 #include "video_decoder.h"
+#ifdef _WIN32
+#include "d3d11_gpu.h"
+#include "d3d12_gpu.h"
+#endif
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/time.h>
 #include <libavutil/mastering_display_metadata.h>
 #include <libswscale/swscale.h>
 }
@@ -107,6 +112,22 @@ bool VideoDecoder::download_planes(AVFrame *frame, VideoPlanes &output, bool pre
 }
 
 bool VideoDecoder::download_frame(VideoPlanes &output) {
+#ifdef _WIN32
+    if (output.d3d12_frame) {
+        int64_t started = av_gettime_relative();
+        bool result = download_planes(output.d3d12_frame->source.get(), output, false);
+        download_us += av_gettime_relative() - started;
+        output.d3d12_frame.reset();
+        return result;
+    }
+    if (output.d3d11_frame) {
+        int64_t started = av_gettime_relative();
+        bool result = download_planes(output.d3d11_frame->source.get(), output, false);
+        download_us += av_gettime_relative() - started;
+        output.d3d11_frame.reset();
+        return result;
+    }
+#endif
     if (!output.hardware_frame) return true;
     bool result = download_planes(output.hardware_frame.get(), output, false);
     output.hardware_frame.reset();

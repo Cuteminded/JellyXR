@@ -5,6 +5,10 @@ signal failed(message: String)
 signal stream_ready(url: String, source: Dictionary, start_ms: int)
 signal reporting_failed(message: String)
 
+const PC_VIDEO_CODECS := "h264,hevc,av1,vp8,vp9,mpeg2video,mpeg4,vc1,wmv3"
+const PC_AUDIO_CODECS := "aac,mp3,opus,vorbis,flac,alac,ac3,eac3,dts,truehd,mp2,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le"
+const PC_VIDEO_RANGES := "SDR|HDR10|HDR10Plus|HLG|DOVIWithHDR10|DOVIWithHDR10Plus|DOVIWithHLG|DOVIWithSDR"
+
 var api: JellyfinClient
 var settings: JellyXRSettings
 var active_playback_mode := "auto"
@@ -103,25 +107,31 @@ func is_hls() -> bool:
 	return protocol == "hls" or path.ends_with(".m3u8")
 
 func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
+	var native_pc := _uses_native_pc_decoder()
 	var direct_profile := {"Container": "mp4,m4v,mkv,webm", "Type": "Video"}
 	if not original:
-		direct_profile["VideoCodec"] = "h264,hevc,vp9"
-		direct_profile["AudioCodec"] = "aac,mp3,opus,vorbis"
+		direct_profile["VideoCodec"] = PC_VIDEO_CODECS if native_pc else "h264,hevc,vp9"
+		direct_profile["AudioCodec"] = PC_AUDIO_CODECS if native_pc else "aac,mp3,opus,vorbis"
 	var transcoding_profile := {"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}
 	var codec_conditions := [{"Condition": "Equals", "Property": "VideoRangeType", "Value": "SDR", "IsRequired": true}]
+	if native_pc and not transcode:
+		codec_conditions = [{"Condition": "EqualsAny", "Property": "VideoRangeType", "Value": PC_VIDEO_RANGES, "IsRequired": true}]
 	var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyXRSettings.TRANSCODE_PRESETS[1080])
 	transcoding_profile["Conditions"] = []
 	for limit in [["Width", str(preset.width)], ["Height", str(preset.height)], ["VideoFramerate", "30"], ["VideoBitrate", str(preset.bitrate)]]:
 		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
 	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {
-		"Name": ("jellyXR original " if original else "jellyXR SDR ") + OS.get_name(),
-		"MaxStreamingBitrate": 2147483647 if original else 80000000,
+		"Name": ("jellyXR original " if original else ("jellyXR native " if native_pc else "jellyXR SDR ")) + OS.get_name(),
+		"MaxStreamingBitrate": 2147483647 if original or native_pc else 80000000,
 		"DirectPlayProfiles": [] if transcode else [direct_profile],
 		"TranscodingProfiles": [] if original else [transcoding_profile],
 		"CodecProfiles": [] if original else [{"Type": "Video", "Conditions": codec_conditions}],
 		"SubtitleProfiles": [{"Format": "vtt", "Method": "External"}, {"Format": "pgssub", "Method": "Encode"}, {"Format": "dvdsub", "Method": "Encode"}, {"Format": "dvbsub", "Method": "Encode"}]
 	}
+
+func _uses_native_pc_decoder() -> bool:
+	return OS.get_name() in ["Windows", "Linux"] and ClassDB.class_exists("JellyXRMpv")
 
 func retry_transcode() -> void:
 	if active_playback_mode == "original":

@@ -39,7 +39,7 @@ def prepare(root):
         "\t\t\tenabled_device_extension_names.has(VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);\n\t}\n"
         "\tRenderingDeviceDriverVulkan(RenderingContextDriverVulkan *p_context_driver);"))
     changes.append(replace_once(root, "servers/rendering/rendering_device.h", "\tstruct Frame {",
-        "\tstruct JellyXRVideoJob { uint64_t record; uint64_t release; uint64_t userdata; };\n"
+        "\tstruct JellyXRVideoJob { uint64_t record; uint64_t release; uint64_t userdata; uint64_t sync[3] = {}; };\n"
         "\tstatic void _jellyxr_record(RDD *p_driver, RDD::CommandBufferID p_command, void *p_userdata);\n"
         "\tstruct Frame {\n\t\tList<JellyXRVideoJob *> jellyxr_video_jobs;"))
     # The header receives two independent additions in one staged update.
@@ -48,13 +48,15 @@ def prepare(root):
     if content.count(marker) != 1:
         raise RuntimeError("Missing Godot driver callback declaration")
     content = content.replace(marker, marker + "\n\tbool jellyxr_vaapi_available() const;\n"
-        "\tvoid jellyxr_vulkan_drain();\n\tError jellyxr_vulkan_queue_copy(uint64_t p_record, uint64_t p_release, uint64_t p_userdata, const Array &p_targets);", 1)
+        "\tbool jellyxr_d3d11_available() const;\n"
+        "\tbool jellyxr_d3d12_available() const;\n"
+        "\tvoid jellyxr_vulkan_drain();\n\tError jellyxr_vulkan_queue_copy(uint64_t p_record, uint64_t p_release, uint64_t p_userdata, const Array &p_targets, const Array &p_sync = Array());", 1)
     changes[-1] = target, content
     path = "servers/rendering/rendering_device.cpp"
     target = root / path
     content = target.read_text(encoding="utf-8")
     marker = '#include "rendering_device.h"'
-    content = content.replace(marker, marker + '\n#if defined(LINUXBSD_ENABLED) && defined(VULKAN_ENABLED)\n'
+    content = content.replace(marker, marker + '\n#if defined(VULKAN_ENABLED)\n'
         '#include "drivers/vulkan/rendering_device_driver_vulkan.h"\n#endif', 1)
     marker = "void RenderingDevice::_free_pending_resources(int p_frame) {"
     if content.count(marker) != 1:
@@ -69,8 +71,10 @@ def prepare(root):
         raise RuntimeError("Missing Godot method binding")
     content = content.replace(marker, implementation + "\n" + marker + "\n"
         '\tClassDB::bind_method(D_METHOD("jellyxr_vaapi_available"), &RenderingDevice::jellyxr_vaapi_available);\n'
+        '\tClassDB::bind_method(D_METHOD("jellyxr_d3d11_available"), &RenderingDevice::jellyxr_d3d11_available);\n'
+        '\tClassDB::bind_method(D_METHOD("jellyxr_d3d12_available"), &RenderingDevice::jellyxr_d3d12_available);\n'
         '\tClassDB::bind_method(D_METHOD("jellyxr_vulkan_drain"), &RenderingDevice::jellyxr_vulkan_drain);\n'
-        '\tClassDB::bind_method(D_METHOD("jellyxr_vulkan_queue_copy", "record", "release", "userdata", "targets"), &RenderingDevice::jellyxr_vulkan_queue_copy);', 1)
+        '\tClassDB::bind_method(D_METHOD("jellyxr_vulkan_queue_copy", "record", "release", "userdata", "targets", "sync"), &RenderingDevice::jellyxr_vulkan_queue_copy, DEFVAL(Array()));', 1)
     changes.append((target, content))
     for target, content in changes:
         target.write_text(content, encoding="utf-8", newline="\n")

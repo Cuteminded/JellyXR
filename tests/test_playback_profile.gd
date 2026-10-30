@@ -1,5 +1,10 @@
 extends SceneTree
 
+class PlatformSession extends PlaybackSession:
+	var native_pc := false
+	func _uses_native_pc_decoder() -> bool:
+		return native_pc
+
 class FixtureClient extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var direct := true
@@ -15,7 +20,7 @@ func _initialize() -> void:
 	call_deferred("run_checks")
 
 func run_checks() -> void:
-	var session := PlaybackSession.new()
+	var session := PlatformSession.new()
 	root.add_child(session)
 	var api := FixtureClient.new()
 	api.server = "https://fixture.invalid"
@@ -46,10 +51,38 @@ func run_checks() -> void:
 	await check_playback_choices(session, api, streams)
 	await check_transcode_resolutions(session, api, streams)
 	await check_media_versions(session, api, streams)
+	await check_native_pc_profile(session, api)
 	session.queue_free()
 	api.queue_free()
 	print("Playback profile checks: PASS")
 	quit()
+
+func check_native_pc_profile(session: PlatformSession, api: FixtureClient) -> void:
+	session.native_pc = true
+	session.settings.playback_mode = "auto"
+	api.sources = []
+	api.direct = true
+	await session.open({"Id": "native-video"})
+	var request: Dictionary = api.bodies.back()
+	var profile: Dictionary = request.DeviceProfile
+	assert(session.method == "DirectPlay" and request.EnableDirectPlay, "Native PC Automatic playback tries the original stream")
+	assert("av1" in str(profile.DirectPlayProfiles[0].VideoCodec).split(","), "Native PC advertises its AV1 decoder")
+	for codec in ["ac3", "eac3", "dts", "truehd", "flac"]:
+		assert(codec in str(profile.DirectPlayProfiles[0].AudioCodec).split(","), "Supported native audio does not force video conversion")
+	assert(request.MaxStreamingBitrate == 2147483647, "Native PC 8K files are not rejected by the old 80 Mbps cap")
+	var range_condition: Dictionary = profile.CodecProfiles[0].Conditions[0]
+	assert(range_condition.Condition == "EqualsAny", "Native PC advertises supported SDR and HDR ranges")
+	for video_range in ["SDR", "HDR10", "HDR10Plus", "HLG"]:
+		assert(video_range in str(range_condition.Value).split("|"), "Supported native HDR is eligible for direct playback")
+	assert("DOVI" not in str(range_condition.Value).split("|"), "Pure Dolby Vision is not advertised as supported")
+	var recovery := session._device_profile(true)
+	assert(recovery.DirectPlayProfiles.is_empty(), "Native decoder recovery still forces conversion")
+	assert(recovery.CodecProfiles[0].Conditions[0].Value == "SDR", "Native recovery still requests SDR output")
+	assert(recovery.TranscodingProfiles[0].Conditions == profile.TranscodingProfiles[0].Conditions, "Recovery keeps the configured conversion limits")
+	session.native_pc = false
+	var constrained := session._device_profile(false)
+	assert(constrained.MaxStreamingBitrate == 80000000 and constrained.CodecProfiles[0].Conditions[0].Value == "SDR", "Other platform profiles keep their existing limits")
+	assert("av1" not in str(constrained.DirectPlayProfiles[0].VideoCodec).split(","), "Native PC codec support does not change the Android profile")
 
 func check_media_versions(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
 	api.sources = [
