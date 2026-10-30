@@ -48,12 +48,6 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 To report results for a listed or unlisted device, [open an issue](https://github.com/Cuteminded/jellyframe/issues). Include the device, operating system, app version, and what you tested.
 
-## Current limitations
-
-Linux 8K playback can drop frames while copying decoded video between VAAPI and Vulkan. This also occurred with the previous GPL playback libraries.
-
-Linux ARM64 builds still need headset testing. Other untested devices are listed in the hardware table.
-
 ## Licence
 
 jellyXR is licensed under [Apache License, Version 2.0](LICENSE)
