@@ -1,0 +1,100 @@
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  headless:
+    name: Linux headless tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install test and build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+
+      - name: Run native playback checks
+        run: |
+          for test in tests/test_*.cpp; do
+            executable="$RUNNER_TEMP/$(basename "$test" .cpp)"
+            c++ -std=c++17 -Wall -Wextra "$test" -o "$executable"
+            "$executable"
+          done
+
+      - name: Run Python unit tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Build PC video plugin
+        run: bash tools/build-pc-video.sh
+
+      - name: Install Godot
+        run: |
+          release="${GODOT_VERSION}-stable"
+          base_url="https://github.com/godotengine/godot-builds/releases/download/${release}"
+          curl --fail --location --retry 3 "${base_url}/Godot_v${release}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          mv "$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          chmod +x "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+
+      - name: Import Godot project
+        run: |
+          mkdir -p build/test-results
+          timeout 120 godot --headless --xr-mode off --path . --editor --import --quit 2>&1 | tee build/test-results/import.log
+          if grep -q 'SCRIPT ERROR:' build/test-results/import.log; then
+            exit 1
+          fi
+
+      - name: Run headless Godot tests
+        run: |
+          failed=0
+          for test in tests/test_*.gd; do
+            case "$test" in
+              tests/test_android_video_transitions.gd|tests/test_controller_depth.gd|\
+              tests/test_export_renderer.gd|tests/test_steamvr_video.gd|\
+              tests/test_pc_gpu_video.gd|tests/test_pc_hdr_video.gd|\
+              tests/test_pc_initial_frame.gd|tests/test_pc_video_performance.gd|\
+              tests/test_pc_video_recovery.gd|tests/test_pc_video_transitions.gd|\
+              tests/test_pc_vulkan_video.gd|tests/test_pc_yuv_material.gd)
+                continue
+                ;;
+            esac
+            echo "::group::$test"
+            log="build/test-results/$(basename "$test" .gd).log"
+            if ! timeout 90 godot --headless --xr-mode off --audio-driver Dummy --path . --script "$test" 2>&1 | tee "$log"; then
+              echo "::error file=$test::Test failed or timed out"
+              failed=1
+            elif grep -q 'SCRIPT ERROR:' "$log"; then
+              echo "::error file=$test::Godot reported a script error"
+              failed=1
+            fi
+            echo '::endgroup::'
+          done
+          exit "$failed"
+
+      - name: Test authenticated HTTP playback
+        run: python3 tests/test_pc_streaming.py --godot "$(command -v godot)"
+
+      - name: Test Linux C++ runtime initialization
+        run: python3 tests/test_linux_cpp_runtime.py --godot "$(command -v godot)"
