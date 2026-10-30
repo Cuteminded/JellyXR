@@ -52,3 +52,12 @@ To report results for a listed or unlisted device, [open an issue](https://githu
 
 jellyXR is licensed under [Apache License, Version 2.0](LICENSE)
 Third-party components retain their own licenses. See [Licence and attribution](LICENSING.md) for details.
+
+## Usage of AI
+
+AI serves as a development aid, not as a replacement for human development. Project decisions, implementation and final review remain under my control
+
+AI is used in jellyXR for some supporting tasks, such as 
+- Writing test scripts
+- Generating temporary placeholder media
+- Summarizing lengthy crash logs to assist with debugging
