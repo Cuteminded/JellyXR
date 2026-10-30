@@ -100,6 +100,10 @@ func run_checks() -> void:
 	check(app.world.panoramic and app.screen.mesh == null, "Stream opening applies automatic 360 detection")
 	await app._play_stream("", {"Path": "Normal.mp4"}, 0)
 	check(not app.world.panoramic and app.screen.mesh != null, "An ordinary stream returns to screen mode")
+	await app._play_stream("", {"Path": "Movie.3D.HTAB.mkv", "MediaStreams": [{"Type": "Video", "Width": 1920, "Height": 1080}]}, 0)
+	check(app.mode == Stereo.Mode.HALF_TOP_BOTTOM, "Stream opening detects Jellyfin HTAB")
+	check(app.material.get_shader_parameter("stereo") == true and app.material.get_shader_parameter("top_bottom") == true, "Half top-bottom enables per-eye vertical sampling")
+	check(is_equal_approx(app.screen.mesh.get_aabb().size.x / app.screen.mesh.get_aabb().size.y, 16.0 / 9.0), "Half top-bottom keeps the intended screen aspect")
 	await check_180_playback(app)
 	app.playing = false
 	app.queue_free()

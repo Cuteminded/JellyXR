@@ -241,7 +241,7 @@ func _build_video_format(parent: VBoxContainer) -> void:
 	stereo_choices.add_theme_constant_override("h_separation", 12)
 	parent.add_child(stereo_choices)
 	var group := ButtonGroup.new()
-	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS], ["Top-bottom", Stereo.Mode.TOP_BOTTOM]]:
+	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS], ["Top-bottom", Stereo.Mode.TOP_BOTTOM], ["Half top-bottom", Stereo.Mode.HALF_TOP_BOTTOM]]:
 		_choice(entry[0], entry[1] == stereo_mode, group, stereo_choices, func(): stereo_mode = entry[1]; stereo_selected.emit(entry[1]))
 	var swap := CheckButton.new()
 	swap.text = "Swap left and right eyes"

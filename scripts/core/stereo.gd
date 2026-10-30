@@ -1,7 +1,7 @@
 class_name Stereo
 extends RefCounted
 
-enum Mode { MONO, HALF_SBS, FULL_SBS, TOP_BOTTOM }
+enum Mode { MONO, HALF_SBS, FULL_SBS, TOP_BOTTOM, HALF_TOP_BOTTOM }
 
 static func detect(source: Dictionary) -> Mode:
 	var format := str(source.get("Video3DFormat", "")).to_lower()
@@ -9,10 +9,23 @@ static func detect(source: Dictionary) -> Mode:
 		return Mode.HALF_SBS
 	if format in ["fullsbs", "fullsidebyside"]:
 		return Mode.FULL_SBS
+	if format == "halftopandbottom":
+		return Mode.HALF_TOP_BOTTOM
 	if format in ["fulltopandbottom", "topandbottom", "topbottom"]:
 		return Mode.TOP_BOTTOM
+	if format == "mvc":
+		return Mode.MONO
 	var filename := str(source.get("Path", "")).get_file().to_lower()
 	var pattern := RegEx.new()
+	pattern.compile("(?:^|[ ._\\-])3d[ ._\\-](hsbs|fsbs|htab|ftab|mvc)(?:$|[ ._\\-])")
+	var jellyfin_match := pattern.search(filename)
+	if jellyfin_match:
+		match jellyfin_match.get_string(1):
+			"hsbs": return Mode.HALF_SBS
+			"fsbs": return Mode.FULL_SBS
+			"htab": return Mode.HALF_TOP_BOTTOM
+			"ftab": return Mode.TOP_BOTTOM
+			"mvc": return Mode.MONO
 	pattern.compile("(?i)(?:^|[ ._\\-])(h(?:alf)?[ ._\\-]?sbs|f(?:ull)?[ ._\\-]?sbs)(?:$|[ ._\\-])")
 	var match_result := pattern.search(filename)
 	if match_result:
@@ -20,6 +33,9 @@ static func detect(source: Dictionary) -> Mode:
 	pattern.compile("(?i)(?:^|[ ._\\-])(?:tb|ou|top[ ._\\-]?bottom|over[ ._\\-]?under)(?:$|[ ._\\-])")
 	if pattern.search(filename): return Mode.TOP_BOTTOM
 	return Mode.MONO
+
+static func is_top_bottom(mode: Mode) -> bool:
+	return mode in [Mode.TOP_BOTTOM, Mode.HALF_TOP_BOTTOM]
 
 static func aspect(width: int, height: int, mode: Mode) -> float:
 	if width <= 0 or height <= 0:

@@ -3,6 +3,7 @@ extends SceneTree
 var failures := 0
 
 func _initialize() -> void:
+	check_jellyfin_3d()
 	check(Stereo.detect({"Video3DFormat": "HalfSideBySide"}) == Stereo.Mode.HALF_SBS, "Jellyfin half-SBS enum")
 	check(Stereo.detect({"Video3DFormat": "FullSideBySide"}) == Stereo.Mode.FULL_SBS, "Jellyfin full-SBS enum")
 	check(Stereo.detect({"Video3DFormat": "HalfSBS"}) == Stereo.Mode.HALF_SBS, "Half-SBS metadata")
@@ -31,6 +32,25 @@ func _initialize() -> void:
 	api.free()
 	print("Core checks: %s" % ("PASS" if failures == 0 else "%d FAILED" % failures))
 	quit(1 if failures else 0)
+
+func check_jellyfin_3d() -> void:
+	var formats := {"HSBS": Stereo.Mode.HALF_SBS, "FSBS": Stereo.Mode.FULL_SBS, "HTAB": Stereo.Mode.HALF_TOP_BOTTOM, "FTAB": Stereo.Mode.TOP_BOTTOM, "MVC": Stereo.Mode.MONO}
+	for tag in formats:
+		for separator in [" ", "-", ".", "_"]:
+			for prefix in ["Awesome Movie (2022)", "Series S01E01 Title", "Movie (2022) -"]:
+				var filename: String = prefix + separator + "3d" + separator + tag + ".mkv"
+				check(Stereo.detect({"Path": filename}) == formats[tag], "Jellyfin filename: " + filename)
+		check(Stereo.detect({"Path": "3D." + tag.to_lower()}) == formats[tag], "Filename boundary: " + tag)
+	check(Stereo.detect({"Path": "Movie.3D_hTaB.mp4"}) == Stereo.Mode.HALF_TOP_BOTTOM, "Mixed separators and case")
+	for filename in ["/Movie.3D.HTAB/Movie.mkv", "C:\\Movie.3D.FTAB\\Movie.mkv", "Movie.3D.HTABextra.mkv", "Movie.x3D.FTAB.mkv", "Movie[3D][HTAB].mkv", "Movie.HTAB.mkv", "Movie.FTAB.mkv", "Movie.3D.mkv"]:
+		check(Stereo.detect({"Path": filename}) == Stereo.Mode.MONO, "Avoid false 3D detection: " + filename)
+	check(Stereo.detect({"Video3DFormat": "HalfTopAndBottom"}) == Stereo.Mode.HALF_TOP_BOTTOM, "Jellyfin half top-bottom metadata")
+	check(Stereo.detect({"Video3DFormat": "FullTopAndBottom"}) == Stereo.Mode.TOP_BOTTOM, "Jellyfin full top-bottom metadata")
+	check(Stereo.detect({"Video3DFormat": null, "Path": "Movie.3D.HTAB.mkv"}) == Stereo.Mode.HALF_TOP_BOTTOM, "Missing metadata falls back to filename")
+	check(Stereo.detect({"Video3DFormat": "HalfTopAndBottom", "Path": "Movie.3D.FSBS.mkv"}) == Stereo.Mode.HALF_TOP_BOTTOM, "Metadata takes priority over filename")
+	check(Stereo.detect({"Video3DFormat": "MVC", "Path": "Movie.3D.HSBS.mkv"}) == Stereo.Mode.MONO, "MVC is not treated as packed SBS")
+	check(is_equal_approx(Stereo.aspect(1920, 1080, Stereo.Mode.HALF_TOP_BOTTOM), 16.0 / 9.0), "Half top-bottom restores eye proportions")
+	check(is_equal_approx(Stereo.aspect(1920, 2160, Stereo.Mode.TOP_BOTTOM), 16.0 / 9.0), "Full top-bottom preserves eye proportions")
 
 func check(condition: bool, message: String) -> void:
 	if not condition:

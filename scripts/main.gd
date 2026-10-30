@@ -650,7 +650,7 @@ func _resize_screen() -> void:
 	var curvature := 0.0 if fixed_screen or panoramic else settings.curvature
 	screen.mesh = null if panoramic else Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
-	material.set_shader_parameter("top_bottom", mode == Stereo.Mode.TOP_BOTTOM)
+	material.set_shader_parameter("top_bottom", Stereo.is_top_bottom(mode))
 	player_overlay.fit_screen(dimensions.x, aspect_ratio, curvature)
 	world.player_loading.fit_screen(dimensions.x, curvature)
 	world.skip_screen_size = Vector3(dimensions.x, aspect_ratio, curvature)
