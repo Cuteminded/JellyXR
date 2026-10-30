@@ -24,6 +24,13 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 ## Hardware status
 
+| Runtime | Status | Build | Tested version | Notes |
+|---|---|---|---|---|
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.1.4 | Tested on a Steam Machine. 8K playback can drop frames. |
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.1.4 ||
+
+### Standalone headsets
+
 | Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
 | [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.1.3 | Testing depends on access to a borrowed headset. |
@@ -32,10 +39,12 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 | [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
 | [Xreal aura](https://www.xreal.com/aura) | Waiting for device | * | * | Not yet released in Europe |
 | [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Waiting for device | * | * | On reservation queue |
-| [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.1.4 | Tested on a Steam Machine. 8K playback can drop frames. |
-| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.1.3 ||
 
+### Hardware through SteamVR
 
+| Device | Status | Build | Tested version | Notes |
+|---|---|---|---|---|
+| [PSVR 2](https://www.playstation.com/ps-vr2) | Working | Windows X64 | 0.1.3 | Tested by [@jpablomsan](https://github.com/Cuteminded/JellyXR/issues/7) |
 
 To report results for a listed or unlisted device, [open an issue](https://github.com/Cuteminded/jellyframe/issues). Include the device, operating system, app version, and what you tested.
 
