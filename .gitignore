@@ -10,6 +10,7 @@ export_credentials.cfg
 build/
 dist/
 docs/
+testmedia/**
 android/build/
 android/.build_version
 native/local.properties
