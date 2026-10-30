@@ -117,6 +117,7 @@ func _setup_ui() -> void:
 	keyboard.hide()
 
 func _clear_page(keep_browsing_return: bool = false) -> void:
+	shell.set_content_loading(false)
 	if not keep_browsing_return and is_instance_valid(browsing_return_page):
 		browsing_return_page.queue_free()
 		browsing_return_page = null
@@ -274,6 +275,7 @@ func _toggle_panel() -> void:
 
 func _open_library(id: String, title: String) -> void:
 	_clear_page()
+	var loading_page := {"generation": page_generation}
 	shell.set_signed_in(true)
 	shell.select(id, title)
 	var library := LibraryView.new()
@@ -288,6 +290,12 @@ func _open_library(id: String, title: String) -> void:
 			browsing_return_status = message
 		else:
 			status.text = message)
+	library.loading_changed.connect(func(loading: bool):
+		if library.get_parent() != page: return
+		if loading: loading_page.generation = page_generation
+		if loading_page.generation != page_generation: return
+		if loading: shell.set_content_loading(true)
+		else: shell.finish_content_loading())
 	library.selected.connect(_details)
 	page.add_child(library)
 	library.field.focus_entered.connect(func(): keyboard.edit.call_deferred(library.field))
@@ -317,14 +325,17 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 		return
 	page_generation += 1
 	var current := page_generation
-	status.text = "Loading details..."
+	status.text = ""
+	shell.set_content_loading(true)
 	var result := await api.details(item.Id)
 	if current != page_generation: return
 	if not result.ok:
+		shell.set_content_loading(false)
 		status.text = result.error
 		return
 	var detail: Dictionary = result.data
 	_clear_page()
+	shell.set_content_loading(true)
 	var view := DetailsView.new()
 	view.item = detail
 	view.api = api
@@ -336,6 +347,7 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	view.back_requested.connect(_show_library)
 	page.add_child(view)
 	status.text = "Ready."
+	shell.finish_content_loading()
 
 func _show_photo(item: Dictionary) -> void:
 	page_generation += 1
@@ -436,14 +448,24 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 	world.set_panoramic(false)
 	_resize_screen()
 	status.text = "Preparing playback..."
+	var generation := countdown_generation
+	var selected := item
+	if not item.has("MoviePartItems") and (MovieParts.is_multipart(item) or (item.get("Type", "") in ["Movie", "Video"] and not requested_source.is_empty())):
+		var result := await api.movie_parts(item)
+		if generation != countdown_generation: return
+		if not result.ok:
+			status.text = "Could not load movie parts. " + str(result.get("error", "Try again."))
+			panel.show()
+			return
+		if result.data.Items.size() > 1:
+			selected = MovieParts.select(result.data.Items, 0, str(item.Id))
 	playing = true
 	screen.show()
 	_show_playback()
 	player_overlay.title.text = DetailsMetadata.title(item, "Now playing")
 	media_segments.load_item(api, str(item.Id))
-	var selected := item
 	if from_start:
-		selected = item.duplicate(true)
+		selected = selected.duplicate(true)
 		if not selected.get("UserData") is Dictionary: selected.UserData = {}
 		selected.UserData.PlaybackPositionTicks = 0
 	await session.open(selected)
@@ -537,6 +559,7 @@ func _player_action(action: String) -> void:
 		"hide": player_overlay.hide()
 
 func _return_to_title() -> void:
+	shell.set_content_loading(false)
 	if is_instance_valid(browsing_return_page): _restore_browsing_page()
 	if photo_active:
 		_show_library()
@@ -546,6 +569,7 @@ func _return_to_title() -> void:
 		_show_library()
 		return
 	var target_id := str(item.get("SeriesId", "")) if item.get("Type", "") == "Episode" else str(item.Id)
+	if item.has("MovieParentId"): target_id = str(item.MovieParentId)
 	if target_id.is_empty(): target_id = str(item.Id)
 	var season: Dictionary = {}
 	if item.get("Type", "") == "Episode" and item.get("SeasonId"):
@@ -771,6 +795,13 @@ func _ended() -> void:
 	var generation := countdown_generation + 1
 	await _stop(false, true)
 	if generation != countdown_generation: return
+	if previous.has("MoviePartItems"):
+		var next_part := MovieParts.next(previous)
+		if next_part.is_empty():
+			_show_library()
+		else:
+			await _start(next_part, true)
+		return
 	if previous.get("Type", "") != "Episode":
 		_show_library()
 		return

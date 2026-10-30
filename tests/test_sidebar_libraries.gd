@@ -7,6 +7,19 @@ func run_checks() -> void:
 	var shell := UiShell.new()
 	root.add_child(shell)
 	shell.set_signed_in(true)
+	shell.set_content_loading(true)
+	shell.finish_content_loading()
+	assert(shell.content_loading.visible, "The spinner remains visible after content arrives")
+	await create_timer(0.50).timeout
+	assert(not shell.content_loading.visible and shell.main_content.visible, "The content appears after the extra loading delay")
+	shell.set_content_loading(true)
+	shell.finish_content_loading()
+	await create_timer(0.20).timeout
+	shell.set_content_loading(false)
+	shell.set_content_loading(true)
+	await create_timer(0.25).timeout
+	assert(shell.content_loading.visible, "An older reveal timer cannot hide a newer loading state")
+	shell.set_content_loading(false)
 	var items: Array = []
 	for kind in ["movies", "tvshows", "homevideos", "mixed", "music", "musicvideos", "photos", "books", "livetv", "playlists", "boxsets", "future-type"]:
 		items.append({"Id": kind, "Name": kind.capitalize(), "CollectionType": kind})

@@ -26,6 +26,7 @@ var backdrop: TextureRect
 var cast_carousel: CastCarousel
 var series_playback_status: Label
 var series_playback_loading := false
+var movie_parts_view: MoviePartsView
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 18)
@@ -48,6 +49,12 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 28)
 	scroll.add_child(body)
 	_build_header()
+	if MovieParts.is_multipart(item):
+		movie_parts_view = MoviePartsView.new()
+		movie_parts_view.api = api
+		movie_parts_view.item = item
+		movie_parts_view.play_requested.connect(func(part: Dictionary): play_requested.emit(part))
+		body.add_child(movie_parts_view)
 	_build_information()
 	if item.get("Type", "") == "Series":
 		series_browser = SeriesBrowser.new()

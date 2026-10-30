@@ -74,6 +74,10 @@ func run_checks() -> void:
 	check(last_request.begins_with("GET /jellyfin/UserViews?") and "UserId=fixture-user" in last_request, "Sidebar loads the signed-in user's libraries")
 	await api.seasons("show id")
 	check(last_request.begins_with("GET /jellyfin/Shows/show%20id/Seasons?"), "Seasons load from the selected series with an escaped ID")
+	payload = '{"Items":[{"Id":"part-two","Type":"Movie"}]}'
+	result = await api.movie_parts({"Id": "movie id", "Type": "Movie"})
+	check(result.ok and result.data.Items.size() == 2 and result.data.Items[1].Id == "part-two", "Multipart responses include the main movie followed by additional parts")
+	check(last_request.begins_with("GET /jellyfin/Videos/movie%20id/AdditionalParts?") and "UserId=fixture-user" in last_request, "Multipart requests preserve the server base path and escape the movie ID")
 	payload = '{"Items":[{"Id":"next","UserData":{"PlaybackPositionTicks":100}}]}'
 	result = await api.next_up("show & id")
 	check(result.ok and last_request.begins_with("GET /jellyfin/Shows/NextUp?") and "SeriesId=show%20%26%20id" in last_request and "UserId=fixture-user" in last_request, "Next Up is scoped to the selected series and signed-in user")

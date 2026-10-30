@@ -2,6 +2,14 @@ extends SceneTree
 
 class FixtureApi extends JellyfinClient:
 	var detail_calls: Array[String] = []
+	var hold_details := false
+	var fail_details := false
+	var hold_library := false
+	var hold_resume := false
+	var fail_library := false
+	signal release_details
+	signal release_library
+	signal release_resume
 	var seasons_list := [{"Id": "season-one", "Name": "Season 1", "IndexNumber": 1}, {"Id": "season-two", "Name": "Season 2", "IndexNumber": 2}]
 
 	func request(_path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
@@ -10,8 +18,19 @@ class FixtureApi extends JellyfinClient:
 
 	func details(id: String) -> Dictionary:
 		detail_calls.append(id)
+		if hold_details: await release_details
 		await get_tree().process_frame
+		if fail_details: return {"ok": false, "error": "Details unavailable."}
 		return {"ok": true, "data": {"Id": id, "Name": "Selected series" if id == "show" else "Selected movie", "Type": "Series" if id == "show" else "Movie", "MediaSources": [], "UserData": {"PlaybackPositionTicks": 7200000000}}}
+
+	func library(_term: String = "", _offset: int = 0, _parent: String = "") -> Dictionary:
+		if hold_library: await release_library
+		if fail_library: return {"ok": false, "error": "Library unavailable."}
+		return await request("/Items")
+
+	func resume_items() -> Dictionary:
+		if hold_resume: await release_resume
+		return await request("/Resume")
 
 	func seasons(_series_id: String) -> Dictionary:
 		await get_tree().process_frame
@@ -51,6 +70,7 @@ func run_checks() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	app.set_process(false)
+	app.shell.content_reveal_delay = 0.0
 	app.api.queue_free()
 	app.video.queue_free()
 	app.session.queue_free()
@@ -68,6 +88,77 @@ func run_checks() -> void:
 	app.libraries_loaded = true
 	app.shell.set_libraries([{"Id": "movies", "Name": "Movies", "CollectionType": "movies"}])
 	var library_button: Button = app.shell.buttons["movies"]
+	api.hold_library = true
+	api.hold_resume = true
+	app._open_library("", "Home")
+	await settle()
+	check(app.shell.content_loading.is_visible_in_tree() and app.shell.status.text.is_empty(), "Home shows the text-free spinner while Continue Watching loads")
+	api.release_resume.emit()
+	await settle()
+	check(app.shell.content_loading.visible, "Home keeps the spinner while the main library request is pending")
+	if "--capture-library-loading" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		app.viewport.get_texture().get_image().save_png("res://dist/library-loading-preview.png")
+	api.release_library.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.main_content.visible, "Home content replaces the spinner after both requests finish")
+	api.hold_resume = false
+	for id in ["movies", "shows"]:
+		app._open_library(id, id.capitalize())
+		await settle()
+		check(app.shell.content_loading.visible, "Opening %s shows the shared spinner" % id)
+		api.release_library.emit()
+		await settle()
+		check(not app.shell.content_loading.visible, "Loading %s hides the spinner" % id)
+	api.fail_library = true
+	app._open_library("movies", "Movies")
+	api.release_library.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.status.text == "Library unavailable.", "Failed libraries reveal their error and retry control")
+	var failed_library: LibraryView = app.page.get_child(0)
+	failed_library.content.get_child(0).pressed.emit()
+	await settle()
+	check(app.shell.content_loading.visible, "Retrying the first library page shows the spinner again")
+	api.fail_library = false
+	api.release_library.emit()
+	await settle()
+	check(not app.shell.content_loading.visible, "A successful retry removes the spinner")
+	app._open_library("movies", "Movies")
+	await settle()
+	app._screen_settings()
+	api.release_library.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.heading.text == "Settings", "A late library response cannot change the loading state of another page")
+	app._open_library("movies", "Movies")
+	api.hold_details = true
+	app._details({"Id": "movie", "Type": "Movie"})
+	await settle()
+	check(app.shell.content_loading.is_visible_in_tree() and not app.shell.main_content.visible, "Opening details shows a spinner and hides the previous content")
+	api.release_library.emit()
+	await settle()
+	check(app.shell.content_loading.visible, "A library response cannot hide the spinner of a newer details request")
+	api.hold_library = false
+	check(app.shell.content_loading.get_child_count() == 1 and not app.shell.status.is_visible_in_tree(), "The loading state contains only a spinner without visible text")
+	if "--capture-details-loading" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		app.viewport.get_texture().get_image().save_png("res://dist/details-loading-preview.png")
+	api.release_details.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.main_content.visible and app.page.get_child(0) is DetailsView, "Loaded details replace the spinner")
+	api.fail_details = true
+	app._details({"Id": "failed", "Type": "Movie"})
+	api.release_details.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.status.text == "Details unavailable.", "Failed details hide the spinner and show the error")
+	api.fail_details = false
+	app._details({"Id": "cancelled", "Type": "Movie"})
+	await settle()
+	app._screen_settings()
+	api.release_details.emit()
+	await settle()
+	check(not app.shell.content_loading.visible and app.shell.heading.text == "Settings", "Navigation cancels loading and ignores late details")
+	api.hold_details = false
+	api.detail_calls.clear()
 	app._open_library("movies", "Movies")
 	await settle()
 	var browsing: LibraryView = app.page.get_child(0)
