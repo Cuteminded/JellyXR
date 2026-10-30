@@ -3,6 +3,7 @@ extends VBoxContainer
 
 signal selected(item: Dictionary)
 signal status(message: String)
+signal loading_changed(loading: bool)
 var api: JellyfinClient
 var library_id := ""
 var library_name := "Home"
@@ -56,7 +57,8 @@ func refresh(term: String = "") -> void:
 	for child in content.get_children():
 		content.remove_child(child)
 		child.queue_free()
-	status.emit("Loading " + library_name.to_lower() + "...")
+	status.emit("")
+	loading_changed.emit(true)
 	if term.is_empty() and library_id.is_empty():
 		var resume := await api.resume_items()
 		if current != generation: return
@@ -74,9 +76,13 @@ func _more(current: int) -> void:
 	if current != generation: return
 	if not result.ok:
 		busy = false
+		if offset == 0: loading_changed.emit(false)
 		status.emit(result.error)
 		var retry := Widgets.button("Retry", func(): pass, content)
-		retry.pressed.connect(func(): retry.queue_free(); _more(current))
+		retry.pressed.connect(func():
+			retry.queue_free()
+			if offset == 0: loading_changed.emit(true)
+			_more(current))
 		return
 	var items: Array = result.data.get("Items", [])
 	if offset == 0:
@@ -89,6 +95,7 @@ func _more(current: int) -> void:
 			content.move_child(hero, 0)
 		Widgets.label(("Recently Added" if library_id.is_empty() else library_name) if search.is_empty() else "Search results", content, 28)
 	_cards(items)
+	if offset == 0: loading_changed.emit(false)
 	offset += items.size()
 	status.emit("%d titles loaded" % offset if offset > 0 else "No matching titles.")
 	has_more = not items.is_empty() and offset < int(result.data.get("TotalRecordCount", offset))

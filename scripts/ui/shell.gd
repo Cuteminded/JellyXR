@@ -21,6 +21,10 @@ var settings_mode := false
 var buttons: Dictionary = {}
 var rail_background: StyleBoxFlat
 var main_background: StyleBoxFlat
+var main_content: VBoxContainer
+var content_loading: CenterContainer
+var content_reveal_delay := 0.40
+var loading_generation := 0
 
 func _ready() -> void:
 	theme = Widgets.theme()
@@ -75,6 +79,7 @@ func _ready() -> void:
 	main.add_theme_stylebox_override("panel", main_background)
 	add_child(main)
 	var body := VBoxContainer.new()
+	main_content = body
 	body.add_theme_constant_override("separation", 18)
 	main.add_child(body)
 	heading = Widgets.label("", body, 34)
@@ -85,7 +90,25 @@ func _ready() -> void:
 	status = Widgets.label("", body, 18)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.add_theme_color_override("font_color", Color("a4aec0"))
+	content_loading = CenterContainer.new()
+	main.add_child(content_loading)
+	var spinner := PlayerLoading.Spinner.new()
+	spinner.custom_minimum_size = Vector2(64, 64)
+	spinner.accessibility_name = "Loading content"
+	content_loading.add_child(spinner)
+	content_loading.hide()
 	set_signed_in(false)
+
+func set_content_loading(loading: bool) -> void:
+	loading_generation += 1
+	main_content.visible = not loading
+	content_loading.visible = loading
+
+func finish_content_loading() -> void:
+	if not content_loading.visible: return
+	var current := loading_generation
+	await get_tree().create_timer(content_reveal_delay).timeout
+	if current == loading_generation: set_content_loading(false)
 
 func set_signed_in(value: bool) -> void:
 	set_settings_mode(false)

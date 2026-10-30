@@ -133,6 +133,22 @@ func resume_items() -> Dictionary:
 func details(id: String) -> Dictionary:
 	return await request("/Users/%s/Items/%s" % [user_id, id.uri_encode()])
 
+func movie_parts(item: Dictionary) -> Dictionary:
+	var id := str(item.get("SelectedMediaSourceId", ""))
+	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
+	if id.is_empty() and not sources.is_empty(): id = str(sources[0].get("Id", ""))
+	if id.is_empty(): id = str(item.Id)
+	var result := await request("/Videos/%s/AdditionalParts" % id.uri_encode() + query({"UserId": user_id}))
+	if not result.ok: return result
+	var parts: Array = [item.duplicate(true)]
+	var seen := {str(item.Id): true, id: true}
+	for part in result.data.get("Items", []):
+		var part_id := str(part.get("Id", ""))
+		if part_id.is_empty() or seen.has(part_id): continue
+		seen[part_id] = true
+		parts.append(part.duplicate(true))
+	return {"ok": true, "data": {"Items": parts}}
+
 func set_watched(id: String, watched: bool) -> Dictionary:
 	return await request("/Users/%s/PlayedItems/%s" % [user_id.uri_encode(), id.uri_encode()], HTTPClient.METHOD_POST if watched else HTTPClient.METHOD_DELETE)
 
