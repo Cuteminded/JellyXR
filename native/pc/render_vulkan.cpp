@@ -30,6 +30,11 @@ void RenderVulkan::dispatch_sync() {
 void RenderVulkan::initialize_on_render_thread() {
     device = RenderingServer::get_singleton()->get_rendering_device();
     if (!device) { render_error = MPV_ERROR_UNSUPPORTED; return; }
+#ifdef __linux__
+    vaapi_available = vaapi.initialize(device);
+    decoder.enable_vaapi_frames(vaapi_available);
+    decoder.set_vaapi_device(vaapi_available ? vaapi.render_node() : "");
+#endif
 }
 
 int RenderVulkan::start(String url, String authorization, int64_t start_ms) {
@@ -57,7 +62,8 @@ bool RenderVulkan::create_textures() {
     Ref<RDTextureFormat> format;
     format.instantiate();
     format->set_texture_type(RenderingDevice::TEXTURE_TYPE_2D);
-    format->set_usage_bits(RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT | RenderingDevice::TEXTURE_USAGE_CAN_UPDATE_BIT);
+    format->set_usage_bits(RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT | RenderingDevice::TEXTURE_USAGE_CAN_UPDATE_BIT |
+        RenderingDevice::TEXTURE_USAGE_CAN_COPY_TO_BIT);
     Ref<RDTextureView> view;
     view.instantiate();
     for (int index = 0; index < frame.plane_count; ++index) {
@@ -115,6 +121,21 @@ void RenderVulkan::present_frame() {
         render_error = MPV_ERROR_NOMEM;
         return;
     }
+#ifdef __linux__
+    if (frame.hardware_frame && vaapi_available) {
+        if (vaapi.copy(frame, planes)) {
+            frame.hardware_frame.reset();
+            frame.exported_frame.reset();
+            return;
+        }
+        vaapi_available = false;
+        decoder.enable_vaapi_frames(false);
+    }
+#endif
+    if (!decoder.download_frame(frame)) {
+        render_error = MPV_ERROR_GENERIC;
+        return;
+    }
     for (int index = 0; index < frame.plane_count; ++index) {
         if (device->texture_update(planes[index], 0, frame.planes[index].data()) != OK) {
             render_error = MPV_ERROR_GENERIC;
@@ -137,6 +158,14 @@ Dictionary RenderVulkan::diagnostics() const {
     Dictionary values = decoder.diagnostics();
     uint64_t count = presented_frames.load();
     values["direct_yuv"] = true;
+#ifdef __linux__
+    values["vaapi_gpu_available"] = vaapi_available.load();
+    values["vaapi_gpu_copy"] = vaapi_available.load() && vaapi.copies() > 0;
+    values["vaapi_gpu_frames"] = int64_t(vaapi.copies());
+    values["vaapi_inflight_frames"] = int64_t(vaapi.outstanding());
+    values["vaapi_fallback_reason"] = String(vaapi.failure().c_str());
+    values["vaapi_render_node"] = String(vaapi.render_node().c_str());
+#endif
     values["presented_frames"] = int64_t(count);
     values["presentation_ms"] = count ? double(presentation_us.load()) / count / 1000.0 : 0;
     return values;
@@ -148,6 +177,9 @@ int RenderVulkan::error() const {
 
 void RenderVulkan::destroy_on_render_thread() {
     if (!device) return;
+#ifdef __linux__
+    if (vaapi.outstanding() > 0) device->call("jellyxr_vulkan_drain");
+#endif
     destroy_textures();
     device = nullptr;
 }

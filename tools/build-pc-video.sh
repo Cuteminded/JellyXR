@@ -40,6 +40,10 @@ if ! pkg-config --exists 'libavcodec >= 60' 'libavformat >= 60' 'libavutil >= 58
     printf 'Install FFmpeg development files: libavcodec-dev libavformat-dev libavutil-dev libswscale-dev.\n' >&2
     exit 1
 fi
+if ! pkg-config --exists libva libdrm vulkan; then
+    printf 'Install VAAPI/Vulkan development files: libva-dev libdrm-dev libvulkan-dev.\n' >&2
+    exit 1
+fi
 mkdir -p "$dependency_root" "$build_root"
 touch "$project_root/build/.gdignore"
 
@@ -70,5 +74,5 @@ if [[ "$mode" == --lgpl ]]; then
     cp -r "$project_root/build/linux/playback/licenses/." "$build_root/licenses/"
     cp "$project_root/build/linux/playback/library-report.json" "$build_root/"
 fi
-printf 'Architecture: %s\nlibmpv API: %s\ngodot-cpp: godot-4.5-stable\n' "$arch" "$(pkg-config --modversion mpv)" > "$build_root/build-info.txt"
+printf 'Architecture: %s\nlibmpv API: %s\nFFmpeg libavcodec: %s\ngodot-cpp: godot-4.5-stable\n' "$arch" "$(pkg-config --modversion mpv)" "$(pkg-config --modversion libavcodec)" > "$build_root/build-info.txt"
 printf 'PC video plugin built for Linux %s in %s\n' "$arch" "$plugin_root"

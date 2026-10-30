@@ -44,7 +44,10 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev patchelf meson ninja-build nasm libass-dev libplacebo-dev libpulse-dev libasound2-dev libva-dev libdrm-dev libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libwayland-dev wayland-protocols libxkbcommon-dev libgnutls28-dev libdav1d-dev libluajit-5.1-dev file desktop-file-utils
+          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 scons curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev patchelf meson ninja-build nasm libass-dev libplacebo-dev libpulse-dev libasound2-dev libva-dev libdrm-dev libvulkan-dev libegl1-mesa-dev libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev libwayland-dev wayland-protocols libxkbcommon-dev libdbus-1-dev libfontconfig1-dev libspeechd-dev libgnutls28-dev libdav1d-dev libluajit-5.1-dev file desktop-file-utils
+
+      - name: Build Godot VAAPI export template
+        run: bash tools/build-godot-vaapi.sh "$PWD" "$PWD/build/linux/godot-vaapi/$ARCH" "$PWD/build/linux/godot-vaapi-source" "$ARCH"
 
       - name: Build PC video plugin
         run: |

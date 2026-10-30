@@ -1,4 +1,7 @@
 #include "video_decoder.h"
+#ifdef __linux__
+#include "vaapi_frame.h"
+#endif
 #include <godot_cpp/variant/variant.hpp>
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -33,7 +36,30 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     int64_t started = av_gettime_relative();
     hardware_active = frame->hw_frames_ctx != nullptr;
     bool converted;
-    if (frame->hw_frames_ctx) {
+    output.hardware_frame.reset();
+    output.exported_frame.reset();
+    if (vaapi_frames && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx) {
+        auto *context = reinterpret_cast<AVHWFramesContext *>(frame->hw_frames_ctx->data);
+        AVFrame description = *frame;
+        description.format = context->sw_format;
+        converted = (context->sw_format == AV_PIX_FMT_NV12 || context->sw_format == AV_PIX_FMT_P010LE) &&
+            prepare_planes(&description, output, context->width, context->height, false);
+        if (converted) {
+            output.hardware_frame = std::shared_ptr<AVFrame>(av_frame_clone(frame), [](AVFrame *value) { av_frame_free(&value); });
+            converted = bool(output.hardware_frame);
+#ifdef __linux__
+            if (converted) {
+                auto exported = std::make_shared<VaapiFrame>();
+                int64_t export_started = av_gettime_relative();
+                int result = exported->export_from(frame);
+                vaapi_export_us += av_gettime_relative() - export_started;
+                ++vaapi_export_frames;
+                if (result >= 0) output.exported_frame = std::move(exported);
+            }
+#endif
+        }
+        if (!converted) converted = download_planes(frame, output);
+    } else if (frame->hw_frames_ctx) {
         converted = download_planes(frame, output);
         download_us += av_gettime_relative() - started;
     } else {
@@ -79,5 +105,7 @@ godot::Dictionary VideoDecoder::diagnostics() const {
     uint64_t count = converted_frames.load();
     values["download_ms"] = count ? double(download_us.load()) / count / 1000.0 : 0;
     values["conversion_ms"] = count ? double(conversion_us.load()) / count / 1000.0 : 0;
+    uint64_t exports = vaapi_export_frames.load();
+    values["vaapi_export_ms"] = exports ? double(vaapi_export_us.load()) / exports / 1000.0 : 0;
     return values;
 }

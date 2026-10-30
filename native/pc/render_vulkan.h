@@ -5,6 +5,9 @@
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/classes/texture2drd.hpp>
 #include <chrono>
+#ifdef __linux__
+#include "vaapi_godot.h"
+#endif
 
 class RenderVulkan : public godot::RefCounted {
     GDCLASS(RenderVulkan, godot::RefCounted)
@@ -37,6 +40,10 @@ private:
     void destroy_on_render_thread();
     void destroy_textures();
     bool create_textures();
+#ifdef __linux__
+    VaapiGodot vaapi;
+    std::atomic<bool> vaapi_available{false};
+#endif
     VideoDecoder decoder;
     VideoPlanes frame;
     godot::RenderingDevice *device = nullptr;

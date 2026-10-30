@@ -18,7 +18,7 @@ static bool supported_size(int width, int height) {
     return width > 0 && height > 0 && width <= 8192 && height <= 8192 && int64_t(width) * height <= 33554432;
 }
 
-bool VideoDecoder::prepare_planes(AVFrame *frame, VideoPlanes &output, int storage_width, int storage_height) {
+bool VideoDecoder::prepare_planes(AVFrame *frame, VideoPlanes &output, int storage_width, int storage_height, bool allocate) {
     output.width = frame->width;
     output.height = frame->height;
     output.storage_width = storage_width;
@@ -39,7 +39,7 @@ bool VideoDecoder::prepare_planes(AVFrame *frame, VideoPlanes &output, int stora
         int width = index ? (storage_width + 1) / 2 : storage_width;
         int height = index ? (storage_height + 1) / 2 : storage_height;
         int64_t bytes = int64_t(width) * height * output.sample_bytes * (index && output.interleaved ? 2 : 1);
-        if (output.planes[index].resize(index < output.plane_count ? bytes : 0) != 0) return false;
+        if (output.planes[index].resize(allocate && index < output.plane_count ? bytes : 0) != 0) return false;
     }
     auto range = frame->color_range != AVCOL_RANGE_UNSPECIFIED ? frame->color_range : codec->color_range;
     auto colorspace = frame->colorspace != AVCOL_SPC_UNSPECIFIED ? frame->colorspace : codec->colorspace;
@@ -70,12 +70,21 @@ bool VideoDecoder::prepare_planes(AVFrame *frame, VideoPlanes &output, int stora
 // VideoPlane owns the allocation until the transfer completes.
 static void retain_plane_storage(void *, uint8_t *) {}
 
-bool VideoDecoder::download_planes(AVFrame *frame, VideoPlanes &output) {
+bool VideoDecoder::download_planes(AVFrame *frame, VideoPlanes &output, bool prepare) {
     auto *context = reinterpret_cast<AVHWFramesContext *>(frame->hw_frames_ctx->data);
     if (!native_format(context->sw_format)) return false;
     AVFrame description = *frame;
     description.format = context->sw_format;
-    if (!prepare_planes(&description, output, context->width, context->height)) return false;
+    if (prepare) {
+        if (!prepare_planes(&description, output, context->width, context->height)) return false;
+    } else {
+        for (int index = 0; index < output.plane_count; ++index) {
+            int width = index ? (context->width + 1) / 2 : context->width;
+            int height = index ? (context->height + 1) / 2 : context->height;
+            int64_t bytes = int64_t(width) * height * output.sample_bytes * (index && output.interleaved ? 2 : 1);
+            if (output.planes[index].resize(bytes) != 0) return false;
+        }
+    }
     AVFrame *target = av_frame_alloc();
     if (!target) return false;
     target->format = context->sw_format;
@@ -95,6 +104,14 @@ bool VideoDecoder::download_planes(AVFrame *frame, VideoPlanes &output) {
     int result = ready ? av_hwframe_transfer_data(target, frame, 0) : AVERROR(ENOMEM);
     av_frame_free(&target);
     return result >= 0;
+}
+
+bool VideoDecoder::download_frame(VideoPlanes &output) {
+    if (!output.hardware_frame) return true;
+    bool result = download_planes(output.hardware_frame.get(), output, false);
+    output.hardware_frame.reset();
+    output.exported_frame.reset();
+    return result;
 }
 
 bool VideoDecoder::convert(AVFrame *frame, VideoPlanes &output) {

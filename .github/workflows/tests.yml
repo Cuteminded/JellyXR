@@ -31,7 +31,7 @@ jobs:
       - name: Install test and build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+          sudo apt-get install --no-install-recommends -y build-essential cmake pkg-config python3 curl unzip libmpv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libva-dev libdrm-dev libvulkan-dev
 
       - name: Run native playback checks
         run: |
@@ -76,7 +76,8 @@ jobs:
               tests/test_pc_gpu_video.gd|tests/test_pc_hdr_video.gd|\
               tests/test_pc_initial_frame.gd|tests/test_pc_video_performance.gd|\
               tests/test_pc_video_recovery.gd|tests/test_pc_video_transitions.gd|\
-              tests/test_pc_vulkan_video.gd|tests/test_pc_yuv_material.gd)
+              tests/test_pc_vulkan_video.gd|tests/test_pc_yuv_material.gd|\
+              tests/test_vaapi_bridge.gd)
                 continue
                 ;;
             esac

@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -17,6 +18,7 @@ struct AVCodecContext;
 struct AVFrame;
 struct AVPacket;
 struct SwsContext;
+class VaapiFrame;
 
 struct VideoPlanes {
     int width = 0;
@@ -39,6 +41,8 @@ struct VideoPlanes {
     float transfer = 0;
     float source_peak = 1000.f / 203.f;
     std::array<VideoPlane, 3> planes;
+    std::shared_ptr<AVFrame> hardware_frame;
+    std::shared_ptr<VaapiFrame> exported_frame;
 };
 
 class VideoDecoder {
@@ -61,6 +65,9 @@ public:
     godot::Dictionary diagnostics() const;
     void set_frame_callback(void (*callback)(void *), void *owner) { frame_callback = callback; frame_owner = owner; }
     bool has_frame();
+    void enable_vaapi_frames(bool enabled) { vaapi_frames = enabled; }
+    void set_vaapi_device(const std::string &device) { vaapi_device = device; }
+    bool download_frame(VideoPlanes &frame);
     uint64_t current_generation() const { return generation; }
 
 private:
@@ -78,8 +85,8 @@ private:
     void update_buffer_size();
     bool publish(AVFrame *frame, uint64_t frame_generation);
     bool convert(AVFrame *frame, VideoPlanes &output);
-    bool prepare_planes(AVFrame *frame, VideoPlanes &output, int storage_width, int storage_height);
-    bool download_planes(AVFrame *frame, VideoPlanes &output);
+    bool prepare_planes(AVFrame *frame, VideoPlanes &output, int storage_width, int storage_height, bool allocate = true);
+    bool download_planes(AVFrame *frame, VideoPlanes &output, bool prepare = true);
     void close();
     AVFormatContext *input = nullptr;
     AVCodecContext *codec = nullptr;
@@ -93,12 +100,15 @@ private:
     bool audio = false;
     std::string codec_name;
     std::string hardware_device;
+    std::string vaapi_device;
     std::atomic<uint64_t> corrupt_packets{0};
     std::atomic<bool> hardware_active{false};
     std::atomic<bool> pinned_download{false};
+    std::atomic<bool> vaapi_frames{false};
     std::atomic<int> active_transfer{0};
     std::atomic<uint64_t> decoded_frames{0}, dropped_frames{0}, converted_frames{0};
     std::atomic<uint64_t> download_us{0}, conversion_us{0};
+    std::atomic<uint64_t> vaapi_export_us{0}, vaapi_export_frames{0};
     std::atomic<uint64_t> read_us{0}, decode_us{0}, read_bytes{0};
     std::atomic<int64_t> buffered_ms{0};
     std::atomic<uint64_t> buffered_bytes{0};

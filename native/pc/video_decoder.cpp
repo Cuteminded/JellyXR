@@ -29,7 +29,8 @@ void VideoDecoder::configure_hardware(const AVCodec *decoder) {
             const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, index);
             if (!config) break;
             if (config->device_type != device_type || !(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) continue;
-            if (av_hwdevice_ctx_create(&codec->hw_device_ctx, device_type, nullptr, nullptr, 0) < 0) continue;
+            const char *device_name = device_type == AV_HWDEVICE_TYPE_VAAPI && !vaapi_device.empty() ? vaapi_device.c_str() : nullptr;
+            if (av_hwdevice_ctx_create(&codec->hw_device_ctx, device_type, device_name, nullptr, 0) < 0) continue;
             hardware_device = av_hwdevice_get_type_name(device_type);
             hardware_format = config->pix_fmt;
             hardware_attempted = false;
@@ -140,6 +141,7 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     corrupt_packets = 0;
     decoded_frames = dropped_frames = converted_frames = 0;
     download_us = conversion_us = 0;
+    vaapi_export_us = vaapi_export_frames = 0;
     read_us = decode_us = read_bytes = 0;
     buffered_ms = buffered_bytes = 0;
     reader_ended = seek_interrupt = false;

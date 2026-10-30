@@ -13,16 +13,24 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 	var height := int(stream.get("Height", 0))
 	var fps := float(stream.get("AverageFrameRate", stream.get("RealFrameRate", 0.0)))
 	var bitrate := int(session.source.get("Bitrate", 0))
+	var driver := RenderingServer.get_current_rendering_driver_name()
+	var renderer: String = {
+		"mobile": "Vulkan",
+		"vulkan": "Vulkan",
+		"opengl3": "OpenGL", 
+		"opengl3_es": "OpenGL", 
+		"d3d12": "Direct3D 12"
+		}.get(driver, driver)
 	return {
-		"Playback resolution": "%d x %d" % [playback_size.x, playback_size.y] if playback_size.x > 0 and playback_size.y > 0 else "Not reported",
+		"Playback resolution": "%d x %d" % [playback_size.x, playback_size.y] if playback_size.x > 0 and playback_size.y > 0 else "N/A",
 		"Playback": session.method,
-		"Source video": "%d x %d / %.3f fps" % [width, height, fps] if width > 0 else "Not reported",
-		"Source codec": str(stream.get("Codec", "Not reported")).to_upper(),
-		"Source bitrate": "%.2f Mbps" % (bitrate / 1000000.0) if bitrate > 0 else "Not reported",
-		"Renderer / app FPS": "%s / %d" % [RenderingServer.get_current_rendering_method(), Engine.get_frames_per_second()],
+		"Source video": "%d x %d / %.3f fps" % [width, height, fps] if width > 0 else "N/A",
+		"Source codec": str(stream.get("Codec", "N/A")).to_upper(),
+		"Source bitrate": "%.2f Mbps" % (bitrate / 1000000.0) if bitrate > 0 else "N/A",
+		"Renderer / FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
 		"Player state": "Buffering" if video.is_buffering() else ("Paused" if video.paused else "Playing"),
 		"Video decoder": str(diagnostics.get("codec", "Platform decoder")),
-		"Hardware decoding": str(diagnostics.get("hardware_device", "Not reported")),
-		"Dropped frames": str(diagnostics.get("dropped_frames", "Not reported")),
-		"Read ahead": "%.2f s" % (float(diagnostics.read_ahead_ms) / 1000.0) if diagnostics.has("read_ahead_ms") else "Not reported",
+		"Hardware decoding": "VAAPI" if diagnostics.get("vaapi_gpu_copy", false) else str(diagnostics.get("hardware_device", "N/A")),
+		"Dropped frames": str(diagnostics.get("dropped_frames", "0")),
+		"Read ahead": "%.2f s" % (float(diagnostics.read_ahead_ms) / 1000.0) if diagnostics.has("read_ahead_ms") else "0",
 	}
