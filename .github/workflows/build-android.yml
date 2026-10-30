@@ -111,7 +111,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: jellyxr-quest1
-          path: dist/jellyxr-quest1.apk
+          path: dist/jellyXR-quest1.apk
           if-no-files-found: error
           retention-days: 14
           archive: false
