@@ -19,6 +19,10 @@ On Linux, install `curl`, `unzip`, and `sha256sum`, then run:
 ```sh
 export JAVA_HOME='/path/to/jdk-17'
 export ANDROID_HOME='/path/to/android-sdk'
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH='/path/to/shared/android.keystore'
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER='Cuteminded'
+read -rsp 'Release keystore password: ' GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD; echo
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD
 GODOT='/path/to/godot' GRADLE='/path/to/gradle' bash tools/build-android.sh
 ```
 
@@ -26,15 +30,13 @@ Omit `GODOT` and `GRADLE` if both tools are on your `PATH`. The script also acce
 
 On Windows, use PowerShell:
 
+The PowerShell script exports debug APKs signed with the `Cuteminded` key. Place the release keystore at `.signing/jellyxr-release.keystore` and its password at `.signing/release-password.txt`, or pass `-SigningKeystore` and `-SigningPasswordFile` to use other paths. These files are ignored by Git. Use the same key as GitHub Actions to keep local and release APK updates compatible.
+
 ```powershell
-./tools/build-android.ps1 -Godot 'C:/tools/godot.exe' `
-  -Gradle 'C:/tools/gradle/bin/gradle.bat' `
-  -AndroidSdk 'C:/tools/android-sdk' -JavaHome 'C:/tools/jdk-17'
+./tools/build-android.ps1 -Godot 'C:/tools/godot.exe' -Gradle 'C:/tools/gradle/bin/gradle.bat' -AndroidSdk 'C:/tools/android-sdk' -JavaHome 'C:/tools/jdk-17'
 ```
 
 The scripts build the Android plugin and export `dist/jellyxr-android.apk`. They download and verify Godot OpenXR Vendors for Quest passthrough support.
-
-To build through GitHub Actions, select **Actions > Build Android APK > Run workflow**. Each run creates a new debug signing key. If it differs from the installed APK's key, uninstall the old build first. Uninstalling removes saved settings and sign-in.
 
 ## Build on Windows
 
@@ -228,7 +230,7 @@ This renders synthetic panoramas to check top-bottom eye selection and the dark 
 
 ## GitHub Actions
 
-The [Android](.github/workflows/build-android.yml), [Windows](.github/workflows/build-windows.yml), and [Linux](.github/workflows/build-linux.yml) workflows build and upload their platform packages. They need no repository secrets and keep artifacts for 14 days. Run the playback tests separately with the commands above.
+The [Android](.github/workflows/build-android.yml), [Windows](.github/workflows/build-windows.yml), and [Linux](.github/workflows/build-linux.yml) workflows build and upload their platform packages and keep artifacts for 14 days. Android requires the `ANDROID_KEYSTORE_BASE64` repository secret described above. Windows and Linux need no repository secrets. Run the playback tests separately with the commands above.
 
 ## Code layout
 

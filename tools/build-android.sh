@@ -17,6 +17,13 @@ export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
     fail 'Set ANDROID_HOME to your Android SDK directory.'
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export JAVA_HOME
+[[ -f "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-}" ]] ||
+    fail 'Set GODOT_ANDROID_KEYSTORE_RELEASE_PATH to the shared Android signing keystore.'
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER="${GODOT_ANDROID_KEYSTORE_RELEASE_USER:-Cuteminded}"
+[[ -n "${GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD:-}" ]] ||
+    fail 'Set GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD to the release keystore password.'
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD
 
 for tool in "$godot" "$gradle" curl unzip sha256sum; do
     command -v "$tool" >/dev/null || fail "Missing build dependency: $tool"
@@ -34,8 +41,8 @@ bash tools/setup-openxr.sh
 "$godot" --headless --xr-mode off --path . --editor --import --quit
 mkdir -p dist
 
-"$godot" --headless --xr-mode off --path . --export-debug 'Android' dist/jellyxr-android.apk
+"$godot" --headless --xr-mode off --path . --export-release 'Android' dist/jellyxr-android.apk
 [[ -s dist/jellyxr-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
 
-"$godot" --headless --xr-mode off --path . --export-debug 'Quest 1' dist/jellyXR-quest1.apk
+"$godot" --headless --xr-mode off --path . --export-release 'Quest 1' dist/jellyXR-quest1.apk
 [[ -s dist/jellyXR-quest1.apk ]] || fail 'Godot did not produce a nonempty Quest 1 APK.'

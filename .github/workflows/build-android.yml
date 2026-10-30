@@ -3,6 +3,11 @@ name: Build Android APK
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
 
 permissions:
   contents: read
@@ -69,12 +74,23 @@ jobs:
           printf '%s\n' "${GODOT_VERSION}.stable" > android/.build_version
           chmod +x android/build/gradlew
 
-      - name: Create Android debug keystore
+      - name: Restore shared Android signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/debug.keystore" \
-            -alias androiddebugkey -storepass android -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" ]]; then
+            echo 'Set ANDROID_KEYSTORE_BASE64 to the base64-encoded local Android signing keystore.' >&2
+            exit 1
+          fi
+          if [[ -z "$ANDROID_KEYSTORE_PASSWORD" ]]; then
+            echo 'Set ANDROID_KEYSTORE_PASSWORD to the release keystore password.' >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/android.keystore" \
+            -alias Cuteminded -storepass:env ANDROID_KEYSTORE_PASSWORD > /dev/null
 
       - name: Configure Android export
         run: |
@@ -85,12 +101,13 @@ jobs:
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
-          export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
-          export/android/debug_keystore_user = "androiddebugkey"
-          export/android/debug_keystore_pass = "android"
           EOF
 
       - name: Build Android APK
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/android.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: Cuteminded
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: bash tools/build-android.sh
 
       - name: Verify APK signature

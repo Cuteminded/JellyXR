@@ -1,6 +1,8 @@
 .DS_Store
 *.jks
 *.keystore
+.signing/*
+!.signing/.gitkeep
 session.cfg
 export_credentials.cfg
 .vscode/

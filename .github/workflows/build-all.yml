@@ -14,6 +14,9 @@ jobs:
   android:
     name: Android
     uses: ./.github/workflows/build-android.yml
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
   linux:
     name: Linux
