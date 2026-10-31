@@ -31,7 +31,7 @@ func check(condition: bool, message: String) -> void:
 
 func run_checks() -> void:
 	var store := SessionStore.new()
-	store.path = "res://dist/session-test.cfg"
+	store.path = "user://session-test.cfg"
 	store.clear_session()
 	check(store.load_session().is_empty(), "Missing sessions load safely.")
 	var data := {"server": "https://example.com", "token": "test-token", "user_id": "test-user"}

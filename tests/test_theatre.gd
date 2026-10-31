@@ -89,7 +89,7 @@ func check_environment_switching() -> void:
 	app.shell.set_signed_in(true)
 	app._screen_settings()
 	var view: SettingsView = app.page.get_child(0)
-	var theatre_choice: CheckBox = view.sections[2].get_child(2).get_child(1)
+	var theatre_choice: CheckBox = view.environment_buttons["Cinema"]
 	theatre_choice.button_pressed = true
 	theatre_choice.pressed.emit()
 	check(app.theatre.visible and app.settings.environment == "Cinema", "Selecting Theatre shows the cinema immediately.")
@@ -112,7 +112,7 @@ func check_environment_switching() -> void:
 	check(app.screen.global_transform.is_equal_approx(app.theatre.projection_transform()) and app.screen.global_basis.y.is_equal_approx(Vector3.UP), "Recenter keeps the movie attached to an upright cinema screen.")
 	var slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
 	check(not slider.editable, "Void position controls are disabled in Theatre.")
-	var low_res_choice: CheckBox = view.sections[2].get_child(2).get_child(2)
+	var low_res_choice: CheckBox = view.environment_buttons["Theatre"]
 	low_res_choice.button_pressed = true
 	low_res_choice.pressed.emit()
 	check(app.theatre.low_res and app.theatre.low_resolution != null and app.theatre.interior == null, "LowRes shows the original theatre without instantiating the detailed interior.")
@@ -136,7 +136,7 @@ func check_environment_switching() -> void:
 	var reset: Button = view.reset_screen_button
 	reset.pressed.emit()
 	check(app.theatre.visible and app.settings.environment == "Cinema", "Screen reset preserves the separate environment choice.")
-	var void_choice: CheckBox = view.sections[2].get_child(2).get_child(0)
+	var void_choice: CheckBox = view.environment_buttons["Void"]
 	void_choice.button_pressed = true
 	void_choice.pressed.emit()
 	check(not app.theatre.visible and app.settings.environment == "Void", "The Environment page can return to Void.")

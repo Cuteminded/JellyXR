@@ -42,7 +42,7 @@ func run_checks() -> void:
 	settings.follow_screen = true
 	settings.playback_mode = "original"
 	settings.transcode_resolution = 2160
-	var path := "res://dist/settings-test.cfg"
+	var path := "user://settings-test.cfg"
 	check(settings.save(path) == OK, "Settings can be saved.")
 	var restored := JellyXRSettings.new()
 	restored.load_settings(path)
@@ -170,11 +170,12 @@ func run_checks() -> void:
 	var saved := JellyXRSettings.new()
 	saved.device_id = "test-device"
 	saved.environment = "Theatre"
-	var low_res_path := "res://dist/settings-lowres-test.cfg"
+	var low_res_path := "user://settings-lowres-test.cfg"
 	check(saved.save(low_res_path) == OK, "LowRes selection can be saved.")
 	var restored_low_res := JellyXRSettings.new()
 	restored_low_res.load_settings(low_res_path)
 	check(restored_low_res.environment == "Theatre", "LowRes selection survives restarting the app.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(low_res_path))
 	var passthrough_choice: CheckBox = view.environment_buttons["Passthrough"]
 	check(passthrough_choice.disabled, "Unsupported devices cannot select Passthrough.")
 	passthrough_choice.disabled = false

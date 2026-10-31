@@ -1,4 +1,4 @@
-name: Build all platforms
+name: Make Release
 
 on:
   workflow_dispatch:
@@ -7,29 +7,29 @@ permissions:
   contents: read
 
 concurrency:
-  group: all-platforms-${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
 
   test:
     name: Test
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/tests.yml
 
   android:
     name: Android
-    uses: ./.github/workflows/build-android.yml
     needs: test
+    uses: ./.github/workflows/build-android.yml
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
   linux:
     name: Linux
-    uses: ./.github/workflows/build-linux.yml
     needs: test
+    uses: ./.github/workflows/build-linux.yml
 
   windows:
     name: Windows
-    uses: ./.github/workflows/build-windows.yml
     needs: test
+    uses: ./.github/workflows/build-windows.yml
