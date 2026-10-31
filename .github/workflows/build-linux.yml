@@ -116,7 +116,7 @@ jobs:
           name: jellyxr-linux-${{ matrix.arch }}-system-libs
           path: dist/jellyxr-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
           archive: false
 
       - name: Build Linux AppImage
@@ -138,5 +138,5 @@ jobs:
           name: jellyxr-linux-${{ matrix.arch }}-appimage
           path: dist/jellyxr-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
           archive: false

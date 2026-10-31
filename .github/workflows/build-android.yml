@@ -121,7 +121,7 @@ jobs:
           name: jellyxr-android
           path: dist/jellyxr-android.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
           archive: false
 
       - name: Upload Quest 1 APK
@@ -130,5 +130,5 @@ jobs:
           name: jellyxr-quest1
           path: dist/jellyXR-quest1.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
           archive: false
