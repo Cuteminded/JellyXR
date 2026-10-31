@@ -103,7 +103,19 @@ func _build_statistics(parent: Control) -> void:
 	grid.add_theme_constant_override("h_separation", 24)
 	grid.add_theme_constant_override("v_separation", 12)
 	statistics_panel.add_child(grid)
-	for key in ["Source video", "Playback resolution", "Playback", "Source codec", "Source bitrate", "Renderer / app FPS", "Player state", "Video decoder", "Hardware decoding", "Dropped frames", "Read ahead"]:
+	for key in [
+			"Source video",
+			"Playback resolution", 
+			"Playback", 
+			"Source codec", 
+			"Source bitrate", 
+			"Video decoder", 
+			"Player state", 
+			"Renderer / FPS",
+			"Hardware decoding", 
+			"Dropped frames", 
+			"Read ahead"
+		]:
 		Widgets.label(key, grid, 20)
 		var value := Widgets.label("N/A", grid, 20)
 		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL

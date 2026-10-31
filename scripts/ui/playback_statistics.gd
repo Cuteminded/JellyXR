@@ -15,10 +15,10 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 	var bitrate := int(session.source.get("Bitrate", 0))
 	var driver := RenderingServer.get_current_rendering_driver_name()
 	var renderer: String = {
-		"mobile": "Vulkan",
 		"vulkan": "Vulkan",
 		"opengl3": "OpenGL", 
 		"opengl3_es": "OpenGL", 
+		"d3d11": "Direct3D 11",
 		"d3d12": "Direct3D 12"
 		}.get(driver, driver)
 	return {
@@ -27,7 +27,7 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 		"Source video": "%d x %d / %.3f fps" % [width, height, fps] if width > 0 else "N/A",
 		"Source codec": str(stream.get("Codec", "N/A")).to_upper(),
 		"Source bitrate": "%.2f Mbps" % (bitrate / 1000000.0) if bitrate > 0 else "N/A",
-		"Renderer / app FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
+		"Renderer / FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
 		"Player state": "Buffering" if video.is_buffering() else ("Paused" if video.paused else "Playing"),
 		"Video decoder": str(diagnostics.get("codec", "Platform decoder")),
 		"Hardware decoding": _hardware_decoder(diagnostics),

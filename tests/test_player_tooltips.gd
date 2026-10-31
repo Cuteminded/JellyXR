@@ -62,7 +62,7 @@ func run_checks() -> void:
 	await process_frame
 	check(overlay.statistics_panel.visible and overlay.statistics_button.button_pressed, "The statistics button opens and marks the panel active")
 	check(overlay.statistics_values["Source video"].text == "3840 x 2160 / 23.976 fps", "Statistics show source resolution and frame rate")
-	var renderer_fps: String = overlay.statistics_values["Renderer / app FPS"].text
+	var renderer_fps: String = overlay.statistics_values["Renderer / FPS"].text
 	check(renderer_fps != "N/A" and renderer_fps.contains(" / ") and renderer_fps.get_slice(" / ", 1).is_valid_int(), "Statistics display the rendering driver and app FPS")
 	check(overlay.statistics_values["Dropped frames"].text == "N/A", "Missing decoder counters are not presented as zero")
 	var statistics := preload("res://scripts/ui/playback_statistics.gd")
