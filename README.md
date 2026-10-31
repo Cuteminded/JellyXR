@@ -44,7 +44,7 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 | Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
-| [PSVR 2](https://www.playstation.com/ps-vr2) | Working | Windows X64 | 0.1.3 | Tested by [@jpablomsan](https://github.com/Cuteminded/JellyXR/issues/7) |
+| [PSVR 2](https://www.playstation.com/ps-vr2) | Working | Windows X64 | 0.2.0 | Tested by [@jpablomsan](https://github.com/Cuteminded/JellyXR/issues/7) |
 
 To report results for a listed or unlisted device, [open an issue](https://github.com/Cuteminded/jellyframe/issues). Include the device, operating system, app version, and what you tested.
 
