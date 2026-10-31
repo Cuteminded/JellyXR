@@ -3,7 +3,11 @@ plugins { id 'com.android.library' }
 android {
     namespace 'nu.lizzy.jellyxr.video'
     compileSdk 35
-    defaultConfig { minSdk 29 }
+    defaultConfig {
+        minSdk 29
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    sourceSets.androidTest.assets.srcDir '../../build/android-test-media'
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -12,6 +16,10 @@ android {
 
 dependencies {
     compileOnly 'org.godotengine:godot:4.5.1.stable'
+    implementation 'androidx.media3:media3-exoplayer:1.8.0'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.8.0'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }
 
 tasks.register('stagePlugin', Copy) {

@@ -57,6 +57,9 @@ func position_ms() -> int:
 func duration_ms() -> int:
 	return bridge.duration_ms() if available() else 0
 
+func buffered_position_ms() -> int:
+	return bridge.buffered_position_ms() if available() else -1
+
 func is_buffering() -> bool:
 	return bridge.is_buffering() if available() else false
 

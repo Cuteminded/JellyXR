@@ -9,6 +9,11 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 	var diagnostics: Dictionary = {}
 	if video.bridge != null and video.bridge.has_method("playback_diagnostics"):
 		diagnostics = video.bridge.playback_diagnostics()
+	var read_ahead_ms := int(diagnostics.get("read_ahead_ms", -1))
+	if read_ahead_ms < 0:
+		var buffered_position := video.buffered_position_ms()
+		if buffered_position >= 0:
+			read_ahead_ms = maxi(0, buffered_position - video.position_ms())
 	var width := int(stream.get("Width", 0))
 	var height := int(stream.get("Height", 0))
 	var fps := float(stream.get("AverageFrameRate", stream.get("RealFrameRate", 0.0)))
@@ -32,7 +37,7 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 		"Video decoder": str(diagnostics.get("codec", "Platform decoder")),
 		"Hardware decoding": _hardware_decoder(diagnostics),
 		"Dropped frames": str(diagnostics.get("dropped_frames", "N/A")),
-		"Read ahead": "%.2f s" % (float(diagnostics.read_ahead_ms) / 1000.0) if diagnostics.has("read_ahead_ms") else "0",
+		"Read ahead": "%.2f s" % (float(read_ahead_ms) / 1000.0) if read_ahead_ms >= 0 else "0",
 	}
 
 static func _hardware_decoder(diagnostics: Dictionary) -> String:

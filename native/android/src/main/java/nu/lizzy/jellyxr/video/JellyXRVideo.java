@@ -1,8 +1,6 @@
 package nu.lizzy.jellyxr.video;
 
 import android.graphics.SurfaceTexture;
-import android.media.MediaPlayer;
-import android.net.Uri;
 import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,7 +11,6 @@ import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
 import org.godotengine.godot.plugin.UsedByGodot;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,13 +26,11 @@ public final class JellyXRVideo extends GodotPlugin {
     private final Runnable pollPlayback = this::pollPlayback;
     private SurfaceTexture texture;
     private Surface surface;
-    private MediaPlayer player;
+    private BufferedPlayback player;
     private volatile int position;
     private volatile int duration;
-    private volatile int bufferedPercent = -1;
-    private volatile boolean prepared;
+    private volatile int bufferedPosition = -1;
     private volatile boolean buffering;
-    private volatile boolean seeking;
     private final AtomicInteger generation = new AtomicInteger();
     private volatile int readyGeneration = -1;
     private int textureGeneration = -1;
@@ -80,66 +75,42 @@ public final class JellyXRVideo extends GodotPlugin {
         });
     }
 
-    private boolean isCurrent(MediaPlayer current, int opening) {
-        return current == player && opening == generation.get();
-    }
-
     private void prepare(Surface output, String url, String authorization, int startMs, int opening) {
         try {
-            player = new MediaPlayer();
-            player.setSurface(output);
-            HashMap<String, String> headers = new HashMap<>();
-            headers.put("Authorization", authorization);
-            headers.put("android-allow-cross-domain-redirect", "0");
-            player.setDataSource(getContext(), Uri.parse(url), headers);
-            player.setOnPreparedListener(current -> {
-                if (!isCurrent(current, opening)) return;
-                prepared = true;
-                watchdog.reset(SystemClock.elapsedRealtime());
-                duration = Math.max(0, current.getDuration());
-                if (startMs > 0) current.seekTo(startMs, MediaPlayer.SEEK_CLOSEST);
-                current.start();
-                main.post(pollPlayback);
-                emitSignal("prepared");
-            });
-            player.setOnVideoSizeChangedListener((current, width, height) -> {
-                if (isCurrent(current, opening)) emitSignal("video_size", width, height);
-            });
-            player.setOnBufferingUpdateListener((current, percent) -> {
-                if (isCurrent(current, opening)) bufferedPercent = Math.max(0, Math.min(100, percent));
-            });
-            player.setOnInfoListener((current, what, extra) -> {
-                if (!isCurrent(current, opening)) return true;
-                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                    buffering = true;
-                }
-                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
-                    buffering = false;
-                }
-                if (what == MediaPlayer.MEDIA_INFO_VIDEO_TRACK_LAGGING) Log.w("JellyXRVideo", "Video decoder is falling behind");
-                return false;
-            });
-            player.setOnSeekCompleteListener(current -> {
-                if (!isCurrent(current, opening)) return;
-                seeking = false;
-                watchdog.setPaused(!current.isPlaying(), SystemClock.elapsedRealtime());
-            });
-            player.setOnCompletionListener(current -> {
-                if (!isCurrent(current, opening)) return;
-                main.removeCallbacks(pollPlayback);
-                emitSignal("completed");
-            });
-            player.setOnErrorListener((current, what, extra) -> {
-                if (!isCurrent(current, opening)) return true;
-                prepared = false;
-                main.removeCallbacks(pollPlayback);
-                emitSignal("failed", "Android could not decode this stream (" + what + ", " + extra + ").");
-                return true;
-            });
-            player.prepareAsync();
-        } catch (Exception exception) {
-            emitSignal("failed", "Cannot open the video stream. Check network and format support.");
+            buffering = true;
+            watchdog.reset(SystemClock.elapsedRealtime());
+            player = new BufferedPlayback(getContext(), output, url, authorization, startMs,
+                new BufferedPlayback.Listener() {
+                    private boolean current() { return opening == generation.get(); }
+
+                    @Override public void ready() {
+                        if (!current()) return;
+                        watchdog.setPaused(player.paused(), SystemClock.elapsedRealtime());
+                        emitSignal("prepared");
+                    }
+
+                    @Override public void completed() {
+                        if (!current()) return;
+                        main.removeCallbacks(pollPlayback);
+                        emitSignal("completed");
+                    }
+
+                    @Override public void failed(String message) {
+                        if (!current()) return;
+                        buffering = false;
+                        main.removeCallbacks(pollPlayback);
+                        emitSignal("failed", message);
+                    }
+
+                    @Override public void sizeChanged(int width, int height) {
+                        if (current()) emitSignal("video_size", width, height);
+                    }
+                });
+            main.post(pollPlayback);
+        } catch (RuntimeException exception) {
+            Log.e("JellyXRVideo", "Cannot prepare playback", exception);
             releasePlayer();
+            emitSignal("failed", "Cannot open the video stream. Check network and format support.");
         }
     }
 
@@ -152,17 +123,18 @@ public final class JellyXRVideo extends GodotPlugin {
     }
 
     private void pollPlayback() {
-        if (player == null || !prepared) return;
+        if (player == null || player.ended()) return;
         try {
-            position = player.getCurrentPosition();
-            if (watchdog.stalled(SystemClock.elapsedRealtime(), lastFrame, buffering || seeking)) {
-                prepared = false;
-                Log.w("JellyXRVideo", "No video frames at " + position + " ms, buffering=" + buffering + ", seeking=" + seeking);
+            position = player.position();
+            duration = player.duration();
+            bufferedPosition = player.bufferedPosition();
+            buffering = player.buffering();
+            if (watchdog.stalled(SystemClock.elapsedRealtime(), lastFrame, buffering)) {
+                Log.w("JellyXRVideo", "No video frames at " + position + " ms, buffering=" + buffering);
                 emitSignal("failed", "Video playback stalled.");
                 return;
             }
         } catch (IllegalStateException exception) {
-            prepared = false;
             emitSignal("failed", "The video player stopped unexpectedly.");
             return;
         }
@@ -176,28 +148,25 @@ public final class JellyXRVideo extends GodotPlugin {
     @UsedByGodot public int position_ms() { return position; }
     @UsedByGodot public int duration_ms() { return duration; }
     @UsedByGodot public int buffered_position_ms() {
-        return prepared && !seeking && bufferedPercent >= 0 && duration > 0
-            ? (int) ((long) duration * bufferedPercent / 100) : -1;
+        return bufferedPosition;
     }
     @UsedByGodot public boolean has_video_frame() { return readyGeneration >= 0 && readyGeneration == generation.get(); }
-    @UsedByGodot public boolean is_buffering() { return prepared && (buffering || seeking); }
+    @UsedByGodot public boolean is_buffering() { return buffering; }
 
     @UsedByGodot public void set_paused(boolean paused) {
         main.post(() -> {
-            if (player == null || !prepared) return;
-            if (paused) player.pause(); else player.start();
+            if (player == null) return;
+            player.setPaused(paused);
             watchdog.setPaused(paused, SystemClock.elapsedRealtime());
         });
     }
 
     @UsedByGodot public void seek_to(int milliseconds) {
         main.post(() -> {
-            if (player != null && prepared) {
-                seeking = true;
-                bufferedPercent = -1;
-                watchdog.setPaused(!player.isPlaying(), SystemClock.elapsedRealtime());
-                player.seekTo(Math.max(0, Math.min(milliseconds, player.getDuration())), MediaPlayer.SEEK_CLOSEST);
-            }
+            if (player == null) return;
+            bufferedPosition = -1;
+            watchdog.setPaused(player.paused(), SystemClock.elapsedRealtime());
+            player.seek(milliseconds);
         });
     }
 
@@ -208,12 +177,10 @@ public final class JellyXRVideo extends GodotPlugin {
 
     private void releasePlayer() {
         main.removeCallbacks(pollPlayback);
-        prepared = false;
         buffering = false;
-        seeking = false;
         position = 0;
         duration = 0;
-        bufferedPercent = -1;
+        bufferedPosition = -1;
         if (player != null) { player.release(); player = null; }
     }
 

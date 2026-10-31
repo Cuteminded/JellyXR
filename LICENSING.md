@@ -15,6 +15,7 @@ Previously distributed GPL-licensed versions remain available under their origin
 jellyXR uses third-party software and assets under their own licenses:
 
 - Godot and Android components retain their original licenses and copyright notices.
+- Android playback uses [AndroidX Media3 / ExoPlayer](https://github.com/androidx/media), copyright The Android Open Source Project, under the [Apache License, Version 2.0](https://github.com/androidx/media/blob/1.8.0/LICENSE).
 - Icons in the player and library come from [Google's Material Symbols Rounded](https://github.com/google/material-design-icons).
 - The virtual cinema is based on [Comicaroid's Cinema/Movie Theater Interior](https://sketchfab.com/3d-models/cinemamovie-theater-interior-dcaf6cdebcad4f03879c24186da257ee), licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 
@@ -31,7 +32,7 @@ Windows and Linux AppImages use shared LGPL builds of FFmpeg and libmpv. jellyXR
 - Linux AppImages build FFmpeg 8.1.3 and libmpv 0.41.0 from pinned sources, with GPL and nonfree features disabled. They bundle the playback libraries, supporting libraries, and notices. The system-libraries archive uses the installed distribution libraries instead. Graphics drivers, VAAPI, OpenXR, and the C++ runtime come from the host.
 - The PC plugin uses MIT-licensed [godot-cpp godot-4.5-stable](https://github.com/godotengine/godot-cpp/tree/godot-4.5-stable).
 
-The build scripts verify source or binary archive checksums and check the loaded library configurations. Android keeps its existing playback backend.
+The build scripts verify source or binary archive checksums and check the loaded library configurations. Android uses Media3 with the platform media decoders.
 
 ## Redistribution
 
