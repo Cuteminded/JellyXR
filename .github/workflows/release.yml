@@ -46,11 +46,11 @@ jobs:
         with:
           path: dist/artifacts
       - name: Zip artifacts
-        run: tar -czf dist/jellyxr-release.tar.gz -C dist/artifacts .
+        run: zip -r dist/jellyxr-release.zip dist/artifacts
       - name: Upload release archive
         uses: actions/upload-artifact@v7
         with:
           name: jellyxr-release
-          path: dist/jellyxr-release.tar.gz
+          path: dist/jellyxr-release.zip
           if-no-files-found: error
           retention-days: 1
