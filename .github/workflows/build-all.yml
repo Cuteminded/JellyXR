@@ -11,9 +11,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  test:
+    name: Test
+    uses: ./.github/workflows/test.yml
+
   android:
     name: Android
     uses: ./.github/workflows/build-android.yml
+    needs: test
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -21,7 +27,9 @@ jobs:
   linux:
     name: Linux
     uses: ./.github/workflows/build-linux.yml
+    needs: test
 
   windows:
     name: Windows
     uses: ./.github/workflows/build-windows.yml
+    needs: test
