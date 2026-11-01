@@ -2,11 +2,17 @@ class_name LibraryView
 extends VBoxContainer
 
 signal selected(item: Dictionary)
+signal folder_changed(path: Array)
 signal status(message: String)
 signal loading_changed(loading: bool)
 var api: JellyfinClient
 var library_id := ""
 var library_name := "Home"
+var folder_mode := false
+var folder_path: Array = []
+var folder_navigation: HBoxContainer
+var up_button: Button
+var path_label: Label
 var field: LineEdit
 var content: VBoxContainer
 var artwork: ArtworkLoader
@@ -26,6 +32,16 @@ func _ready() -> void:
 	artwork = ArtworkLoader.new()
 	artwork.api = api
 	add_child(artwork)
+	if folder_mode:
+		folder_navigation = HBoxContainer.new()
+		folder_navigation.add_theme_constant_override("separation", 18)
+		add_child(folder_navigation)
+		up_button = Widgets.button("Up", go_up, folder_navigation)
+		up_button.tooltip_text = "Go to parent folder"
+		path_label = Widgets.label("", folder_navigation, 22)
+		path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		path_label.clip_text = true
+		path_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var tools := HBoxContainer.new()
 	add_child(tools)
 	field = Widgets.input("Search " + library_name, tools)
@@ -45,7 +61,43 @@ func _ready() -> void:
 	scrollbar.changed.connect(func(): _check_more.call_deferred())
 	refresh()
 
+func parent_id() -> String:
+	return library_id if folder_path.is_empty() else str(folder_path.back().Id)
+
+func folder_name() -> String:
+	return library_name if folder_path.is_empty() else str(folder_path.back().get("Name", "Folder"))
+
+static func is_folder(item: Dictionary) -> bool:
+	return item.get("Type", "") in ["Folder", "PhotoAlbum"]
+
+func _chosen(item: Dictionary) -> void:
+	if folder_mode and is_folder(item):
+		folder_path.append(item)
+		folder_changed.emit(folder_path.duplicate(true))
+		field.text = ""
+		refresh()
+	else:
+		selected.emit(item)
+
+func go_up() -> void:
+	if folder_path.is_empty(): return
+	folder_path.pop_back()
+	folder_changed.emit(folder_path.duplicate(true))
+	field.text = ""
+	refresh()
+
+func _update_path() -> void:
+	if not folder_mode: return
+	folder_navigation.visible = not folder_path.is_empty()
+	up_button.disabled = folder_path.is_empty()
+	var names := PackedStringArray([library_name])
+	for folder in folder_path: names.append(str(folder.get("Name", "Folder")))
+	path_label.text = " / ".join(names)
+	path_label.tooltip_text = path_label.text
+	field.placeholder_text = "Search " + folder_name()
+
 func refresh(term: String = "") -> void:
+	_update_path()
 	generation += 1
 	var current := generation
 	busy = true
@@ -72,7 +124,7 @@ func _more(current: int) -> void:
 	if busy or current != generation: return
 	busy = true
 	has_more = false
-	var result := await api.library(search, offset, library_id)
+	var result := await api.folder_items(search, offset, parent_id()) if folder_mode else await api.library(search, offset, library_id)
 	if current != generation: return
 	if not result.ok:
 		busy = false
@@ -86,18 +138,20 @@ func _more(current: int) -> void:
 		return
 	var items: Array = result.data.get("Items", [])
 	if offset == 0:
-		if search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
+		if not folder_mode and search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
 			var hero := LibraryHero.new()
 			hero.item = _choose_hero(items.filter(func(item: Dictionary): return item.get("Type", "") != "Photo"))
 			hero.artwork = artwork
 			hero.chosen.connect(func(item: Dictionary): selected.emit(item))
 			content.add_child(hero)
 			content.move_child(hero, 0)
-		Widgets.label(("Recently Added" if library_id.is_empty() else library_name) if search.is_empty() else "Search results", content, 28)
+		var title := "Recently Added" if library_id.is_empty() else folder_name()
+		Widgets.label(title if search.is_empty() else "Search results", content, 28)
 	_cards(items)
 	if offset == 0: loading_changed.emit(false)
 	offset += items.size()
-	status.emit("%d titles loaded" % offset if offset > 0 else "No matching titles.")
+	var noun := "items" if folder_mode else "titles"
+	status.emit("%d %s loaded" % [offset, noun] if offset > 0 else "No matching %s." % noun)
 	has_more = not items.is_empty() and offset < int(result.data.get("TotalRecordCount", offset))
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -140,5 +194,5 @@ func _cards(items: Array, horizontal: bool = false) -> void:
 		var card := MediaCard.new()
 		card.item = item
 		card.artwork = artwork
-		card.chosen.connect(func(chosen: Dictionary): selected.emit(chosen))
+		card.chosen.connect(_chosen)
 		holder.add_child(card)

@@ -143,6 +143,7 @@ godot --headless --xr-mode off --path . --script tests/test_player_tooltips.gd
 godot --headless --xr-mode off --path . --script tests/test_tracks.gd
 godot --headless --xr-mode off --path . --script tests/test_player_loading.gd
 godot --headless --xr-mode off --path . --script tests/test_photos.gd
+godot --headless --xr-mode off --path . --script tests/test_library_folders.gd
 ```
 
 ## Test PC video

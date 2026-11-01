@@ -7,6 +7,7 @@ var offset := 0
 var has_more := false
 var search := ""
 var library_id := ""
+var folder_mode := false
 var busy := false
 
 func capture(library: LibraryView, selected: Dictionary) -> void:
@@ -21,7 +22,8 @@ func capture(library: LibraryView, selected: Dictionary) -> void:
 	offset = library.offset
 	has_more = library.has_more
 	search = library.search
-	library_id = library.library_id
+	library_id = library.parent_id()
+	folder_mode = library.folder_mode
 
 func can_next() -> bool:
 	return index + 1 < items.size() or has_more
@@ -30,7 +32,7 @@ func step(direction: int, api: JellyfinClient) -> Dictionary:
 	if busy or index + direction < 0: return {}
 	busy = true
 	while direction > 0 and index + 1 >= items.size() and has_more:
-		var result := await api.library(search, offset, library_id)
+		var result := await api.folder_items(search, offset, library_id) if folder_mode else await api.library(search, offset, library_id)
 		if not result.ok:
 			busy = false
 			return {"error": result.error}

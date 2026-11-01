@@ -19,6 +19,7 @@ var selected_id := ""
 var signed_in := false
 var settings_mode := false
 var buttons: Dictionary = {}
+var library_types: Dictionary = {}
 var rail_background: StyleBoxFlat
 var main_background: StyleBoxFlat
 var main_content: VBoxContainer
@@ -144,6 +145,7 @@ func _home_pressed() -> void:
 
 func clear_libraries() -> void:
 	buttons.clear()
+	library_types.clear()
 	for child in libraries.get_children():
 		libraries.remove_child(child)
 		child.queue_free()
@@ -152,7 +154,7 @@ func set_libraries(items: Array) -> void:
 	clear_libraries()
 	for item in items:
 		var library_type := str(item.get("CollectionType") if item.get("CollectionType") != null else "").to_lower()
-		if library_type not in ["", "mixed", "movies", "tvshows", "homevideos", "photos"]: continue
+		if library_type not in ["", "mixed", "movies", "tvshows", "homevideos", "photos", "musicvideos"]: continue
 		var id := str(item.get("Id", ""))
 		var title := str(item.get("Name", "Library"))
 		var button := Widgets.button(title, func(): navigate.emit(id, title), libraries)
@@ -161,6 +163,7 @@ func set_libraries(items: Array) -> void:
 		button.tooltip_text = title
 		_style_navigation_button(button, _library_icon(library_type))
 		buttons[id] = button
+		library_types[id] = library_type
 	if buttons.is_empty():
 		var empty := Widgets.label("No supported libraries", libraries, 17)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

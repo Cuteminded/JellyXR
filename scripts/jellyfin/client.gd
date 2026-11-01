@@ -84,7 +84,7 @@ func query(values: Dictionary) -> String:
 	return "?" + "&".join(pairs)
 
 func library(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
-	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
+	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video,MusicVideo,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
 	if search.is_empty() and parent_id.is_empty():
 		values["SortBy"] = "DateCreated"
 		values["SortOrder"] = "Descending"
@@ -94,8 +94,14 @@ func library(search: String = "", offset: int = 0, parent_id: String = "") -> Di
 		return await _random_library(values, offset)
 	return await request("/Items" + query(values))
 
+func folder_items(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
+	var values := {"UserId": user_id, "ParentId": parent_id, "Recursive": "false" if search.is_empty() else "true", "IncludeItemTypes": "Folder,PhotoAlbum,Video,MusicVideo,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
+	if not search.is_empty(): values["SearchTerm"] = search
+	if values["SortBy"] == "Random": return await _random_library(values, offset)
+	return await request("/Items" + query(values))
+
 func _random_library(values: Dictionary, offset: int) -> Dictionary:
-	var key := JSON.stringify([server, user_id, values.get("ParentId", ""), values.get("SearchTerm", "")])
+	var key := JSON.stringify([server, user_id, values.get("ParentId", ""), values.get("SearchTerm", ""), values.get("Recursive", ""), values.get("IncludeItemTypes", "")])
 	var ids: Array = random_library_ids.get(key, [])
 	if offset == 0 or not random_library_ids.has(key):
 		var generation := int(random_library_generation.get(key, 0)) + 1

@@ -8,6 +8,7 @@ var artwork: ArtworkLoader
 func _ready() -> void:
 	custom_minimum_size = Vector2(210, 332)
 	tooltip_text = item.get("Name", "Untitled")
+	if LibraryView.is_folder(item): accessibility_name = tooltip_text + ", folder"
 	pressed.connect(func(): chosen.emit(item))
 	add_theme_stylebox_override("normal", Widgets.surface(Color("151e2e"), 14, 0))
 	var body := VBoxContainer.new()
@@ -21,26 +22,12 @@ func _ready() -> void:
 	image_frame.add_theme_stylebox_override("panel", Widgets.surface(Color("25334a"), 8))
 	image_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_child(image_frame)
-	var fallback := Label.new()
-	fallback.text = "J"
-	fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	fallback.add_theme_font_size_override("font_size", 64)
-	fallback.add_theme_color_override("font_color", Color("8095b3"))
-	fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_frame.add_child(fallback)
-	var poster := TextureRect.new()
-	poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	if item.get("Type", "") == "Photo":
-		poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_frame.add_child(poster)
-	artwork.fetch(poster, item)
+	_add_artwork(image_frame)
 	var title := Widgets.label(item.get("Name", "Untitled"), body, 20)
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if LibraryView.is_folder(item): return
 	var user_data: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var detail := DetailsMetadata.year(item)
 	if item.get("Type", "") == "Photo": detail = ""
@@ -61,3 +48,34 @@ func _ready() -> void:
 		bar.add_theme_stylebox_override("background", Widgets.surface(Color("29374b"), 2))
 		bar.add_theme_stylebox_override("fill", Widgets.surface(Color("6de3cf"), 2))
 		body.add_child(bar)
+
+func _add_artwork(image_frame: PanelContainer) -> void:
+	if LibraryView.is_folder(item):
+		var center := CenterContainer.new()
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		image_frame.add_child(center)
+		var icon := TextureRect.new()
+		icon.texture = preload("res://assets/icons/folder.svg")
+		icon.custom_minimum_size = Vector2(96, 96)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.modulate = Color("8095b3")
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(icon)
+		return
+	var fallback := Label.new()
+	fallback.text = "J"
+	fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	fallback.add_theme_font_size_override("font_size", 64)
+	fallback.add_theme_color_override("font_color", Color("8095b3"))
+	fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_frame.add_child(fallback)
+	var poster := TextureRect.new()
+	poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	if item.get("Type", "") == "Photo":
+		poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_frame.add_child(poster)
+	artwork.fetch(poster, item)

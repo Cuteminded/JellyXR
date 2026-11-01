@@ -12,6 +12,7 @@ var viewport: SubViewport
 var shell: UiShell
 var libraries_loaded := false
 var library_generation := 0
+var library_folder_path: Array = []
 var page_generation := 0
 var page: VBoxContainer
 var browsing_return_page: Control
@@ -255,7 +256,7 @@ func _quick_connect() -> void:
 func _show_library() -> void:
 	var title := "Home"
 	if shell.buttons.has(shell.selected_id): title = shell.buttons[shell.selected_id].text
-	_open_library(shell.selected_id, title)
+	_open_library(shell.selected_id, title, library_folder_path.duplicate(true))
 
 func _toggle_controller_library() -> void:
 	if api.token.is_empty(): return
@@ -273,7 +274,7 @@ func _toggle_panel() -> void:
 	player_overlay.hide()
 	keyboard.hide()
 
-func _open_library(id: String, title: String) -> void:
+func _open_library(id: String, title: String, folder_path: Array = []) -> void:
 	_clear_page()
 	var loading_page := {"generation": page_generation}
 	shell.set_signed_in(true)
@@ -282,6 +283,10 @@ func _open_library(id: String, title: String) -> void:
 	library.api = api
 	library.library_id = id
 	library.library_name = title
+	library.folder_mode = shell.library_types.get(id, "") in ["homevideos", "musicvideos", "photos"]
+	library_folder_path = folder_path.duplicate(true)
+	library.folder_path = library_folder_path.duplicate(true)
+	library.folder_changed.connect(func(path: Array): library_folder_path = path)
 	api.library_sort_by = settings.library_sort_by
 	api.library_sort_order = settings.library_sort_order
 	library.size_flags_vertical = Control.SIZE_EXPAND_FILL
