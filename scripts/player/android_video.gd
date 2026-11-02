@@ -5,11 +5,13 @@ var texture: ExternalTexture
 var playback_generation := 0
 var stream_open := false
 var frame_visible := false
+var volume_poll_elapsed := 0.0
+var unmuted_volume := 1.0
 
 func _ready() -> void:
 	if not Engine.has_singleton("JellyXRVideo"): return
 	bridge = Engine.get_singleton("JellyXRVideo")
-	_apply_volume()
+	_sync_system_volume()
 	bridge.connect("prepared", func(): prepared.emit())
 	bridge.connect("completed", func(): ended.emit())
 	bridge.connect("failed", func(message: String): failed.emit(message))
@@ -18,6 +20,43 @@ func _ready() -> void:
 
 func available() -> bool:
 	return bridge != null
+
+func _has_system_volume() -> bool:
+	if bridge == null: return false
+	if bridge.has_method("has_java_method"):
+		return bridge.has_java_method("get_system_volume") and bridge.has_java_method("set_system_volume")
+	return bridge.has_method("get_system_volume") and bridge.has_method("set_system_volume")
+
+func _update_system_volume(level: float, force_emit := false) -> void:
+	level = clampf(level, 0.0, 1.0)
+	var silent := level <= 0.0
+	if not force_emit and is_equal_approx(volume, level) and muted == silent: return
+	volume = level
+	muted = silent
+	if volume > 0.0: unmuted_volume = volume
+	volume_changed.emit(volume, muted)
+
+func _sync_system_volume() -> void:
+	if _has_system_volume(): _update_system_volume(bridge.get_system_volume())
+
+func set_volume(level: float) -> void:
+	if not _has_system_volume():
+		super.set_volume(level)
+		return
+	_update_system_volume(bridge.set_system_volume(clampf(level, 0.0, 1.0)), true)
+
+func toggle_mute() -> void:
+	if not _has_system_volume():
+		super.toggle_mute()
+		return
+	_sync_system_volume()
+	set_volume(unmuted_volume if muted else 0.0)
+
+func _apply_volume() -> void:
+	if _has_system_volume():
+		_sync_system_volume()
+	else:
+		super._apply_volume()
 
 func has_android_services() -> bool:
 	return available()
@@ -70,7 +109,11 @@ func stop() -> void:
 	_clear_frame()
 	if available(): bridge.stop_video()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	volume_poll_elapsed += delta
+	if volume_poll_elapsed >= 0.25:
+		volume_poll_elapsed = 0.0
+		_sync_system_volume()
 	if not available() or material == null: return
 	var ready: bool = stream_open and bridge.has_video_frame()
 	if ready != frame_visible:

@@ -1,6 +1,8 @@
 package nu.lizzy.jellyxr.video;
 
+import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.media.AudioManager;
 import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.Looper;
@@ -167,6 +169,24 @@ public final class JellyXRVideo extends GodotPlugin {
         main.post(() -> {
             if (player != null) player.setVolume(volume);
         });
+    }
+
+    @UsedByGodot public double get_system_volume() {
+        AudioManager audio = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        int maximum = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        return maximum > 0 ? (double) audio.getStreamVolume(AudioManager.STREAM_MUSIC) / maximum : 0.0;
+    }
+
+    @UsedByGodot public double set_system_volume(double level) {
+        AudioManager audio = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        int maximum = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        int index = (int) Math.round(Math.max(0.0, Math.min(1.0, level)) * maximum);
+        try {
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, index, 0);
+        } catch (SecurityException exception) {
+            Log.w("JellyXRVideo", "Android denied the media volume change", exception);
+        }
+        return get_system_volume();
     }
 
     @UsedByGodot public void seek_to(int milliseconds) {
