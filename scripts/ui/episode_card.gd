@@ -60,15 +60,16 @@ func _ready() -> void:
 	play_button.accessibility_name = play_button.text + " " + title_label.text
 	if user.get("Played", false):
 		play_button.accessibility_name += ", watched"
-	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
-	if sources.size() > 1:
-		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), image_column)
-		version_button.accessibility_name = "Choose version of " + title_label.text
 	watched_control = preload("res://scripts/ui/watched_control.gd").new()
 	watched_control.api = api
 	watched_control.item = item
 	watched_control.changed.connect(_refresh_user_data)
-	text.add_child(watched_control)
+	image_column.add_child(watched_control)
+	watched_control.button.size_flags_horizontal = Control.SIZE_FILL
+	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
+	if sources.size() > 1:
+		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), image_column)
+		version_button.accessibility_name = "Choose version of " + title_label.text
 
 func _refresh_user_data() -> void:
 	var user: Dictionary = item.UserData
