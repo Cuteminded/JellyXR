@@ -17,6 +17,17 @@ class JavaVolumeBridge extends VolumeBridge:
 class AvailablePcVideo extends PcVideo:
 	func available() -> bool: return true
 
+class SystemVolumeBridge extends JavaVolumeBridge:
+	var system_level := 0.4
+	var writes := 0
+	func has_java_method(method: StringName) -> bool:
+		return method in [&"get_system_volume", &"set_system_volume", &"set_volume"]
+	func get_system_volume() -> float: return system_level
+	func set_system_volume(value: float) -> float:
+		writes += 1
+		system_level = roundf(clampf(value, 0.0, 1.0) * 15.0) / 15.0
+		return system_level
+
 var failures := 0
 
 func _initialize() -> void:
@@ -114,6 +125,37 @@ func run_checks() -> void:
 	check(java_bridge.level == 0.0, "Android mute reaches the Java playback bridge")
 	android.toggle_mute()
 	check(is_equal_approx(java_bridge.level, 0.25), "Android unmute restores volume through the Java playback bridge")
+	var system_bridge := SystemVolumeBridge.new()
+	android.bridge = system_bridge
+	android.volume_changed.connect(controls.update_volume)
+	android._apply_volume()
+	check(is_equal_approx(android.volume, 0.4) and controls.slider.value == 40 and system_bridge.writes == 0, "Android reads the existing system volume without changing it on startup or playback restart")
+	android.set_volume(0.5)
+	check(is_equal_approx(android.volume, 8.0 / 15.0) and is_equal_approx(android.volume, system_bridge.system_level), "Android slider reads back the system's discrete volume step")
+	controls.slider.set_value_no_signal(54)
+	android.set_volume(0.54)
+	check(is_equal_approx(controls.slider.value, roundf(android.volume * 100.0)), "Slider movement within one system volume step still snaps back to the actual level")
+	check(system_bridge.level == 1.0, "System volume does not also attenuate the player's audio")
+	system_bridge.system_level = 0.2
+	android._process(0.25)
+	check(is_equal_approx(android.volume, 0.2) and controls.slider.value == 20, "Hardware volume changes update the slider even without an active video material")
+	android.toggle_mute()
+	check(android.muted and system_bridge.system_level == 0.0 and controls.slider.value == 0, "Android mute silences system media volume and updates the slider")
+	android.toggle_mute()
+	check(not android.muted and is_equal_approx(system_bridge.system_level, 0.2), "Android unmute restores the previous system volume")
+	android.toggle_mute()
+	system_bridge.system_level = 0.6
+	android._process(0.25)
+	check(not android.muted and controls.slider.value == 60, "Raising hardware volume clears the muted state")
+	system_bridge.system_level = 0.0
+	android._process(0.25)
+	check(android.muted and controls.mute_button.accessibility_name == "Unmute", "Hardware volume at zero exposes the unmute action")
+	android.toggle_mute()
+	check(is_equal_approx(system_bridge.system_level, 0.6), "Unmute remembers the latest hardware volume")
+	android.set_volume(2.0)
+	check(android.volume == 1.0, "Android system volume clamps above one")
+	android.set_volume(-1.0)
+	check(android.volume == 0.0 and android.muted, "Android system volume clamps below zero")
 	android.queue_free()
 	video.queue_free()
 	app.queue_free()
