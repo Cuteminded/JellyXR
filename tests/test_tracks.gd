@@ -153,6 +153,8 @@ func check_app_switching() -> void:
 	for frame in range(4): await process_frame
 	check(choices.scroll_vertical > 0 and choices.buttons[23].get_global_rect().end.y <= choices.get_global_rect().end.y, "Long track lists scroll to the keyboard-focused choice")
 	check(app.player_overlay.quick_access.get_global_rect().end.y < app.player_overlay.submenu_buttons["audio"].get_global_rect().position.y, "Long track lists keep the player buttons accessible")
+	check(app.player_overlay.quick_access.get_global_rect().position.y >= 0, "The combined audio menu fits inside the player viewport with long track lists")
+	check(app.player_overlay.volume_control.is_visible_in_tree(), "Volume stays accessible while the audio track list scrolls")
 	app.session.started = false
 	await app._stop(false)
 	check(app.subtitles.index == -1 and app.subtitle_overlay.text.is_empty(), "Stopping clears subtitle display and selection")

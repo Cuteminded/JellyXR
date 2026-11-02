@@ -9,6 +9,7 @@ var kind := "Subtitle"
 var body: VBoxContainer
 var buttons: Dictionary = {}
 var automatic_button: Button
+var maximum_height := 420.0
 
 func _ready() -> void:
 	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -52,7 +53,7 @@ func refresh() -> void:
 		if not supported: label += "\nJellyfin converts the video."
 		_track_button(label, index, selected, group, busy or (original and (kind == "Audio" or not supported)))
 	if count == 0: _hint("No %s tracks." % kind.to_lower())
-	custom_minimum_size.y = minf(420, body.get_combined_minimum_size().y)
+	custom_minimum_size.y = minf(maximum_height, body.get_combined_minimum_size().y)
 	set_deferred("scroll_vertical", scroll_position)
 
 func _track_button(label: String, index: int, selected: int, group: ButtonGroup, disabled: bool) -> void:
