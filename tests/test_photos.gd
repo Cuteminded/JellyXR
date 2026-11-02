@@ -83,15 +83,31 @@ func run_checks() -> void:
 	assert(app.material.get_shader_parameter("stereo") == true)
 	assert(app.mode == Stereo.Mode.FULL_SBS)
 	assert(not app.player_overlay.timeline.visible and not app.player_overlay.pause_button.visible)
-	app._select_stereo(Stereo.Mode.TOP_BOTTOM)
+	var overlay: PlayerOverlay = app.player_overlay
+	assert(overlay.stop_button.get_index() == 0, "Exit is the leftmost button in photo mode")
+	var screen_mode: Button = overlay.submenu_buttons["screen_mode"]
+	assert(screen_mode.is_visible_in_tree(), "The photo bar includes Screen mode")
+	assert(not overlay.submenu_buttons["audio"].visible and not overlay.submenu_buttons["subtitles"].visible, "Photo viewing keeps video-only controls hidden")
+	var compact_height := overlay.viewport.size.y
+	screen_mode.pressed.emit()
+	await process_frame
+	await process_frame
+	assert(overlay.quick_access.is_visible_in_tree() and overlay.quick_access.screen_mode.visible, "The photo Screen mode button opens its pop-out")
+	assert(overlay.viewport.size.x == 820 and overlay.viewport.size.y > compact_height, "The photo viewport expands vertically to fit the menu")
+	assert(overlay.quick_access.get_global_rect().position.y >= 0 and overlay.quick_access.get_global_rect().end.x <= overlay.viewport.size.x, "The screen mode menu fits inside the photo viewport")
+	overlay.quick_access.screen_mode.stereo_buttons[Stereo.Mode.TOP_BOTTOM].pressed.emit()
 	assert(app.material.get_shader_parameter("top_bottom") == true)
-	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
+	overlay.quick_access.screen_mode.projection_buttons[VideoProjection.Mode.EQUIRECTANGULAR].pressed.emit()
 	assert(app.world.panoramic)
+	screen_mode.pressed.emit()
+	assert(not overlay.quick_access.visible and overlay.viewport.size.y == compact_height, "Pressing Screen mode again restores the compact photo bar")
+	assert(screen_mode.has_focus(), "Closing the photo menu restores focus to Screen mode")
 	await app._stop(false)
 	assert(not app.photo_active and not app.screen.visible)
 	assert(app.material == original and app.screen.material_override == original)
 	assert(app.world.panorama.material_override == original and not app.world.panoramic)
 	assert(app.player_overlay.timeline.visible and app.player_overlay.pause_button.visible)
+	assert(overlay.pause_button.get_index() == 0 and overlay.stop_button.get_index() == 1, "Leaving photo mode restores the video button order")
 	await app._show_photo({"Id": "pending", "Name": "Pending", "Type": "Photo"})
 	assert(indicator.is_visible_in_tree())
 	app._photo_failed("Test failure")

@@ -96,7 +96,7 @@ func _build_controls(parent: Control) -> void:
 		PlayerQuickAccess.style_button(button, false)
 		button.pressed.connect(func(): toggle_menu(entry[1]))
 		submenu_buttons[entry[1]] = button
-		video_controls.append(button)
+		if entry[1] != "screen_mode": video_controls.append(button)
 	_add_control("Settings", "settings", "settings", row)
 	previous_photo = _add_control("Previous photo", "previous_photo", "chevron_left", row)
 	next_photo = _add_control("Next photo", "next_photo", "chevron_right", row)
@@ -120,7 +120,7 @@ func toggle_menu(name: String) -> void:
 	else: show_menu(name)
 
 func show_menu(name: String) -> void:
-	if photo_mode: return
+	if photo_mode and name != "screen_mode": return
 	active_menu = name
 	_resize_viewport(true)
 	quick_access.show_menu(name)
@@ -136,7 +136,7 @@ func close_menu() -> void:
 	statistics_panel.hide()
 	for button in submenu_buttons.values(): button.set_pressed_no_signal(false)
 	_resize_viewport(false)
-	if is_visible_in_tree() and not photo_mode and submenu_buttons.has(previous): submenu_buttons[previous].grab_focus()
+	if is_visible_in_tree() and submenu_buttons.has(previous) and submenu_buttons[previous].visible: submenu_buttons[previous].grab_focus()
 
 func set_statistics_visible(enabled: bool) -> void:
 	if enabled: show_menu("statistics")
@@ -144,7 +144,7 @@ func set_statistics_visible(enabled: bool) -> void:
 
 func _resize_viewport(expanded: bool) -> void:
 	var bar_height := ceili(bar.get_combined_minimum_size().y)
-	viewport.size = Vector2i(820, bar_height) if photo_mode else Vector2i(1400, 840 if expanded else bar_height)
+	viewport.size = Vector2i(820 if photo_mode else 1400, 840 if expanded else bar_height)
 	bar.offset_top = -bar_height
 	fit_screen(screen_dimensions.x, screen_dimensions.y, screen_dimensions.z)
 
@@ -185,6 +185,7 @@ func set_photo_mode(enabled: bool) -> void:
 	next_photo.visible = enabled
 	controls_row.move_child(previous_photo, 0 if enabled else controls_row.get_child_count() - 1)
 	controls_row.move_child(next_photo, 1 if enabled else controls_row.get_child_count() - 1)
+	controls_row.move_child(stop_button, 0 if enabled else 1)
 	volume_control.visible = not enabled
 	timeline.visible = not enabled
 	for button in video_controls: button.visible = not enabled
