@@ -25,8 +25,9 @@ func toggle_mute() -> void:
 	volume_changed.emit(volume, muted)
 
 func _apply_volume() -> void:
-	if bridge != null and bridge.has_method("set_volume"):
-		bridge.set_volume(0.0 if muted else volume)
+	if bridge == null: return
+	var supported: bool = bridge.has_java_method("set_volume") if bridge.has_method("has_java_method") else bridge.has_method("set_volume")
+	if supported: bridge.set_volume(0.0 if muted else volume)
 
 func available() -> bool:
 	return false

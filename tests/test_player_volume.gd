@@ -8,6 +8,12 @@ class VolumeBridge extends RefCounted:
 		opened_levels.append(level)
 		return ""
 
+class JavaVolumeBridge extends VolumeBridge:
+	var java_methods_checked: Array[StringName] = []
+	func has_java_method(method: StringName) -> bool:
+		java_methods_checked.append(method)
+		return method == &"set_volume"
+
 class AvailablePcVideo extends PcVideo:
 	func available() -> bool: return true
 
@@ -95,6 +101,17 @@ func run_checks() -> void:
 	check(bridge.opened_levels == [0.0, 0.0] and is_equal_approx(video.volume, 0.42), "Playback restarts begin muted and preserve the selected level")
 	video.toggle_mute()
 	check(is_equal_approx(bridge.level, 0.42), "Unmuting after a restart restores the selected level")
+	var android := AndroidVideo.new()
+	var java_bridge := JavaVolumeBridge.new()
+	android.bridge = java_bridge
+	root.add_child(android)
+	android.set_volume(0.25)
+	check(java_bridge.java_methods_checked.has(&"set_volume") and is_equal_approx(java_bridge.level, 0.25), "Android volume uses the Java plugin method registry")
+	android.toggle_mute()
+	check(java_bridge.level == 0.0, "Android mute reaches the Java playback bridge")
+	android.toggle_mute()
+	check(is_equal_approx(java_bridge.level, 0.25), "Android unmute restores volume through the Java playback bridge")
+	android.queue_free()
 	video.queue_free()
 	app.queue_free()
 	await process_frame
