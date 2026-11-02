@@ -8,6 +8,7 @@ func capture() -> void:
 	root.add_child(app)
 	app.set_process(false)
 	app.playing = true
+	app.decoder_ready = true
 	app.session.item = {"Id": "fixture", "Name": "Example movie"}
 	app.session.source = {"DefaultAudioStreamIndex": 1, "MediaStreams": [
 		{"Type": "Audio", "Index": 1, "DisplayTitle": "English - AAC - Stereo"},
@@ -18,10 +19,16 @@ func capture() -> void:
 	app._show_tracks()
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
-	app.viewport.get_texture().get_image().save_png("res://dist/tracks-preview.png")
-	var view: TracksView = app.page.get_child(0)
-	var scroll: ScrollContainer = view.get_child(2)
-	scroll.scroll_vertical = 1000
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/quick-subtitles-preview.png")
+	app.player_overlay.show_menu("audio")
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/quick-audio-preview.png")
+	app.api.token = "preview-only"
+	app.shell.signed_in = true
+	app._screen_settings()
+	var view: SettingsView = app.page.get_child(0)
+	view._show_section(4)
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw
 	app.viewport.get_texture().get_image().save_png("res://dist/subtitle-settings-preview.png")
@@ -40,6 +47,16 @@ func capture() -> void:
 	var controls_top: float = app.player_overlay.position.y + app.player_overlay.panel_size.y / 2.0
 	assert(subtitle_bottom > controls_top, "Multiline subtitles stay above the visible player controls")
 	root.get_texture().get_image().save_png("res://dist/subtitle-controls-preview.png")
+	var controls_y: float = app.subtitle_overlay.position.y
+	app.player_overlay.show_menu("subtitles")
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	assert(is_equal_approx(app.subtitle_overlay.position.y, controls_y), "Opening a submenu does not move subtitles above the panel")
+	var player_material := app.player_overlay.material_override as StandardMaterial3D
+	assert(app.subtitle_overlay.render_priority < player_material.render_priority, "Subtitles draw behind player menus")
+	root.get_texture().get_image().save_png("res://dist/subtitle-menu-overlay-preview.png")
+	app.player_overlay.close_menu()
+
 	app.settings.subtitle_size = 80
 	app.settings.curvature = 1.2
 	app._resize_screen()

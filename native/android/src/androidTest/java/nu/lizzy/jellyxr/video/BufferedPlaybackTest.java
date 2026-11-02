@@ -36,7 +36,7 @@ public final class BufferedPlaybackTest {
         }, new Handler(Looper.getMainLooper()));
         try {
             onMain(() -> playback.set(new BufferedPlayback(
-                InstrumentationRegistry.getInstrumentation().getContext(), output.getSurface(), url, "", 0,
+                InstrumentationRegistry.getInstrumentation().getContext(), output.getSurface(), url, "", 0, 1.0f,
                 new BufferedPlayback.Listener() {
                     public void ready() {
                         bufferedAtStart.set(playback.get().bufferedPosition());

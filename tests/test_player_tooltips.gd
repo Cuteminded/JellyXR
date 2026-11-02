@@ -34,21 +34,29 @@ func run_checks() -> void:
 	check(overlay.tooltip.text.is_empty(), "Leaving the controls clears the tooltip")
 	pointer.aim(overlay.timeline.slider.get_global_rect().get_center(), true)
 	await process_frame
-	check(overlay.tooltip.text == "Seek to a time", "The playback timeline also shows its tooltip inside the player")
+	check(overlay.tooltip.text.is_empty() and overlay.timeline.slider.tooltip_text.is_empty(), "Hovering the playback timeline does not show a tooltip")
+	overlay.timeline.slider.grab_focus()
+	await process_frame
+	check(overlay.tooltip.text.is_empty(), "Focusing the playback timeline does not show a tooltip")
 	pointer.cancel()
-	var tracks: Button = button.get_parent().get_child(5)
 	var actions: Array[String] = []
 	overlay.action.connect(func(value: String): actions.append(value))
+	var compact_height := overlay.viewport.size.y
+	check(overlay.bar.get_global_rect().end.y - overlay.controls_row.get_global_rect().end.y <= 31, "The player bar ends with only its normal padding below the buttons")
+	var bar_position := overlay.bar.get_global_rect().position
+	var tracks: Button = overlay.submenu_buttons["subtitles"]
 	pointer.sample_trigger(0.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	await process_frame
-	check(overlay.tooltip.text == "Audio and subtitles", "The track button identifies its action on hover")
 	pointer.sample_trigger(1.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	pointer.sample_trigger(0.0)
 	pointer.aim(tracks.get_global_rect().get_center(), true)
 	await process_frame
-	check(actions == ["tracks"], "The track button opens audio and subtitle controls")
+	await process_frame
+	check(actions.is_empty() and overlay.quick_access.tracks_menu.visible and overlay.quick_access.visible, "The player subtitle button opens its submenu directly")
+	check(overlay.bar.get_global_rect().position.y - bar_position.y == 840 - compact_height, "Opening a submenu preserves the bar's position within the expanded viewport")
+	check(overlay.quick_access.get_global_rect().end.y < tracks.get_global_rect().position.y, "The submenu stays above the player buttons")
 	pointer.cancel()
 	button.grab_focus()
 	await process_frame
@@ -57,10 +65,10 @@ func run_checks() -> void:
 	var video := VideoBackend.new()
 	session.source = {"Bitrate": 25000000, "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 2160, "AverageFrameRate": 23.976, "Codec": "hevc"}]}
 	overlay.statistics_provider = func(): return preload("res://scripts/ui/playback_statistics.gd").snapshot(session, video)
-	overlay.statistics_button.pressed.emit()
+	overlay.set_statistics_visible(true)
 	await process_frame
 	await process_frame
-	check(overlay.statistics_panel.visible and overlay.statistics_button.button_pressed, "The statistics button opens and marks the panel active")
+	check(overlay.statistics_panel.visible and overlay.submenu_buttons["statistics"].button_pressed, "The statistics button opens and marks the panel active")
 	check(overlay.statistics_values["Source video"].text == "3840 x 2160 / 23.976 fps", "Statistics show source resolution and frame rate")
 	var renderer_fps: String = overlay.statistics_values["Renderer / FPS"].text
 	check(renderer_fps != "N/A" and renderer_fps.contains(" / ") and renderer_fps.get_slice(" / ", 1).is_valid_int(), "Statistics display the rendering driver and app FPS")
@@ -72,10 +80,36 @@ func run_checks() -> void:
 	video.paused = true
 	overlay._process(1.0)
 	check(overlay.statistics_values["Player state"].text == "Paused", "Open statistics refresh playback state")
-	check(overlay.statistics_button.get_global_rect().end.x <= overlay.viewport.size.x, "The rightmost button fits inside the player bar")
+	check(overlay.submenu_buttons["statistics"].get_global_rect().end.x <= overlay.viewport.size.x, "The rightmost button fits inside the player bar")
 	check(overlay.statistics_panel.get_global_rect().end.y <= overlay.viewport.size.y, "The statistics panel fits inside the player viewport")
-	overlay.statistics_button.pressed.emit()
-	check(not overlay.statistics_panel.visible and overlay.viewport.size.y == 300, "Pressing statistics again restores the compact player")
+	overlay.submenu_buttons["screen_mode"].pressed.emit()
+	await process_frame
+	await process_frame
+	check(overlay.quick_access.screen_mode.visible and not overlay.statistics_panel.visible and not overlay.quick_access.tracks_menu.visible, "Switching player buttons shows only the selected submenu")
+	check(overlay.submenu_buttons["screen_mode"].button_pressed and not overlay.submenu_buttons["statistics"].button_pressed, "Only the active submenu button is selected")
+	overlay.submenu_buttons["screen_mode"].pressed.emit()
+	check(not overlay.quick_access.visible and overlay.viewport.size.y == compact_height, "Pressing the active button closes its submenu")
+	overlay.show_menu("subtitles")
+	var cancel := InputEventAction.new()
+	cancel.action = "ui_cancel"
+	cancel.pressed = true
+	overlay.quick_access._unhandled_key_input(cancel)
+	check(not overlay.quick_access.visible and overlay.submenu_buttons["subtitles"].has_focus(), "Closing a submenu returns focus to its player button")
+	for name in ["volume", "subtitles", "audio", "screen_mode", "statistics", "audio", "subtitles"]:
+		overlay.submenu_buttons[name].pressed.emit()
+		await process_frame
+		await process_frame
+		var visible_panels := int(overlay.quick_access.volume_control.visible) + int(overlay.quick_access.tracks_menu.visible) + int(overlay.quick_access.screen_mode.visible) + int(overlay.statistics_panel.visible)
+		check(overlay.quick_access.visible and visible_panels == 1 and overlay.active_menu == name, "Switching between player buttons keeps exactly one panel open")
+		check(is_equal_approx(overlay.quick_access.size.y, overlay.quick_access.get_combined_minimum_size().y), "Each panel fits its content without unused space below it")
+		overlay._show_tooltip(overlay.submenu_buttons[name])
+		await process_frame
+		await process_frame
+		check(overlay.tooltip.get_global_rect().position.y >= overlay.quick_access.get_global_rect().end.y + 8, "The player tooltip fits below the open submenu without overlap")
+		overlay._hide_tooltip(overlay.submenu_buttons[name])
+		var selected_buttons := 0
+		for control in overlay.submenu_buttons.values(): selected_buttons += int(control.button_pressed)
+		check(selected_buttons == 1, "Only one player submenu button remains selected")
 	overlay.set_statistics_visible(true)
 	overlay.hide()
 	await process_frame

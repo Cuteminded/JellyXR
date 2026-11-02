@@ -24,6 +24,7 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 		bridge.failed.connect(func(message: String): failed.emit(message))
 		bridge.size_changed.connect(func(w: int, h: int): size_changed.emit(w, h))
 		bridge.texture_changed.connect(_set_texture)
+	_apply_volume()
 	paused = false
 	var error: String = bridge.open_video(url, authorization, start_ms)
 	if not error.is_empty(): failed.emit(error)

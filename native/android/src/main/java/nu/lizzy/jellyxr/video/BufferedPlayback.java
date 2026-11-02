@@ -31,7 +31,7 @@ final class BufferedPlayback {
     private boolean failed;
 
     BufferedPlayback(Context context, Surface surface, String url, String authorization,
-                     int startMs, Listener listener) {
+                     int startMs, float volume, Listener listener) {
         DefaultHttpDataSource.Factory http = new DefaultHttpDataSource.Factory()
             .setUserAgent("jellyXR")
             .setDefaultRequestProperties(Collections.singletonMap("Authorization", authorization));
@@ -43,12 +43,17 @@ final class BufferedPlayback {
             .setMediaSourceFactory(new DefaultMediaSourceFactory(new DefaultDataSource.Factory(context, http)))
             .setLoadControl(loadControl)
             .build();
+        player.setVolume(volume);
         try {
             prepare(surface, url, startMs, listener);
         } catch (RuntimeException exception) {
             player.release();
             throw exception;
         }
+    }
+
+    void setVolume(float volume) {
+        player.setVolume(volume);
     }
 
     private void prepare(Surface surface, String url, int startMs, Listener listener) {

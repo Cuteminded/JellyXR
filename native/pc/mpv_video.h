@@ -15,6 +15,7 @@ public:
     ~JellyXRMpv();
     godot::String open_video(godot::String url, godot::String authorization, int64_t start_ms);
     void set_paused(bool paused);
+    void set_volume(double level);
     void seek_to(int64_t milliseconds);
     int64_t position_ms() const;
     int64_t duration_ms() const;
@@ -56,6 +57,7 @@ private:
     bool active = false;
     bool prepared = false;
     bool paused = false;
+    double volume = 1.0;
     bool buffering = false;
     bool seeking = false;
     bool software_only = false;

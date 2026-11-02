@@ -84,9 +84,7 @@ func _setup_world() -> void:
 	screen.add_child(subtitle_overlay)
 	player_overlay = world.player_overlay
 	subtitle_overlay.controls = player_overlay
-	player_overlay.action.connect(_player_action)
-	player_overlay.statistics_provider = func(): return preload("res://scripts/ui/playback_statistics.gd").snapshot(session, video, decoder_size if decoder_ready else Vector2i.ZERO)
-	player_overlay.seek_requested.connect(_seek_to)
+	_configure_player_overlay(player_overlay)
 	world.player_loading.cancelled.connect(_show_library)
 	world.player_skip_popup.skip_requested.connect(_skip_segment)
 	material = world.material
@@ -103,6 +101,25 @@ func _setup_world() -> void:
 	startup.ready_to_center.connect(func(): _recenter(); panel.show())
 	add_child(startup)
 	if get_viewport().use_xr: panel.hide()
+
+func _configure_player_overlay(overlay: PlayerOverlay) -> void:
+	overlay.action.connect(_player_action)
+	overlay.volume_control.volume_changed.connect(video.set_volume)
+	overlay.volume_control.mute_requested.connect(video.toggle_mute)
+	video.volume_changed.connect(overlay.volume_control.update_volume)
+	overlay.volume_control.update_volume(video.volume, video.muted)
+	var tracks_menu := overlay.quick_access.tracks_menu
+	tracks_menu.state_provider = func(): return {"session": session, "subtitles": subtitles, "busy": seeking}
+	tracks_menu.audio_selected.connect(_select_audio)
+	tracks_menu.subtitle_selected.connect(_select_subtitle)
+	subtitles.changed.connect(tracks_menu.update_subtitle_status)
+	var screen_modes := overlay.quick_access.screen_mode
+	screen_modes.state_provider = func(): return {"stereo": mode, "projection": projection_mode, "swap_eyes": material.get_shader_parameter("swap_eyes") == true}
+	screen_modes.stereo_selected.connect(_select_stereo)
+	screen_modes.projection_selected.connect(_select_projection)
+	screen_modes.eyes_swapped.connect(func(enabled: bool): material.set_shader_parameter("swap_eyes", enabled))
+	overlay.statistics_provider = func(): return preload("res://scripts/ui/playback_statistics.gd").snapshot(session, video, decoder_size if decoder_ready else Vector2i.ZERO)
+	overlay.seek_requested.connect(_seek_to)
 
 func _setup_ui() -> void:
 	shell = UiShell.new()
@@ -264,7 +281,7 @@ func _toggle_controller_library() -> void:
 		_show_library()
 		return
 	for child in page.get_children():
-		if child is TracksView or child is SettingsView:
+		if child is SettingsView:
 			_restore_browsing_page()
 			return
 	_toggle_panel()
@@ -467,7 +484,7 @@ func _start(item: Dictionary, from_start: bool = false) -> void:
 	playing = true
 	screen.show()
 	_show_playback()
-	player_overlay.title.text = DetailsMetadata.title(item, "Now playing")
+	player_overlay.set_media(item)
 	media_segments.load_item(api, str(item.Id))
 	if from_start:
 		selected = selected.duplicate(true)
@@ -534,6 +551,7 @@ func _video_prepared() -> void:
 	if get_viewport().use_xr and not seeking and not panel.visible:
 		player_overlay.hide()
 	seeking = false
+	player_overlay.quick_access.refresh_tracks()
 	_update_timeline()
 
 func _show_playback() -> void:
@@ -541,7 +559,7 @@ func _show_playback() -> void:
 	panel.hide()
 	player_overlay.set_photo_mode(photo_active)
 	if photo_active: player_overlay.set_photo_navigation(photo_sequence.index > 0, photo_sequence.can_next())
-	player_overlay.title.text = DetailsMetadata.title(photo_item if photo_active else session.item, "Now playing")
+	player_overlay.set_media(photo_item if photo_active else session.item)
 	player_overlay.show()
 	_update_timeline()
 
@@ -558,7 +576,8 @@ func _player_action(action: String) -> void:
 		"forward": _skip(30000)
 		"skip_segment": _skip_segment()
 		"stop": _stop()
-		"tracks": _show_tracks()
+		"subtitles": _show_tracks("Subtitle")
+		"audio": _show_tracks("Audio")
 		"settings": _screen_settings()
 		"library": _return_to_title()
 		"hide": player_overlay.hide()
@@ -607,17 +626,14 @@ func _screen_settings() -> void:
 	var view := SettingsView.new()
 	view.navigation_host = shell.settings_navigation
 	view.settings = settings
+	view.subtitles = subtitles
+	view.subtitle_timing_enabled = playing and not photo_active
 	view.passthrough_supported = world.passthrough.is_supported()
-	view.stereo_mode = mode
 	view.projection_mode = projection_mode
-	view.swap_eyes = material.get_shader_parameter("swap_eyes") == true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.screen_changed.connect(func(): _resize_screen(); _position_screen())
 	view.screen_follow_changed.connect(_update_screen_follow)
 	view.environment_changed.connect(_change_environment)
-	view.stereo_selected.connect(_select_stereo)
-	view.projection_selected.connect(_select_projection)
-	view.eyes_swapped.connect(func(): material.set_shader_parameter("swap_eyes", not material.get_shader_parameter("swap_eyes")))
 	view.status.connect(func(message: String): status.text = message)
 	page.add_child(view)
 	status.text = "Changes take effect as you make them."
@@ -697,7 +713,7 @@ func _position_screen() -> void:
 	elif settings.is_theatre():
 		screen.global_transform = theatre.projection_transform()
 	else:
-		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.height
+		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.screen_height_offset()
 
 func _update_screen_follow() -> void:
 	if not settings.follow_screen or settings.environment not in ["Void", "Passthrough"]: return
@@ -727,9 +743,12 @@ func _duration_ms() -> int:
 
 func _update_timeline() -> void:
 	if autoplay_pending or photo_active: return
-	player_overlay.update_time(int(transcode_offset / 10000) + video.position_ms(), _duration_ms(), decoder_ready and not seeking, video.paused)
+	var position_ms := int(transcode_offset / 10000) + video.position_ms()
+	var duration_ms := _duration_ms()
+	var ready := decoder_ready and not seeking
 	var buffered := video.buffered_position_ms() if decoder_ready and not seeking else -1
-	player_overlay.timeline.update_buffer(buffered + int(transcode_offset / 10000) if buffered >= 0 else -1, _duration_ms(), decoder_ready and not seeking)
+	player_overlay.update_time(position_ms, duration_ms, ready, video.paused)
+	player_overlay.timeline.update_buffer(buffered + int(transcode_offset / 10000) if buffered >= 0 else -1, duration_ms, ready)
 	world.player_skip_popup.update_segment(_active_segment())
 	_update_loading()
 
@@ -903,22 +922,10 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE: _toggle_menu()
 
-func _show_tracks() -> void:
+func _show_tracks(kind: String = "Subtitle") -> void:
 	if not playing or photo_active: return
-	_preserve_browsing_page()
-	panel.show()
-	shell.heading.text = "Audio and subtitles"
-	var view := TracksView.new()
-	view.session = session
-	view.subtitles = subtitles
-	view.settings = settings
-	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	view.closed.connect(_show_playback)
-	view.appearance_changed.connect(_resize_screen)
-	view.audio_selected.connect(_select_audio)
-	view.subtitle_selected.connect(_select_subtitle)
-	page.add_child(view)
-	status.text = "Audio changes briefly restart playback at the current position."
+	_show_playback()
+	player_overlay.show_menu("audio" if kind == "Audio" else "subtitles")
 
 func _select_subtitle(index: int) -> void:
 	if not playing or seeking: return
@@ -939,6 +946,7 @@ func _select_subtitle(index: int) -> void:
 		subtitles.select(api, str(session.item.Id), session.media_source_id, index)
 	if restart: await _restart_tracks()
 	else: session.report("Progress", video.paused)
+	player_overlay.quick_access.refresh_tracks()
 
 func _select_audio(index: int) -> void:
 	if not playing or seeking or session.active_playback_mode == "original": return
@@ -947,6 +955,7 @@ func _select_audio(index: int) -> void:
 
 func _restart_tracks() -> void:
 	seeking = true
+	player_overlay.quick_access.refresh_tracks()
 	seek_paused = video.paused
 	decoder_ready = false
 	var current := countdown_generation
@@ -955,4 +964,4 @@ func _restart_tracks() -> void:
 	await session.report("Stopped")
 	if current != countdown_generation: return
 	await session.open(session.item, false, true)
-	if current == countdown_generation and playing: _show_tracks()
+	if current == countdown_generation and playing: player_overlay.quick_access.refresh_tracks()

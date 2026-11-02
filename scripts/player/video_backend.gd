@@ -5,10 +5,28 @@ signal failed(message: String)
 signal prepared
 signal ended
 signal size_changed(width: int, height: int)
+signal volume_changed(level: float, muted: bool)
 
 var bridge: Object
 var paused := false
+var volume := 1.0
+var muted := false
 var material: ShaderMaterial
+
+func set_volume(level: float) -> void:
+	volume = clampf(level, 0.0, 1.0)
+	if volume > 0.0: muted = false
+	_apply_volume()
+	volume_changed.emit(volume, muted)
+
+func toggle_mute() -> void:
+	muted = not muted
+	_apply_volume()
+	volume_changed.emit(volume, muted)
+
+func _apply_volume() -> void:
+	if bridge != null and bridge.has_method("set_volume"):
+		bridge.set_volume(0.0 if muted else volume)
 
 func available() -> bool:
 	return false

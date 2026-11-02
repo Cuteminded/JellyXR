@@ -4,19 +4,16 @@ extends VBoxContainer
 signal screen_changed
 signal screen_follow_changed
 signal environment_changed
-signal stereo_selected(value: int)
-signal projection_selected(value: int)
-signal eyes_swapped
 signal status(message: String)
 
+var subtitles: SubtitleTrack
+var subtitle_timing_enabled := false
+var subtitle_controls: SubtitleSettings
 var settings: JellyXRSettings
-var stereo_mode := Stereo.Mode.MONO
 var projection_mode := VideoProjection.Mode.SCREEN
-var swap_eyes := false
 var passthrough_supported := false
 var sort_choices: GridContainer
 var screen_dimensions: GridContainer
-var stereo_choices: HFlowContainer
 var reset_screen_button: Button
 var playback_choices: VBoxContainer
 var transcode_options: VBoxContainer
@@ -33,12 +30,13 @@ var environment_choices: VBoxContainer
 var environment_buttons: Dictionary = {}
 var follow_switch: CheckButton
 
-const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback"]
+const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles"]
 const SECTION_ICONS := [
 	preload("res://assets/icons/material/video_library.svg"),
 	preload("res://assets/icons/material/tv.svg"),
 	preload("res://assets/icons/material/home.svg"),
-	preload("res://assets/icons/material/play_arrow.svg")
+	preload("res://assets/icons/material/play_arrow.svg"),
+	preload("res://assets/icons/material/subtitles.svg")
 ]
 
 func _ready() -> void:
@@ -53,7 +51,7 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
-	for index in range(4):
+	for index in range(SECTION_TITLES.size()):
 		var section := VBoxContainer.new()
 		section.add_theme_constant_override("separation", 24)
 		section.visible = index == 0
@@ -63,6 +61,13 @@ func _ready() -> void:
 	_build_screen(sections[1])
 	_build_environment(sections[2])
 	_build_playback(sections[3])
+	subtitle_controls = SubtitleSettings.new()
+	subtitle_controls.settings = settings
+	subtitle_controls.subtitles = subtitles
+	subtitle_controls.timing_enabled = subtitle_timing_enabled
+	subtitle_controls.appearance_changed.connect(func(): screen_changed.emit())
+	_card(sections[4], "Subtitle appearance and timing").add_child(subtitle_controls)
+	subtitle_controls.refresh()
 	resized.connect(_adapt_columns)
 	scroll.resized.connect(_adapt_columns)
 	_adapt_columns()
@@ -74,7 +79,7 @@ func _build_navigation() -> void:
 	navigation.add_theme_constant_override("h_separation", 8)
 	navigation_host.add_child(navigation)
 	var group := ButtonGroup.new()
-	for index in range(4):
+	for index in range(SECTION_TITLES.size()):
 		var title: String = SECTION_TITLES[index]
 		var button := Widgets.button(title, func(): _show_section(index), navigation)
 		button.toggle_mode = true
@@ -205,8 +210,6 @@ func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, ac
 	return choice
 
 func _build_screen(parent: VBoxContainer) -> void:
-	_build_projection(parent)
-	_build_video_format(parent)
 	_build_screen_position(parent)
 
 func _build_screen_position(parent: VBoxContainer) -> void:
@@ -233,38 +236,6 @@ func _screen_position_hint() -> String:
 	if settings.is_theatre():
 		return "Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it."
 	return "Set the screen size, distance, height and curve."
-
-func _build_video_format(parent: VBoxContainer) -> void:
-	parent = _card(parent, "Picture format")
-	_hint("jellyXR detects the 3D format. Choose a different format if the picture looks wrong.", parent)
-	stereo_choices = HFlowContainer.new()
-	stereo_choices.add_theme_constant_override("h_separation", 12)
-	parent.add_child(stereo_choices)
-	var group := ButtonGroup.new()
-	for entry in [["2D", Stereo.Mode.MONO], ["Half-SBS", Stereo.Mode.HALF_SBS], ["Full-SBS", Stereo.Mode.FULL_SBS], ["Top-bottom", Stereo.Mode.TOP_BOTTOM], ["Half top-bottom", Stereo.Mode.HALF_TOP_BOTTOM]]:
-		_choice(entry[0], entry[1] == stereo_mode, group, stereo_choices, func(): stereo_mode = entry[1]; stereo_selected.emit(entry[1]))
-	var swap := CheckButton.new()
-	swap.text = "Swap left and right eyes"
-	swap.accessibility_name = swap.text
-	_style_control(swap)
-	swap.custom_minimum_size.y = 56
-	swap.button_pressed = swap_eyes
-	swap.toggled.connect(func(enabled: bool): swap_eyes = enabled; eyes_swapped.emit())
-	parent.add_child(swap)
-
-func _build_projection(parent: VBoxContainer) -> void:
-	parent = _card(parent, "Video projection")
-	_hint("180° fills the view in front of you. 360° surrounds you. Both use equirectangular video and hide the environment during playback. Fisheye and cubemap layouts are not supported.", parent)
-	var choices := HFlowContainer.new()
-	choices.add_theme_constant_override("h_separation", 12)
-	choices.add_theme_constant_override("v_separation", 12)
-	parent.add_child(choices)
-	var group := ButtonGroup.new()
-	for entry in [["Screen", VideoProjection.Mode.SCREEN], ["180°", VideoProjection.Mode.EQUIRECTANGULAR_180], ["360°", VideoProjection.Mode.EQUIRECTANGULAR]]:
-		_choice(entry[0], entry[1] == projection_mode, group, choices, func():
-			projection_mode = entry[1]
-			projection_selected.emit(entry[1])
-			_rebuild_screen.call_deferred())
 
 func _build_environment(parent: VBoxContainer) -> void:
 	_hint("Choose a background for your screen.", parent)

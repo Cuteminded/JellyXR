@@ -31,6 +31,7 @@ public final class JellyXRVideo extends GodotPlugin {
     private volatile int duration;
     private volatile int bufferedPosition = -1;
     private volatile boolean buffering;
+    private volatile float volume = 1.0f;
     private final AtomicInteger generation = new AtomicInteger();
     private volatile int readyGeneration = -1;
     private int textureGeneration = -1;
@@ -79,7 +80,7 @@ public final class JellyXRVideo extends GodotPlugin {
         try {
             buffering = true;
             watchdog.reset(SystemClock.elapsedRealtime());
-            player = new BufferedPlayback(getContext(), output, url, authorization, startMs,
+            player = new BufferedPlayback(getContext(), output, url, authorization, startMs, volume,
                 new BufferedPlayback.Listener() {
                     private boolean current() { return opening == generation.get(); }
 
@@ -158,6 +159,13 @@ public final class JellyXRVideo extends GodotPlugin {
             if (player == null) return;
             player.setPaused(paused);
             watchdog.setPaused(paused, SystemClock.elapsedRealtime());
+        });
+    }
+
+    @UsedByGodot public void set_volume(double level) {
+        volume = (float) Math.max(0.0, Math.min(1.0, level));
+        main.post(() -> {
+            if (player != null) player.setVolume(volume);
         });
     }
 

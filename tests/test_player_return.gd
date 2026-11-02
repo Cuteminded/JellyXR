@@ -188,11 +188,35 @@ func run_checks() -> void:
 
 	app.playing = true
 	app._show_playback()
+	app.player_overlay.submenu_buttons["screen_mode"].pressed.emit()
+	await settle()
+	var screen_modes: PlayerScreenMode = app.player_overlay.quick_access.screen_mode
+	check(screen_modes.visible and app.player_overlay.active_menu == "screen_mode", "Screen mode opens inside Quick Access")
+	var stereo_button: Button = screen_modes.stereo_buttons[Stereo.Mode.HALF_TOP_BOTTOM]
+	stereo_button.button_pressed = true
+	stereo_button.pressed.emit()
+	check(app.mode == Stereo.Mode.HALF_TOP_BOTTOM and app.stereo_overridden, "Quick Access applies the selected stereo format to playback")
+	screen_modes.swap_button.button_pressed = true
+	check(app.material.get_shader_parameter("swap_eyes") == true, "Quick Access applies eye swapping to the video shader")
+	var projection_button: Button = screen_modes.projection_buttons[VideoProjection.Mode.EQUIRECTANGULAR_180]
+	projection_button.button_pressed = true
+	projection_button.pressed.emit()
+	check(app.projection_mode == VideoProjection.Mode.EQUIRECTANGULAR_180 and app.projection_overridden, "Quick Access applies panoramic projection")
+	app.player_overlay.close_menu()
+	app.player_overlay.submenu_buttons["screen_mode"].pressed.emit()
+	check(stereo_button.button_pressed and projection_button.button_pressed and screen_modes.swap_button.button_pressed, "Reopening Screen mode reflects the active playback settings")
+	var formats := stereo_button.get_parent() as GridContainer
+	check(formats.columns == 2 and formats.get_child(2) == stereo_button and formats.get_child(3) == screen_modes.stereo_buttons[Stereo.Mode.TOP_BOTTOM], "Half top-bottom appears before Top-bottom in the two-column format grid")
+	app._select_projection(VideoProjection.Mode.SCREEN)
+	app._select_stereo(Stereo.Mode.MONO)
+	screen_modes.swap_button.button_pressed = false
+	app.player_overlay.close_menu()
 	var statistics_generation: int = app.page_generation
 	for attempt in range(3):
-		app.player_overlay.statistics_button.pressed.emit()
+		app.player_overlay.submenu_buttons["statistics"].pressed.emit()
 		await settle()
-		check(app.player_overlay.statistics_panel.visible, "The statistics button opens its player panel")
+		check(app.player_overlay.quick_access.visible, "The Quick Access button opens its player panel")
+		check(app.player_overlay.statistics_panel.visible, "Quick Access opens statistics inside the player")
 		check(app.page.get_child(0) == browsing and app.page_generation == statistics_generation, "Statistics never replace or rebuild the library page")
 		app._toggle_controller_library()
 		await settle()
@@ -318,7 +342,7 @@ func run_checks() -> void:
 	check(app.playing and video.stops == stops_before_library and session.opens == opens_before_library and video.paused == paused_before_library, "Returning from settings with B leaves playback uninterrupted")
 	for hide_tracks in [false, true]:
 		app._show_tracks()
-		check(app.page.get_child(0) is TracksView, "Audio and subtitles opens its own page")
+		check(app.player_overlay.quick_access.tracks_menu.visible and not app.panel.visible, "Subtitles opens inside Quick Access")
 		if hide_tracks: app._show_playback()
 		app.world._controller_button_pressed("by_button", &"right_hand")
 		check(app.panel.visible and app.page.get_child(0) is LibraryView, "B opens the library after either visible or hidden track controls")

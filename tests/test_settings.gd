@@ -34,6 +34,19 @@ func check(condition: bool, message: String) -> void:
 
 func run_checks() -> void:
 	var settings := JellyXRSettings.new()
+	check(is_equal_approx(settings.height, 0.0) and is_equal_approx(settings.screen_height_offset(), -0.2), "Zero screen height uses the lowered reference position")
+	var legacy := ConfigFile.new()
+	legacy.set_value("screen", "height", -0.2)
+	legacy.set_value("connection", "device_id", "legacy-test-device")
+	var legacy_path := "user://settings-height-reference-test.cfg"
+	check(legacy.save(legacy_path) == OK, "Legacy screen height fixture can be saved")
+	var migrated := JellyXRSettings.new()
+	migrated.load_settings(legacy_path)
+	check(is_equal_approx(migrated.height, 0.0) and is_equal_approx(migrated.screen_height_offset(), -0.2), "Existing lowered screen positions become zero without moving the screen")
+	migrated.save(legacy_path)
+	var reloaded := JellyXRSettings.new()
+	reloaded.load_settings(legacy_path)
+	check(is_equal_approx(reloaded.height, 0.0), "Reloading migrated settings does not apply the reference shift twice")
 	settings.device_id = "test-device"
 	settings.library_sort_by = "PremiereDate"
 	settings.library_sort_order = "Descending"
@@ -110,6 +123,10 @@ func run_checks() -> void:
 	view.navigation_host = shell.settings_navigation
 	var fixture := FixtureSettings.new()
 	view.settings = fixture
+	var subtitle_track := SubtitleTrack.new()
+	root.add_child(subtitle_track)
+	view.subtitles = subtitle_track
+	view.subtitle_timing_enabled = true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shell.page.add_child(view)
 	await process_frame
@@ -140,17 +157,13 @@ func run_checks() -> void:
 	fixture.curvature = 0.8
 	fixture.environment = "Cinema"
 	fixture.server = "https://example.com"
-	var half_sbs: CheckBox = view.stereo_choices.get_child(1)
-	half_sbs.button_pressed = true
-	half_sbs.pressed.emit()
 	var reset: Button = view.reset_screen_button
 	reset.pressed.emit()
-	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and fixture.height == 0.0 and fixture.curvature == 0.0 and fixture.environment == "Cinema", "Reset restores screen defaults while preserving the separate environment selection.")
+	check(is_equal_approx(fixture.width, 3.6) and is_equal_approx(fixture.distance, 3.0) and is_equal_approx(fixture.height, 0.0) and fixture.curvature == 0.0 and fixture.environment == "Cinema", "Reset restores screen defaults while preserving the separate environment selection.")
 	check(fixture.library_sort_by == "PremiereDate" and fixture.library_sort_order == "Descending" and fixture.server == "https://example.com", "Screen reset preserves library and connection preferences.")
 	check(fixture.saves == 4 and changes == ["screen", "screen"], "Reset applies immediately and saves once.")
 	var restored_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
-	var restored_format: CheckBox = view.stereo_choices.get_child(1)
-	check(is_equal_approx(restored_slider.value, 3.6) and restored_format.button_pressed, "Reset updates displayed values and preserves the current video format.")
+	check(is_equal_approx(restored_slider.value, 3.6), "Reset updates displayed screen position values.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-screen")
 	var environment_tab: Button = view.navigation_buttons[2]
@@ -207,7 +220,7 @@ func run_checks() -> void:
 		check(view.navigation.get_parent() == shell.settings_navigation and not shell.libraries.visible, "Settings categories stay in the main sidebar at narrow widths.")
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-narrow-bottom")
-		for index in [1, 2, 3]:
+		for index in [1, 2, 3, 4]:
 			view._show_section(index)
 			await capture("settings-narrow-" + str(index))
 			check(view.scroll.size.y >= 300 and shell.get_global_rect().end.x <= root.size.x, "Each narrow settings section remains visible and fits the window.")
@@ -255,6 +268,23 @@ func run_checks() -> void:
 	check(not view.follow_switch.disabled, "The shared follow switch remains available for Void when passthrough is unsupported.")
 	view.follow_switch.button_pressed = false
 	check(not fixture.follow_screen, "Disabling the shared switch stops screen following.")
+	view._show_section(4)
+	check(view.sections[4].visible and view.section_heading.text == "Subtitles", "Subtitle appearance and timing have their own main settings section")
+	var size_before := fixture.subtitle_size
+	var subtitle_saves := fixture.saves
+	var appearance_updates := changes.size()
+	for control in view.subtitle_controls.find_children("*", "Button", true, false):
+		if control.accessibility_name == "Increase text size": control.pressed.emit()
+		if control.accessibility_name == "Increase delay": control.pressed.emit()
+	check(fixture.subtitle_size == size_before + 4 and fixture.saves == subtitle_saves + 1 and changes.size() == appearance_updates + 1, "Subtitle appearance applies immediately and saves from the main settings")
+	check(subtitle_track.delay_ms == 100 and fixture.saves == subtitle_saves + 1, "Subtitle delay adjusts the active video without saving a global delay")
+	var yellow: Button = view.subtitle_controls.color_buttons["Yellow"]
+	yellow.button_pressed = true
+	yellow.pressed.emit()
+	check(fixture.subtitle_color == "Yellow", "The main settings select the subtitle color")
+	var reset_timing: Button = view.subtitle_controls.get_child(view.subtitle_controls.get_child_count() - 1)
+	reset_timing.pressed.emit()
+	check(subtitle_track.delay_ms == 0, "Reset timing clears the active subtitle delay")
 	print("Settings failures: ", failures)
 	quit(1 if failures else 0)
 

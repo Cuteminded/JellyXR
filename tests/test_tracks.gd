@@ -79,14 +79,24 @@ func run_checks() -> void:
 	await process_frame
 	await process_frame
 	check(streams.size() == count, "A cancelled request cannot restart playback")
-	var view := TracksView.new()
-	view.session = session
-	view.subtitles = track
-	view.settings = session.settings
+	var view := PlayerTracksMenu.new()
+	view.state_provider = func(): return {"session": session, "subtitles": track, "busy": false}
 	root.add_child(view)
-	await process_frame
-	view._refresh()
-	check(track.changed.get_connections().size() == 1, "Refreshing track choices does not duplicate subtitle notifications")
+	session.source = {"DefaultAudioStreamIndex": 2, "MediaStreams": [{"Type": "Audio", "Index": 2, "DisplayTitle": "English AAC"}, {"Type": "Subtitle", "Index": 5, "Codec": "pgssub"}]}
+	view.kind = "Audio"
+	view.refresh()
+	check(view.buttons[2].button_pressed, "The audio submenu selects the server's default track")
+	session.active_playback_mode = "original"
+	view.refresh()
+	check(view.buttons[2].disabled, "Original playback disables audio conversion")
+	view.automatic_button.pressed.emit()
+	check(session.active_playback_mode == "auto" and not view.buttons[2].disabled, "Automatic playback enables audio selection")
+	view.kind = "Subtitle"
+	view.refresh()
+	check(view.buttons[-1].button_pressed and view.buttons.has(5), "The subtitle submenu includes Off and picture subtitles")
+	session.active_playback_mode = "original"
+	view.refresh()
+	check(view.buttons[5].disabled and not view.buttons[-1].disabled, "Original playback keeps Off available and disables picture burn-in")
 	view.queue_free()
 	session.queue_free()
 	api.queue_free()
@@ -116,16 +126,35 @@ func check_app_switching() -> void:
 	app.session.source = {"Id": "source"}
 	app.session.media_source_id = "source"
 	video.paused = true
+	app._show_tracks("Audio")
 	await app._select_audio(2)
 	check(video.paused and video.position == 42000, "Changing audio preserves pause state and the current position")
+	check(app.player_overlay.quick_access.tracks_menu.visible and not app.panel.visible, "Audio switching keeps Quick Access open without rebuilding the library")
 	check(app.session.audio_index == 2 and not app.seeking, "A prepared replacement stream completes the track change")
 	await app._select_subtitle(5)
 	check(app.session.burn_subtitles and app.subtitles.index == 5 and video.paused, "Picture subtitle selection restarts playback and preserves pause")
 	await app._select_subtitle(-1)
 	check(not app.session.burn_subtitles and app.subtitles.index == -1 and video.paused, "Turning off burned-in subtitles reopens a stream without them")
+	app.player_overlay.show_menu("audio")
+	var choices: PlayerTracksMenu = app.player_overlay.quick_access.tracks_menu
+	check(not choices.buttons[2].disabled, "Track choices become available again when replacement playback is prepared")
+	api.wait_for_frame = true
+	app._select_audio(2)
+	app.player_overlay.close_menu()
+	for frame in range(6): await process_frame
+	check(not app.player_overlay.quick_access.visible and not app.seeking, "An asynchronous track change does not reopen a dismissed Quick Access panel")
+	var many_streams: Array = []
+	for index in range(24): many_streams.append({"Type": "Audio", "Index": index, "DisplayTitle": "Audio track %d with a longer display title" % index})
+	app.session.source["MediaStreams"] = many_streams
+	app._show_tracks("Audio")
+	await process_frame
+	await process_frame
+	choices.buttons[23].grab_focus()
+	for frame in range(4): await process_frame
+	check(choices.scroll_vertical > 0 and choices.buttons[23].get_global_rect().end.y <= choices.get_global_rect().end.y, "Long track lists scroll to the keyboard-focused choice")
+	check(app.player_overlay.quick_access.get_global_rect().end.y < app.player_overlay.submenu_buttons["audio"].get_global_rect().position.y, "Long track lists keep the player buttons accessible")
 	app.session.started = false
 	await app._stop(false)
 	check(app.subtitles.index == -1 and app.subtitle_overlay.text.is_empty(), "Stopping clears subtitle display and selection")
 	app.queue_free()
 	await process_frame
-

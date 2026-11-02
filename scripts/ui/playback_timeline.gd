@@ -30,9 +30,12 @@ func _ready() -> void:
 	slider.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	slider.custom_minimum_size.y = 56
 	slider.step = 1000
+	var grabber := preload("res://assets/icons/material/timeline_grabber.svg")
+	for state in ["grabber", "grabber_highlight", "grabber_disabled"]:
+		slider.add_theme_icon_override(state, grabber)
 	slider.scrollable = false
 	slider.editable = false
-	slider.tooltip_text = "Seek to a time"
+	slider.accessibility_name = "Seek to a time"
 	var track := Widgets.surface(Color.TRANSPARENT, 5)
 	track.content_margin_top = 5
 	track.content_margin_bottom = 5

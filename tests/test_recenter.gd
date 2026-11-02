@@ -96,7 +96,7 @@ func check_screen_follow(app: Node) -> void:
 		app.camera.rotation = Vector3(0.3, 0.7, 0.2)
 		app._update_screen_follow()
 		assert(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Following tracks head rotation in adjustable environments")
-		var expected: Vector3 = app.camera.global_position - app.camera.global_basis.z * 4.0 + app.camera.global_basis.y * 0.4
+		var expected: Vector3 = app.camera.global_position - app.camera.global_basis.z * 4.0 + app.camera.global_basis.y * 0.2
 		assert(app.screen.global_position.is_equal_approx(expected), "Following tracks translation and preserves distance and height")
 		assert(app.panel.global_transform.is_equal_approx(menu_transform), "Following the movie does not move the settings window")
 	app.settings.follow_screen = false
