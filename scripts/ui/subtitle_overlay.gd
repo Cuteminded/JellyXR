@@ -31,6 +31,5 @@ func _process(_delta: float) -> void:
 func _update_position() -> void:
 	position.y = preferred_y
 	if text.is_empty() or not is_instance_valid(controls) or not controls.is_visible_in_tree(): return
-	var bar_height := controls.panel_size.y * controls.bar.size.y / float(controls.viewport.size.y)
-	var controls_top := controls.position.y - controls.panel_size.y / 2.0 + bar_height
+	var controls_top := controls.position.y - controls.panel_size.y / 2.0 + controls.bar_height()
 	position.y = maxf(preferred_y, controls_top + controls_gap - get_aabb().position.y)

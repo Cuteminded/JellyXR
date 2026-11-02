@@ -139,7 +139,7 @@ func _process(_delta: float) -> void:
 func _update_skip_popup() -> void:
 	player_skip_popup.visible = player_skip_popup.available and not panel.is_visible_in_tree() and not player_loading.is_visible_in_tree()
 	if not player_skip_popup.is_visible_in_tree(): return
-	var controls_height := player_overlay.panel_size.y if player_overlay.is_visible_in_tree() else 0.0
+	var controls_height := player_overlay.bar_height() if player_overlay.is_visible_in_tree() else 0.0
 	player_skip_popup.fit_screen(skip_screen_size.x, skip_screen_size.y, skip_screen_size.z, controls_height)
 
 func _prepare_controller_model(node: Node) -> void:
