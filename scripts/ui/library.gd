@@ -23,6 +23,9 @@ var busy := false
 var has_more := false
 var scroll: ScrollContainer
 var grid: HFlowContainer
+var navigation_states: Dictionary = {}
+var restore_scroll := -1
+var restore_count := 0
 static var previous_hero_ids: Dictionary = {}
 
 const LOAD_AHEAD_PIXELS := 400.0
@@ -59,7 +62,7 @@ func _ready() -> void:
 	var scrollbar := scroll.get_v_scroll_bar()
 	scrollbar.value_changed.connect(func(_value: float): _check_more.call_deferred())
 	scrollbar.changed.connect(func(): _check_more.call_deferred())
-	refresh()
+	_restore_location()
 
 func parent_id() -> String:
 	return library_id if folder_path.is_empty() else str(folder_path.back().Id)
@@ -72,19 +75,32 @@ static func is_folder(item: Dictionary) -> bool:
 
 func _chosen(item: Dictionary) -> void:
 	if folder_mode and is_folder(item):
+		save_navigation_state()
 		folder_path.append(item)
 		folder_changed.emit(folder_path.duplicate(true))
-		field.text = ""
-		refresh()
+		_restore_location()
 	else:
 		selected.emit(item)
 
 func go_up() -> void:
 	if folder_path.is_empty(): return
+	save_navigation_state()
 	folder_path.pop_back()
 	folder_changed.emit(folder_path.duplicate(true))
-	field.text = ""
-	refresh()
+	_restore_location()
+
+func save_navigation_state() -> Dictionary:
+	navigation_states[parent_id()] = {
+		"search": search,
+		"scroll": restore_scroll if restore_scroll >= 0 else scroll.scroll_vertical,
+		"count": maxi(offset, restore_count),
+	}
+	return navigation_states.duplicate(true)
+
+func _restore_location() -> void:
+	var saved: Dictionary = navigation_states.get(parent_id(), {})
+	field.text = saved.get("search", "")
+	refresh(field.text, saved)
 
 func _update_path() -> void:
 	if not folder_mode: return
@@ -96,12 +112,14 @@ func _update_path() -> void:
 	path_label.tooltip_text = path_label.text
 	field.placeholder_text = "Search " + folder_name()
 
-func refresh(term: String = "") -> void:
+func refresh(term: String = "", saved: Dictionary = {}) -> void:
 	_update_path()
 	generation += 1
 	var current := generation
 	busy = true
 	has_more = false
+	restore_scroll = int(saved.get("scroll", -1))
+	restore_count = int(saved.get("count", 0))
 	scroll.scroll_vertical = 0
 	search = term
 	offset = 0
@@ -128,12 +146,12 @@ func _more(current: int) -> void:
 	if current != generation: return
 	if not result.ok:
 		busy = false
-		if offset == 0: loading_changed.emit(false)
+		if offset == 0 or restore_scroll >= 0: loading_changed.emit(false)
 		status.emit(result.error)
 		var retry := Widgets.button("Retry", func(): pass, content)
 		retry.pressed.connect(func():
 			retry.queue_free()
-			if offset == 0: loading_changed.emit(true)
+			if offset == 0 or restore_scroll >= 0: loading_changed.emit(true)
 			_more(current))
 		return
 	var items: Array = result.data.get("Items", [])
@@ -142,13 +160,13 @@ func _more(current: int) -> void:
 			var hero := LibraryHero.new()
 			hero.item = _choose_hero(items.filter(func(item: Dictionary): return item.get("Type", "") != "Photo"))
 			hero.artwork = artwork
-			hero.chosen.connect(func(item: Dictionary): selected.emit(item))
+			hero.chosen.connect(_chosen)
 			content.add_child(hero)
 			content.move_child(hero, 0)
 		var title := "Recently Added" if library_id.is_empty() else folder_name()
 		Widgets.label(title if search.is_empty() else "Search results", content, 28)
 	_cards(items)
-	if offset == 0: loading_changed.emit(false)
+	if offset == 0 and restore_scroll < 0: loading_changed.emit(false)
 	offset += items.size()
 	var noun := "items" if folder_mode else "titles"
 	status.emit("%d %s loaded" % [offset, noun] if offset > 0 else "No matching %s." % noun)
@@ -156,6 +174,17 @@ func _more(current: int) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if current != generation: return
+	if restore_scroll >= 0 and (offset >= restore_count or not has_more):
+		loading_changed.emit(false)
+		while not scroll.is_visible_in_tree():
+			await get_tree().process_frame
+			if current != generation: return
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if current != generation: return
+		scroll.scroll_vertical = restore_scroll
+		restore_scroll = -1
+		restore_count = 0
 	busy = false
 	_check_more.call_deferred()
 
@@ -168,6 +197,9 @@ func _choose_hero(items: Array) -> Dictionary:
 
 func _check_more() -> void:
 	if busy or not has_more or not is_inside_tree(): return
+	if restore_scroll >= 0:
+		_more(generation)
+		return
 	var scrollbar := scroll.get_v_scroll_bar()
 	var remaining := scrollbar.max_value - scrollbar.page - scrollbar.value
 	if remaining <= LOAD_AHEAD_PIXELS:
