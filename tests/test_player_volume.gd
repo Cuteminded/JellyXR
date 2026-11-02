@@ -58,10 +58,13 @@ func run_checks() -> void:
 	check(controls.mute_button.icon.resource_path.ends_with("volume_off.svg"), "Muting overrides the volume icon with the muted symbol")
 	app.video.toggle_mute()
 	app.player_overlay.show()
-	app.player_overlay.submenu_buttons["volume"].pressed.emit()
+	app.player_overlay.submenu_buttons["audio"].pressed.emit()
 	await process_frame
 	await process_frame
-	check(controls.visible and app.player_overlay.active_menu == "volume", "The speaker button opens a dedicated volume pop-out")
+	check(controls.visible and app.player_overlay.active_menu == "audio", "The audio button opens volume and audio tracks together")
+	check(app.player_overlay.quick_access.tracks_menu.visible and app.player_overlay.quick_access.tracks_menu.kind == "Audio", "The combined menu shows audio track selection with volume")
+	check(not app.player_overlay.submenu_buttons.has("volume"), "One player button opens the combined audio controls")
+	check(controls.get_global_rect().end.y < app.player_overlay.quick_access.tracks_menu.get_global_rect().position.y, "Volume controls sit above the audio tracks")
 	check(controls.mute_button.get_global_rect().end.x < controls.slider.get_global_rect().position.x, "The separate mute button sits to the left of the slider")
 	check(is_equal_approx(controls.slider.get_global_rect().get_center().y, controls.mute_button.get_global_rect().get_center().y), "The slider and mute button share the same vertical center")
 	check(app.player_overlay.controls_row.get_global_rect().end.x <= app.player_overlay.viewport.size.x, "The volume controls fit beside the player buttons")

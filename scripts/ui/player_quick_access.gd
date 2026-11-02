@@ -9,6 +9,7 @@ var screen_mode: PlayerScreenMode
 var statistics_panel: VBoxContainer
 var statistics_values: Dictionary = {}
 var heading: Label
+var audio_track_heading: Label
 
 func _ready() -> void:
 	theme = Widgets.theme()
@@ -34,10 +35,11 @@ func _ready() -> void:
 	_build_statistics(body)
 	screen_mode = PlayerScreenMode.new()
 	body.add_child(screen_mode)
-	tracks_menu = PlayerTracksMenu.new()
-	body.add_child(tracks_menu)
 	volume_control = PlayerVolumeControl.new()
 	body.add_child(volume_control)
+	audio_track_heading = Widgets.label("Audio track", body, 20)
+	tracks_menu = PlayerTracksMenu.new()
+	body.add_child(tracks_menu)
 	minimum_size_changed.connect(_fit_content)
 	hide()
 
@@ -67,14 +69,16 @@ func _build_statistics(parent: Node) -> void:
 		statistics_values[key] = value
 
 func show_menu(name: String) -> void:
-	volume_control.visible = name == "volume"
+	volume_control.visible = name == "audio"
+	audio_track_heading.visible = name == "audio"
 	tracks_menu.visible = name in ["audio", "subtitles"]
 	screen_mode.visible = name == "screen_mode"
 	statistics_panel.visible = name == "statistics"
-	heading.text = {"volume": "Volume", "audio": "Audio track", "subtitles": "Subtitles", "screen_mode": "Screen mode", "statistics": "Statistics for nerds"}[name]
+	heading.text = {"audio": "Audio", "subtitles": "Subtitles", "screen_mode": "Screen mode", "statistics": "Statistics for nerds"}[name]
 	show()
 	if tracks_menu.visible:
 		tracks_menu.kind = "Audio" if name == "audio" else "Subtitle"
+		tracks_menu.maximum_height = 300.0 if name == "audio" else 420.0
 		refresh_tracks()
 	if screen_mode.visible: screen_mode.refresh()
 	_fit_content.call_deferred()
