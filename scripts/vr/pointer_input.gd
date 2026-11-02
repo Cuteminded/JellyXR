@@ -15,6 +15,9 @@ func sample_trigger(value: float) -> void:
 
 func aim(point: Vector2, inside: bool) -> void:
 	if not inside:
+		if mouse_down:
+			_move(point)
+			if trigger_down: return
 		cancel()
 		return
 	if not hovering:
@@ -58,10 +61,10 @@ func _scroll_horizontal(amount: float) -> void:
 		target = target.get_parent()
 
 func cancel() -> void:
-	if previous != Vector2(-1, -1): _move(Vector2(-1, -1))
 	if mouse_down:
 		mouse_down = false
 		_button(false)
+	if previous != Vector2(-1, -1): _move(Vector2(-1, -1))
 	if hovering:
 		hovering = false
 		viewport.notify_mouse_exited()

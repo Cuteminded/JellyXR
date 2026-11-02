@@ -7,7 +7,7 @@ func capture() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	app.viewport.get_parent().hide()
-	app.session.item = {"Name": "The long way home"}
+	app.session.item = {"Name": "The long way home", "Type": "Episode", "ParentIndexNumber": 1, "IndexNumber": 2}
 	app._show_playback()
 	app.screen.show()
 	var material := StandardMaterial3D.new()
@@ -27,6 +27,19 @@ func capture() -> void:
 	app.player_overlay._show_tooltip(app.player_overlay.pause_button)
 	await RenderingServer.frame_post_draw
 	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-controls-preview.png")
+	app.player_overlay._hide_tooltip(app.player_overlay.pause_button)
+	app.player_overlay.submenu_buttons["volume"].pressed.emit()
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-volume-preview.png")
+	app.player_overlay.submenu_buttons["screen_mode"].pressed.emit()
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/quick-screen-mode-preview.png")
+	app.player_overlay._show_tooltip(app.player_overlay.submenu_buttons["screen_mode"])
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-submenu-tooltip-preview.png")
+	app.player_overlay._hide_tooltip(app.player_overlay.submenu_buttons["screen_mode"])
 	app.session.method = "DirectPlay"
 	app.session.source = {"Bitrate": 25000000, "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 2160, "AverageFrameRate": 23.976, "Codec": "hevc"}]}
 	app.player_overlay.set_statistics_visible(true)

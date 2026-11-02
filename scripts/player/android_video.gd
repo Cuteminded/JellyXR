@@ -9,6 +9,7 @@ var frame_visible := false
 func _ready() -> void:
 	if not Engine.has_singleton("JellyXRVideo"): return
 	bridge = Engine.get_singleton("JellyXRVideo")
+	_apply_volume()
 	bridge.connect("prepared", func(): prepared.emit())
 	bridge.connect("completed", func(): ended.emit())
 	bridge.connect("failed", func(message: String): failed.emit(message))
@@ -34,6 +35,7 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 	material.set_shader_parameter("video_texture", texture)
 	await RenderingServer.frame_post_draw
 	if opening != playback_generation: return
+	_apply_volume()
 	bridge.open_video(texture.get_external_texture_id(), url, authorization, start_ms)
 	stream_open = true
 	paused = false

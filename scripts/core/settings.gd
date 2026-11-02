@@ -2,6 +2,7 @@ class_name JellyXRSettings
 extends RefCounted
 
 const PATH := "user://settings.cfg"
+const SCREEN_HEIGHT_ORIGIN := -0.2
 const SCREEN_KEYS := ["width", "distance", "height", "curvature"]
 const PLAYBACK_MODES := ["auto", "original", "transcoded"]
 const TRANSCODE_PRESETS := {
@@ -37,7 +38,10 @@ func load_settings(path: String = PATH) -> void:
 	config.load(path)
 	width = clampf(config.get_value("screen", "width", width), 1.5, 7.0)
 	distance = clampf(config.get_value("screen", "distance", distance), 1.5, 8.0)
-	height = clampf(config.get_value("screen", "height", height), -2.0, 2.0)
+	if config.has_section_key("screen", "height"):
+		var saved_height := float(config.get_value("screen", "height"))
+		var saved_origin := float(config.get_value("screen", "height_origin", 0.0))
+		height = clampf(saved_height + saved_origin - SCREEN_HEIGHT_ORIGIN, -2.0, 2.0)
 	curvature = clampf(config.get_value("screen", "curvature", curvature), 0.0, 1.2)
 	follow_screen = config.get_value("screen", "follow_screen", false) == true
 	environment = config.get_value("screen", "environment", "Void")
@@ -65,6 +69,9 @@ func load_settings(path: String = PATH) -> void:
 		device_id = Crypto.new().generate_random_bytes(16).hex_encode()
 		save(path)
 
+func screen_height_offset() -> float:
+	return height + SCREEN_HEIGHT_ORIGIN
+
 func is_theatre() -> bool:
 	return environment in ["Cinema", "Theatre"]
 
@@ -77,6 +84,7 @@ func save(path: String = PATH) -> Error:
 	var config := ConfigFile.new()
 	for key in SCREEN_KEYS:
 		config.set_value("screen", key, get(key))
+	config.set_value("screen", "height_origin", SCREEN_HEIGHT_ORIGIN)
 	config.set_value("screen", "environment", environment)
 	config.set_value("screen", "follow_screen", follow_screen)
 	config.set_value("screen", "environment_version", 2)

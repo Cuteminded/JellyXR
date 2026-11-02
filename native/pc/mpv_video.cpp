@@ -28,6 +28,7 @@ static bool hardware_opengl_available() {
 void JellyXRMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("open_video", "url", "authorization", "start_ms"), &JellyXRMpv::open_video);
     ClassDB::bind_method(D_METHOD("set_paused", "paused"), &JellyXRMpv::set_paused);
+    ClassDB::bind_method(D_METHOD("set_volume", "level"), &JellyXRMpv::set_volume);
     ClassDB::bind_method(D_METHOD("seek_to", "milliseconds"), &JellyXRMpv::seek_to);
     ClassDB::bind_method(D_METHOD("position_ms"), &JellyXRMpv::position_ms);
     ClassDB::bind_method(D_METHOD("duration_ms"), &JellyXRMpv::duration_ms);
@@ -81,7 +82,9 @@ String JellyXRMpv::initialize(int64_t start_ms) {
         int error = mpv_set_option_string(player, "vid", "no");
         if (error < 0) return "Could not configure the Vulkan playback clock.";
     }
-    int error = mpv_initialize(player);
+    double initial_volume = volume * 100.0;
+    int error = mpv_set_option(player, "volume", MPV_FORMAT_DOUBLE, &initial_volume);
+    if (error >= 0) error = mpv_initialize(player);
     if (error >= 0 && use_opengl) {
         gl_renderer.instantiate();
         if (gl_renderer->start(player) < 0) {
@@ -160,6 +163,13 @@ void JellyXRMpv::set_paused(bool value) {
     audio_clock.reset(position, playback_time_ms());
     watchdog.reset(playback_time_ms());
     apply_audio_pause();
+}
+
+void JellyXRMpv::set_volume(double level) {
+    volume = std::clamp(level, 0.0, 1.0);
+    if (!player) return;
+    double percent = volume * 100.0;
+    mpv_set_property(player, "volume", MPV_FORMAT_DOUBLE, &percent);
 }
 
 void JellyXRMpv::seek_to(int64_t milliseconds) {

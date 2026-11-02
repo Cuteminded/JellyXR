@@ -140,7 +140,8 @@ func check_environment_switching() -> void:
 	void_choice.button_pressed = true
 	void_choice.pressed.emit()
 	check(not app.theatre.visible and app.settings.environment == "Void", "The Environment page can return to Void.")
-	check(is_equal_approx(app.screen.global_position.distance_to(app.camera.global_position), 3.0), "Void restores the saved floating screen distance.")
+	var floating_position: Vector3 = app.camera.global_position - app.screen.global_basis.z * 3.0 - app.screen.global_basis.y * 0.2
+	check(app.screen.global_position.is_equal_approx(floating_position), "Void restores the default floating screen distance and lowered height reference.")
 	app.queue_free()
 	await process_frame
 	await process_frame
