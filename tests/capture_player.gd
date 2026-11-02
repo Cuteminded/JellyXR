@@ -7,7 +7,7 @@ func capture() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(app)
 	app.viewport.get_parent().hide()
-	app.session.item = {"Name": "The long way home", "Type": "Episode", "ParentIndexNumber": 1, "IndexNumber": 2}
+	app.session.item = {"Name": "The long way home", "SeriesName": "Example series", "Type": "Episode", "ParentIndexNumber": 1, "IndexNumber": 2}
 	app._show_playback()
 	app.screen.show()
 	var material := StandardMaterial3D.new()
@@ -28,10 +28,11 @@ func capture() -> void:
 	await RenderingServer.frame_post_draw
 	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-controls-preview.png")
 	app.player_overlay._hide_tooltip(app.player_overlay.pause_button)
-	app.player_overlay.submenu_buttons["volume"].pressed.emit()
+	app.session.source = {"DefaultAudioStreamIndex": 1, "MediaStreams": [{"Type": "Audio", "Index": 1, "DisplayTitle": "English · OPUS · Stereo · Default"}, {"Type": "Audio", "Index": 2, "DisplayTitle": "Dutch · AAC · Stereo"}]}
+	app.player_overlay.submenu_buttons["audio"].pressed.emit()
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw
-	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-volume-preview.png")
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-audio-preview.png")
 	app.player_overlay.submenu_buttons["screen_mode"].pressed.emit()
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw

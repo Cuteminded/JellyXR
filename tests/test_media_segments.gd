@@ -17,6 +17,13 @@ class FakeVideo extends AndroidVideo:
 	func seek(value: int) -> void: last_seek = value
 	func stop() -> void: pass
 
+var failures := 0
+
+func check(condition: bool, message: String) -> void:
+	if not condition:
+		failures += 1
+		push_error(message)
+
 func _initialize() -> void:
 	call_deferred("run_checks")
 
@@ -75,6 +82,21 @@ func run_checks() -> void:
 	app.player_overlay.show()
 	app.world._process(0.0)
 	assert(popup.position.y > bottom, "Popup moves above visible controls")
+	await process_frame
+	await process_frame
+	app.world._process(0.0)
+	var bar_position := popup.position
+	for name in ["screen_mode", "audio", "subtitles", "statistics"]:
+		app.player_overlay.show_menu(name)
+		await process_frame
+		await process_frame
+		app.world._process(0.0)
+		check(popup.position.is_equal_approx(bar_position), "Opening the %s panel keeps the skip button in place" % name)
+	app.player_overlay.close_menu()
+	await process_frame
+	await process_frame
+	app.world._process(0.0)
+	check(popup.position.is_equal_approx(bar_position), "Closing a submenu keeps the skip button in place")
 	var pointer := LaserPointer.new()
 	app.add_child(pointer)
 	pointer.global_position = popup.global_position + Vector3(0, 0, 1)
@@ -105,5 +127,5 @@ func run_checks() -> void:
 	app.queue_free()
 	api.queue_free()
 	await process_frame
-	print("Media segment checks: PASS")
-	quit()
+	print("Media segment checks: ", "PASS" if failures == 0 else str(failures) + " failures")
+	quit(1 if failures else 0)

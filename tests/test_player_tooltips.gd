@@ -13,6 +13,11 @@ func check(condition: bool, message: String) -> void:
 func run_checks() -> void:
 	var overlay := PlayerOverlay.new()
 	root.add_child(overlay)
+	overlay.set_media({"Type": "Episode", "Name": "The long way home", "SeriesName": "Example series", "ParentIndexNumber": 1, "IndexNumber": 2})
+	check(overlay.episode_label.text == "Example series - S01 E02" and overlay.title.text == "The long way home", "The player shows the series name before the season and episode numbers")
+	overlay.set_media({"Type": "Episode", "Name": "Episode", "ParentIndexNumber": 1, "IndexNumber": 2})
+	check(overlay.episode_label.text == "S01 E02", "Missing series names do not leave a leading separator")
+	overlay.set_media({"Type": "Movie", "Name": "Movie"})
 	overlay.show()
 	await process_frame
 	await process_frame
@@ -95,12 +100,13 @@ func run_checks() -> void:
 	cancel.pressed = true
 	overlay.quick_access._unhandled_key_input(cancel)
 	check(not overlay.quick_access.visible and overlay.submenu_buttons["subtitles"].has_focus(), "Closing a submenu returns focus to its player button")
-	for name in ["volume", "subtitles", "audio", "screen_mode", "statistics", "audio", "subtitles"]:
+	for name in ["subtitles", "audio", "screen_mode", "statistics", "audio", "subtitles"]:
 		overlay.submenu_buttons[name].pressed.emit()
 		await process_frame
 		await process_frame
-		var visible_panels := int(overlay.quick_access.volume_control.visible) + int(overlay.quick_access.tracks_menu.visible) + int(overlay.quick_access.screen_mode.visible) + int(overlay.statistics_panel.visible)
+		var visible_panels := int(overlay.quick_access.tracks_menu.visible) + int(overlay.quick_access.screen_mode.visible) + int(overlay.statistics_panel.visible)
 		check(overlay.quick_access.visible and visible_panels == 1 and overlay.active_menu == name, "Switching between player buttons keeps exactly one panel open")
+		check(overlay.quick_access.volume_control.visible == (name == "audio"), "Volume is shown only in the combined audio menu")
 		check(is_equal_approx(overlay.quick_access.size.y, overlay.quick_access.get_combined_minimum_size().y), "Each panel fits its content without unused space below it")
 		overlay._show_tooltip(overlay.submenu_buttons[name])
 		await process_frame

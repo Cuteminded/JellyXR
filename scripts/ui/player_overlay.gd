@@ -56,6 +56,7 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 8)
 	panel.add_child(body)
 	episode_label = Widgets.label("", body, 16)
+	episode_label.clip_text = true
 	episode_label.add_theme_color_override("font_color", Color("a4aec0"))
 	episode_label.hide()
 	title = Widgets.label("Now playing", body, 36)
@@ -89,7 +90,7 @@ func _build_controls(parent: Control) -> void:
 	_add_control("Forward 30 seconds", "forward", "forward_30", row)
 	controls_spacer = row.add_spacer(false)
 	_add_control("Library", "library", "video_library", row)
-	for entry in [["Volume", "volume", "volume_up"], ["Subtitles", "subtitles", "subtitles"], ["Audio track", "audio", "audio_track"], ["Screen mode", "screen_mode", "tv"], ["Statistics for nerds", "statistics", "statistics"]]:
+	for entry in [["Audio", "audio", "volume_up"], ["Subtitles", "subtitles", "subtitles"], ["Screen mode", "screen_mode", "tv"], ["Statistics for nerds", "statistics", "statistics"]]:
 		var button := _add_control(entry[0], entry[1], entry[2], row)
 		button.toggle_mode = true
 		PlayerQuickAccess.style_button(button, false)
@@ -151,7 +152,9 @@ func set_media(item: Dictionary) -> void:
 	title.text = str(item.get("Name", "Now playing"))
 	episode_label.visible = not photo_mode and item.get("Type", "") == "Episode"
 	if episode_label.visible:
-		episode_label.text = "S%02d  E%02d" % [int(item.get("ParentIndexNumber", 0)), int(item.get("IndexNumber", 0))]
+		var episode_number := "S%02d E%02d" % [int(item.get("ParentIndexNumber", 0)), int(item.get("IndexNumber", 0))]
+		var series_name := str(item.get("SeriesName", "")).strip_edges()
+		episode_label.text = "%s - %s" % [series_name, episode_number] if not series_name.is_empty() else episode_number
 
 func _refresh_statistics() -> void:
 	if not statistics_provider.is_valid(): return
@@ -161,7 +164,7 @@ func _refresh_statistics() -> void:
 
 func _add_control(label: String, action_name: String, icon_name: String, parent: Control) -> Button:
 	var button := Widgets.button("", func():
-		if action_name not in ["volume", "audio", "subtitles", "screen_mode", "statistics"]: action.emit(action_name), parent)
+		if action_name not in ["audio", "subtitles", "screen_mode", "statistics"]: action.emit(action_name), parent)
 	if action_name in ["pause", "back", "forward", "tracks"]: video_controls.append(button)
 	button.icon = load("res://assets/icons/material/%s.svg" % icon_name)
 	button.accessibility_name = label
@@ -230,6 +233,9 @@ func _position_tooltip() -> void:
 	tooltip.reset_size()
 	var target := hovered_control.get_global_rect()
 	tooltip.position = Vector2(clampf(target.get_center().x - tooltip.size.x / 2.0, 8, viewport.size.x - tooltip.size.x - 8), target.position.y - tooltip.size.y - 8)
+
+func bar_height() -> float:
+	return panel_size.y * bar.size.y / float(viewport.size.y)
 
 func fit_screen(width: float, aspect: float, curvature: float) -> void:
 	screen_dimensions = Vector3(width, aspect, curvature)
