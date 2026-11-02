@@ -47,4 +47,10 @@ func capture() -> void:
 	await create_timer(0.2).timeout
 	await RenderingServer.frame_post_draw
 	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/player-statistics-preview.png")
+	app.player_overlay.set_photo_mode(true)
+	app.player_overlay.set_media({"Name": "Mountain panorama", "Type": "Photo"})
+	app.player_overlay.show_menu("screen_mode")
+	await create_timer(0.2).timeout
+	await RenderingServer.frame_post_draw
+	app.player_overlay.viewport.get_texture().get_image().save_png("res://dist/photo-screen-mode-preview.png")
 	quit()
