@@ -582,8 +582,9 @@ func _player_action(action: String) -> void:
 		"library": _return_to_title()
 		"hide": player_overlay.hide()
 
-func _return_to_title() -> void:
+func _return_to_title(refresh: bool = false) -> void:
 	shell.set_content_loading(false)
+	if refresh: panel.show()
 	if is_instance_valid(browsing_return_page): _restore_browsing_page()
 	if photo_active:
 		_show_library()
@@ -599,7 +600,7 @@ func _return_to_title() -> void:
 	if item.get("Type", "") == "Episode" and item.get("SeasonId"):
 		season = {"Id": item.SeasonId, "Name": "Season %d" % int(item.get("ParentIndexNumber", 0)), "IndexNumber": item.get("ParentIndexNumber")}
 	for child in page.get_children():
-		if child is DetailsView and str(child.item.Id) == target_id:
+		if not refresh and child is DetailsView and str(child.item.Id) == target_id:
 			page_generation += 1
 			player_overlay.hide()
 			keyboard.hide()
@@ -790,7 +791,8 @@ func _seek_to(milliseconds: int) -> void:
 	session.position_ticks = target * 10000
 	await session.open(session.item, session.method == "Transcode", true)
 
-func _stop(show_library: bool = true, completed: bool = false) -> void:
+func _stop(show_details: bool = true, completed: bool = false) -> void:
+	var was_photo := photo_active
 	session.cancel_pending()
 	subtitles.clear()
 	subtitles.delay_ms = 0
@@ -799,6 +801,7 @@ func _stop(show_library: bool = true, completed: bool = false) -> void:
 	media_segments.clear()
 	world.player_skip_popup.update_segment({})
 	countdown_generation += 1
+	var generation := countdown_generation
 	_cancel_countdown()
 	world.player_loading.hide()
 	player_overlay.hide()
@@ -810,8 +813,11 @@ func _stop(show_library: bool = true, completed: bool = false) -> void:
 		video.stop()
 		playing = false
 		await session.report("Stopped")
+	if generation != countdown_generation: return
 	screen.hide()
-	if show_library and not api.token.is_empty(): _show_library()
+	if show_details and not api.token.is_empty():
+		if was_photo: _show_library()
+		else: await _return_to_title(true)
 
 func _ended() -> void:
 	if not playing: return
@@ -822,12 +828,12 @@ func _ended() -> void:
 	if previous.has("MoviePartItems"):
 		var next_part := MovieParts.next(previous)
 		if next_part.is_empty():
-			_show_library()
+			await _return_to_title(true)
 		else:
 			await _start(next_part, true)
 		return
 	if previous.get("Type", "") != "Episode":
-		_show_library()
+		await _return_to_title(true)
 		return
 	panel.hide()
 	screen.show()
