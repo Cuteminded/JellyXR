@@ -13,6 +13,7 @@ var shell: UiShell
 var libraries_loaded := false
 var library_generation := 0
 var library_folder_path: Array = []
+var library_navigation_states: Dictionary = {}
 var page_generation := 0
 var page: VBoxContainer
 var browsing_return_page: Control
@@ -157,6 +158,8 @@ func _field(placeholder: String, secret: bool = false) -> LineEdit:
 	return field
 
 func _show_login() -> void:
+	library_navigation_states.clear()
+	library_folder_path.clear()
 	shell.set_signed_in(false)
 	_clear_page()
 	shell.heading.hide()
@@ -273,7 +276,7 @@ func _quick_connect() -> void:
 func _show_library() -> void:
 	var title := "Home"
 	if shell.buttons.has(shell.selected_id): title = shell.buttons[shell.selected_id].text
-	_open_library(shell.selected_id, title, library_folder_path.duplicate(true))
+	_open_library(shell.selected_id, title, library_folder_path.duplicate(true), library_navigation_states)
 
 func _toggle_controller_library() -> void:
 	if api.token.is_empty(): return
@@ -291,7 +294,8 @@ func _toggle_panel() -> void:
 	player_overlay.hide()
 	keyboard.hide()
 
-func _open_library(id: String, title: String, folder_path: Array = []) -> void:
+func _open_library(id: String, title: String, folder_path: Array = [], navigation_states: Dictionary = {}) -> void:
+	library_navigation_states = navigation_states.duplicate(true)
 	_clear_page()
 	var loading_page := {"generation": page_generation}
 	shell.set_signed_in(true)
@@ -303,6 +307,7 @@ func _open_library(id: String, title: String, folder_path: Array = []) -> void:
 	library.folder_mode = shell.library_types.get(id, "") in ["homevideos", "musicvideos", "photos"]
 	library_folder_path = folder_path.duplicate(true)
 	library.folder_path = library_folder_path.duplicate(true)
+	library.navigation_states = library_navigation_states.duplicate(true)
 	library.folder_changed.connect(func(path: Array): library_folder_path = path)
 	api.library_sort_by = settings.library_sort_by
 	api.library_sort_order = settings.library_sort_order
@@ -339,6 +344,8 @@ func _load_libraries() -> void:
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
 func _details(item: Dictionary, season: Dictionary = {}) -> void:
+	for child in page.get_children():
+		if child is LibraryView: library_navigation_states = child.save_navigation_state()
 	if item.get("Type", "") == "Photo":
 		photo_sequence = PhotoSequence.new()
 		for child in page.get_children():
