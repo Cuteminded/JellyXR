@@ -6,10 +6,16 @@ class FixtureApi extends JellyfinClient:
 	var hold_parts := false
 	signal release_parts
 	var movie := {"Id": "movie", "Type": "Video", "Name": "Multipart video", "PartCount": 3.0, "RunTimeTicks": 120000000}
+	var detail_calls: Array[String] = []
 	var extra := [
 		{"Id": "part-two", "Type": "Video", "Name": "Part two", "RunTimeTicks": 120000000, "UserData": {"PlaybackPositionTicks": 50000000}},
 		{"Id": "part-three", "Type": "Video", "Name": "Part three", "RunTimeTicks": 120000000}
 	]
+
+	func details(id: String) -> Dictionary:
+		detail_calls.append(id)
+		await get_tree().process_frame
+		return {"ok": true, "data": movie.duplicate(true)}
 
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
 		calls.append(path)
@@ -113,6 +119,7 @@ func run_checks() -> void:
 	video.ended.emit()
 	await settle()
 	check(not app.playing and session.opened.size() == opens, "The final part stops without looping")
+	check(app.page.get_child(0) is DetailsView and app.page.get_child(0).item.Id == "movie" and api.detail_calls == ["movie"], "The final part returns to the parent movie details")
 
 	app._clear_page()
 	app.shell.heading.text = "Movie details"
@@ -180,6 +187,10 @@ func run_checks() -> void:
 	api.fail_parts = true
 	await app._start(api.movie)
 	check(not app.playing and "Could not load movie parts" in app.status.text, "Playback preparation failures show an error without starting a partial sequence")
+	api.fail_parts = false
+	await app._start(MovieParts.select(result.data.Items, 1, "movie"))
+	await app._stop()
+	check(app.page.get_child(0) is DetailsView and app.page.get_child(0).item.Id == "movie" and not app.playing, "Stopping an additional part returns to its parent movie details")
 	app.queue_free()
 	await process_frame
 	print("Movie parts checks: ", "PASS" if failures == 0 else str(failures) + " failures")

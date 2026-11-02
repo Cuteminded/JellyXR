@@ -48,7 +48,10 @@ class FixtureVideo extends VideoBackend:
 
 class FixtureSession extends PlaybackSession:
 	var opens := 0
-	func report(_event: String, _paused: bool = false) -> void: pass
+	var hold_stop := false
+	signal release_stop
+	func report(event: String, _paused: bool = false) -> void:
+		if event == "Stopped" and hold_stop: await release_stop
 	func open(selected: Dictionary, _transcode: bool = false, _continuing: bool = false) -> void:
 		item = selected
 		opens += 1
@@ -452,6 +455,30 @@ func run_checks() -> void:
 	await settle()
 	check(session.item.get("SelectedMediaSourceId") == "two" and session.item.UserData.PlaybackPositionTicks == 7200000000, "Choosing another version switches playback and preserves saved progress")
 	check(versions.UserData.PlaybackPositionTicks == 7200000000 and not versions.has("SelectedMediaSourceId"), "Version selection leaves the original item unchanged")
+
+	await app._details({"Id": "movie"})
+	var details_before_stop: Node = app.page.get_child(0)
+	await app._start({"Id": "movie", "Type": "Movie"})
+	app._screen_settings()
+	app.panel.hide()
+	app._player_action("stop")
+	await settle()
+	check(not app.playing and not app.screen.visible and not app.player_overlay.visible, "Stop closes playback and its controls")
+	check(app.panel.visible and app.page.get_child(0) is DetailsView and app.page.get_child(0).item.Id == "movie", "Stop returns from settings to the playing movie details")
+	check(app.page.get_child(0) != details_before_stop and not app.shell.settings_mode, "Stop refreshes the details after reporting progress")
+	await app._start({"Id": "movie", "Type": "Movie"})
+	app._open_library("movies", "Movies")
+	app.panel.hide()
+	await app._ended()
+	check(app.panel.visible and app.page.get_child(0) is DetailsView and app.page.get_child(0).item.Id == "movie", "Natural completion returns from the library to the playing movie details")
+	await app._start({"Id": "movie", "Type": "Movie"})
+	session.hold_stop = true
+	app._player_action("stop")
+	app._open_library("movies", "Movies")
+	var library_after_stop: Node = app.page.get_child(0)
+	session.release_stop.emit()
+	await settle()
+	check(app.page.get_child(0) == library_after_stop, "A delayed Stop report cannot replace a page opened by the user")
 	app.playing = false
 	app.queue_free()
 	await process_frame
