@@ -112,14 +112,14 @@ jobs:
 
       - name: Verify APK signature
         run: |
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyxr-android.apk
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/jellyXR-quest1.apk
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/JellyXR-android.apk
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose dist/JellyXR-quest1.apk
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-android
-          path: dist/jellyxr-android.apk
+          name: JellyXR-android
+          path: dist/JellyXR-android.apk
           if-no-files-found: error
           retention-days: 1
           archive: false
@@ -127,8 +127,8 @@ jobs:
       - name: Upload Quest 1 APK
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-quest1
-          path: dist/jellyXR-quest1.apk
+          name: JellyXR-quest1
+          path: dist/JellyXR-quest1.apk
           if-no-files-found: error
           retention-days: 1
           archive: false

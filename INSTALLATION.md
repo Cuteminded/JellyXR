@@ -6,13 +6,13 @@ You need a Jellyfin server and an account to use the app. To build jellyXR yours
 
 ## Quest 3
 
-Enable developer mode and USB debugging on your headset. Install Android's `adb` tool on your computer and download `jellyxr-android.apk`.
+Enable developer mode and USB debugging on your headset. Install Android's `adb` tool on your computer and download `JellyXR-android.apk`.
 
 Connect your headset to your computer by USB and approve USB debugging in the headset. Run these commands from the folder containing the APK:
 
 ```powershell
 adb devices
-adb install -r jellyxr-android.apk
+adb install -r JellyXR-android.apk
 ```
 
 Open jellyXR from **Unknown Sources** in your headset.
@@ -36,16 +36,16 @@ Download the AppImage for your computer's architecture, `x86_64` or `arm64`. The
 Connect your headset and start your OpenXR runtime. On x64, set SteamVR as the active runtime. Make the AppImage executable and launch it:
 
 ```sh
-chmod +x jellyxr-linux-x86_64.AppImage
-./jellyxr-linux-x86_64.AppImage
+chmod +x JellyXR-linux-x86_64.AppImage
+./JellyXR-linux-x86_64.AppImage
 ```
 
-For ARM64, replace the filename with `jellyxr-linux-arm64.AppImage`. On SteamOS, add the AppImage to Steam as a non-Steam game.
+For ARM64, replace the filename with `JellyXR-linux-arm64.AppImage`. On SteamOS, add the AppImage to Steam as a non-Steam game.
 
 If jellyXR cannot start with Vulkan, try OpenGL:
 
 ```sh
-./jellyxr-linux-x86_64.AppImage --rendering-method gl_compatibility
+./JellyXR-linux-x86_64.AppImage --rendering-method gl_compatibility
 ```
 
 If mounting an AppImage fails because FUSE is unavailable, run it with `--appimage-extract-and-run`.
@@ -56,11 +56,11 @@ Download the `system-libs` archive for your architecture. On Ubuntu x64, install
 
 ```sh
 sudo apt-get install libmpv2
-tar -xzf jellyxr-linux-x86_64-system-libs.tar.gz
+tar -xzf JellyXR-linux-x86_64.tar.gz
 ./jellyxr.x86_64
 ```
 
-Keep the executable and the `.so` file together. For ARM64, use `jellyxr-linux-arm64-system-libs.tar.gz` and launch `./jellyxr.arm64`.
+Keep the executable and the `.so` file together. For ARM64, use `JellyXR-linux-arm64.tar.gz` and launch `./jellyxr.arm64`.
 
 ## After installation
 

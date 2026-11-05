@@ -36,7 +36,7 @@ The PowerShell script exports debug APKs signed with the `Cuteminded` key. Place
 ./tools/build-android.ps1 -Godot 'C:/tools/godot.exe' -Gradle 'C:/tools/gradle/bin/gradle.bat' -AndroidSdk 'C:/tools/android-sdk' -JavaHome 'C:/tools/jdk-17'
 ```
 
-The scripts build the Android plugin and export `dist/jellyxr-android.apk`. They download and verify Godot OpenXR Vendors for Quest passthrough support.
+The scripts build the Android plugin and export `dist/JellyXR-android.apk`. They download and verify Godot OpenXR Vendors for Quest passthrough support.
 
 ## Build on Windows
 
@@ -89,10 +89,10 @@ Package the exported app without bundling playback libraries:
 cp -r build/linux/x86_64/licenses dist/linux-x86_64/
 cp LICENSE dist/linux-x86_64/licenses/jellyxr.txt
 cp LICENSING.md dist/linux-x86_64/licenses/
-tar -czf dist/jellyxr-linux-x86_64.tar.gz -C dist/linux-x86_64 .
+tar -czf dist/JellyXR-linux-x86_64.tar.gz -C dist/linux-x86_64 .
 ```
 
-The target system supplies libmpv and FFmpeg. The workflow uploads this as `jellyxr-linux-<arch>-system-libs`.
+The target system supplies libmpv and FFmpeg. The workflow uploads this as `JellyXR-linux-<arch>-system-libs`.
 
 ### Package an AppImage
 
@@ -108,7 +108,7 @@ cp LICENSING.md dist/linux-x86_64-lgpl/licenses/
 bash tools/package-linux-appimages.sh x86_64 dist/linux-x86_64-lgpl
 ```
 
-Replace `x86_64` with `arm64` and use the `Linux ARM64` preset for ARM64. The output is `dist/jellyxr-linux-<arch>.AppImage`. The host supplies graphics drivers, VAAPI, OpenXR, and the C++ runtime.
+Replace `x86_64` with `arm64` and use the `Linux ARM64` preset for ARM64. The output is `dist/JellyXR-linux-<arch>.AppImage`. The host supplies graphics drivers, VAAPI, OpenXR, and the C++ runtime.
 
 ## Run the app during development
 

@@ -108,13 +108,13 @@ jobs:
 
       - name: Package Linux build with system libraries
         run: |
-          tar -czf "dist/jellyxr-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
+          tar -czf "dist/JellyXR-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
 
       - name: Upload Linux build with system libraries
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-linux-${{ matrix.arch }}-system-libs
-          path: dist/jellyxr-linux-${{ matrix.arch }}.tar.gz
+          name: JellyXR-linux-${{ matrix.arch }}-system-libs
+          path: dist/JellyXR-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 1
           archive: false
@@ -135,8 +135,8 @@ jobs:
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-linux-${{ matrix.arch }}-appimage
-          path: dist/jellyxr-linux-${{ matrix.arch }}.AppImage
+          name: JellyXR-linux-${{ matrix.arch }}-appimage
+          path: dist/JellyXR-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
           retention-days: 1
           archive: false

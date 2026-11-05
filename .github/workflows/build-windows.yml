@@ -90,7 +90,7 @@ jobs:
       - name: Upload Windows build
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-windows
+          name: JellyXR-windows
           path: dist/windows/
           if-no-files-found: error
           retention-days: 1

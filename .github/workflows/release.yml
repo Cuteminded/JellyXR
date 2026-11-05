@@ -49,12 +49,12 @@ jobs:
           skip-decompress: true
       - name: Zip artifacts
         working-directory: dist/artifacts
-        run: zip -r ../jellyxr-release.zip .
+        run: zip -r ../JellyXR-release.zip .
       - name: Upload release archive
         uses: actions/upload-artifact@v7
         with:
-          name: jellyxr-release
-          path: dist/jellyxr-release.zip
+          name: JellyXR-release
+          path: dist/JellyXR-release.zip
           if-no-files-found: error
           retention-days: 1
           archive: false

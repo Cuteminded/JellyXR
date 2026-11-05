@@ -56,7 +56,7 @@ Terminal=false
 EOF
 cp assets/logo/jellyxr-logo-transparent-crop.png "$appdir/jellyxr.png"
 ln -s jellyxr.png "$appdir/.DirIcon"
-output="$project_root/dist/jellyxr-linux-$arch.AppImage"
+output="$project_root/dist/JellyXR-linux-$arch.AppImage"
 ARCH="$appimage_arch" "$appimagetool" --appimage-extract-and-run "$appdir" "$output"
 [[ -s "$output" ]]
 chmod +x "$output"

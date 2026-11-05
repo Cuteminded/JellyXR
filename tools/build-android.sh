@@ -41,8 +41,8 @@ bash tools/setup-openxr.sh
 "$godot" --headless --xr-mode off --path . --editor --import --quit
 mkdir -p dist
 
-"$godot" --headless --xr-mode off --path . --export-release 'Android' dist/jellyxr-android.apk
-[[ -s dist/jellyxr-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
+"$godot" --headless --xr-mode off --path . --export-release 'Android' dist/JellyXR-android.apk
+[[ -s dist/JellyXR-android.apk ]] || fail 'Godot did not produce a nonempty APK.'
 
-"$godot" --headless --xr-mode off --path . --export-release 'Quest 1' dist/jellyXR-quest1.apk
-[[ -s dist/jellyXR-quest1.apk ]] || fail 'Godot did not produce a nonempty Quest 1 APK.'
+"$godot" --headless --xr-mode off --path . --export-release 'Quest 1' dist/JellyXR-quest1.apk
+[[ -s dist/JellyXR-quest1.apk ]] || fail 'Godot did not produce a nonempty Quest 1 APK.'

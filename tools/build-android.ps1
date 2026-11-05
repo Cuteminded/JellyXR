@@ -33,9 +33,9 @@ try {
     New-Item -ItemType Directory -Force -Path dist | Out-Null
     & $Godot --headless --xr-mode off --path . --editor --import --quit | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Godot import failed.' }
-    & $Godot --headless --xr-mode off --path . --export-debug 'Android' 'dist/jellyxr-android.apk' | Out-Host
+    & $Godot --headless --xr-mode off --path . --export-debug 'Android' 'dist/JellyXR-android.apk' | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Android export failed.' }
-    & $Godot --headless --xr-mode off --path . --export-debug 'Quest 1' 'dist/jellyXR-quest1.apk' | Out-Host
+    & $Godot --headless --xr-mode off --path . --export-debug 'Quest 1' 'dist/JellyXR-quest1.apk' | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Quest 1 export failed.' }
 } finally {
     $env:GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD = $previousSigningPassword
