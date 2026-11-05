@@ -30,6 +30,7 @@ var environment_choices: VBoxContainer
 var environment_buttons: Dictionary = {}
 var follow_switch: CheckButton
 var hardware_labels: Dictionary = {}
+var controller_controls: ControllerSettings
 
 const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles", "Controls", "Info"]
 const SECTION_ICONS := [
@@ -53,6 +54,7 @@ func _ready() -> void:
 	add_child(scroll)
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.add_child(body)
 	for index in range(SECTION_TITLES.size()):
 		var section := VBoxContainer.new()
@@ -160,8 +162,16 @@ func _build_library(parent: VBoxContainer) -> void:
 			func(): settings.library_sort_by = option[1]; _save())
 
 func _build_controller_rebinding(parent: VBoxContainer) -> void:
-	var card := _card(parent, "Coming soon")
-	_hint("Controller rebinding is not ready yet. You'll be able to customize your controller buttons in a future update.", card)
+	parent.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	controller_controls = ControllerSettings.new()
+	controller_controls.bindings = settings.controller_bindings
+	controller_controls.changed.connect(_save_controller_bindings)
+	parent.add_child(controller_controls)
+
+func _save_controller_bindings() -> void:
+	var result := settings.save()
+	controller_controls.show_save_result(result)
+	status.emit("Settings saved." if result == OK else "Could not save settings. Check available storage and try again.")
 
 func _build_info(parent: VBoxContainer) -> void:
 	var app_card := _card(parent, str(ProjectSettings.get_setting("application/config/name", "jellyXR")))

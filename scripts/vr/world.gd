@@ -4,6 +4,8 @@ extends Node3D
 signal menu_requested
 signal settings_requested
 signal library_requested
+signal pause_requested
+signal recenter_requested
 var settings: JellyXRSettings
 var camera: Camera3D
 var viewport: SubViewport
@@ -104,13 +106,12 @@ func setup() -> void:
 		viewport.reparent(container)
 
 func _controller_button_pressed(action: String, hand: StringName) -> void:
-	if action == "menu_button" and hand == &"left_hand": return
-	if action == "by_button" and hand == &"left_hand":
-		settings_requested.emit()
-	elif action == "by_button" and hand == &"right_hand":
-		library_requested.emit()
-	elif action in ["menu_button", "ax_button", "by_button"]:
-		menu_requested.emit()
+	match settings.controller_bindings.action_for(str(hand) + "/" + action):
+		"menu": menu_requested.emit()
+		"settings": settings_requested.emit()
+		"library": library_requested.emit()
+		"pause": pause_requested.emit()
+		"recenter": recenter_requested.emit()
 
 func _process(_delta: float) -> void:
 	if not player_overlay: return

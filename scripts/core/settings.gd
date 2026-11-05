@@ -32,10 +32,12 @@ var transcode_resolution := 1080
 var subtitle_size := 48
 var subtitle_color := "White"
 var subtitle_height := 0.18
+var controller_bindings := ControllerBindings.new()
 
 func load_settings(path: String = PATH) -> void:
 	var config := ConfigFile.new()
 	config.load(path)
+	controller_bindings.load_config(config)
 	width = clampf(config.get_value("screen", "width", width), 1.5, 7.0)
 	distance = clampf(config.get_value("screen", "distance", distance), 1.5, 8.0)
 	if config.has_section_key("screen", "height"):
@@ -82,6 +84,7 @@ func reset_screen() -> void:
 
 func save(path: String = PATH) -> Error:
 	var config := ConfigFile.new()
+	controller_bindings.save_config(config)
 	for key in SCREEN_KEYS:
 		config.set_value("screen", key, get(key))
 	config.set_value("screen", "height_origin", SCREEN_HEIGHT_ORIGIN)
