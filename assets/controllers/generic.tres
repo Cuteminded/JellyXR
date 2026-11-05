@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ControllerDiagramModel" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/controller_diagram_model.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/controllers/generic.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+texture = ExtResource("2")
+canvas_size = Vector2(1024, 1536)
+mirror_right = true
+hotspot_diameter = 16.0
+button_positions = {
+"primary_click": Vector2(480, 220),
+"by_button": Vector2(725, 303),
+"ax_button": Vector2(697, 422),
+"grip_click": Vector2(546, 872)
+}
+button_labels = {
+"primary_click": "Thumbstick click",
+"by_button": "Upper face button",
+"ax_button": "Lower face button",
+"grip_click": "Grip"
+}

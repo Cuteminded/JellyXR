@@ -2,9 +2,10 @@ extends SceneTree
 
 class FixtureSettings extends JellyXRSettings:
 	var saves := 0
+	var save_error := OK
 	func save(_path: String = PATH) -> Error:
 		saves += 1
-		return OK
+		return save_error
 
 class FixtureApi extends JellyfinClient:
 	var requests: Array[String] = []
@@ -288,11 +289,57 @@ func run_checks() -> void:
 	var info_saves := fixture.saves
 	view.navigation_buttons[5].pressed.emit()
 	check(view.sections[5].visible and not view.sections[4].visible and view.section_heading.text == "Controls", "Controls is between Subtitles and Info")
-	var rebinding_text: Array[String] = []
-	for label in view.sections[5].find_children("*", "Label", true, false):
-		rebinding_text.append(label.text)
-	check("Coming soon" in rebinding_text and rebinding_text[1].contains("not ready yet"), "Controller rebinding explains that it is not ready yet")
+	var controls := view.controller_controls
+	check(not controls.binding_buttons.has("right_hand/menu_button") and not controls.binding_buttons.has("left_hand/menu_button"), "Menu buttons have no remapping controls")
+	var binding_key := "left_hand/by_button"
+	await process_frame
+	await process_frame
+	var controls_height := controls.size.y
+	controls.binding_buttons[binding_key].pressed.emit()
+	check(controls.editor.visible and controls.selected_key == binding_key, "Selecting a controller button opens its action choices")
+	await process_frame
+	check(is_equal_approx(controls.size.y, controls_height), "The popup does not expand the Controls page")
+	check(controls.editor.get_viewport() == controls.get_viewport(), "The popup stays inside the viewport used for VR pointer input")
+	controls.action_buttons["pause"].pressed.emit()
+	check(not controls.editor.visible, "Choosing an action dismisses the popup")
+	check(fixture.controller_bindings.action_for(binding_key) == "settings" and fixture.saves == info_saves, "Draft shortcuts do not affect active input or save before Apply")
+	check(controls.draft.action_for(binding_key) == "pause" and not controls.apply_button.disabled, "Changing a shortcut enables Apply")
+	check(controls.hand_views[0].action_labels[binding_key].text == "Play / pause", "The shortcut row shows the draft action")
+	controls.hand_views[1].hotspots["right_hand/by_button"].pressed.emit()
+	check(controls.selected_key == "right_hand/by_button", "Controller hotspots select the matching action editor")
+	controls.editor.backdrop.pressed.emit()
+	check(not controls.editor.visible and controls.draft.action_for(binding_key) == "pause", "Clicking outside dismisses the popup without losing pending choices")
+	controls.binding_buttons[binding_key].pressed.emit()
+	var cancel_popup := InputEventKey.new()
+	cancel_popup.keycode = KEY_ESCAPE
+	cancel_popup.pressed = true
+	root.push_input(cancel_popup)
+	check(not controls.editor.visible, "Escape dismisses the action popup")
+	controls.apply_button.pressed.emit()
+	check(fixture.controller_bindings.action_for(binding_key) == "pause" and fixture.saves == info_saves + 1, "Apply activates and saves shortcuts once")
+	check(controls.apply_button.disabled and not controls.editor.visible, "Applying closes the editor and clears the pending state")
+	controls.reset_button.pressed.emit()
+	check(fixture.controller_bindings.action_for(binding_key) == "pause" and controls.draft.action_for(binding_key) == "settings", "Reset previews defaults until Apply")
+	fixture.save_error = ERR_CANT_CREATE
+	controls.apply_button.pressed.emit()
+	check(controls.save_failed and not controls.apply_button.disabled, "A failed save keeps Apply available for retry")
+	fixture.save_error = OK
+	controls.apply_button.pressed.emit()
+	check(fixture.controller_bindings.action_for(binding_key) == "settings" and not controls.save_failed and controls.apply_button.disabled, "Retry saves the restored defaults")
+	info_saves = fixture.saves
+	if "--capture-controls" in OS.get_cmdline_user_args():
+		root.size = Vector2i(1536, 960)
+		await capture("settings-controls-vr")
+	if "--capture" in OS.get_cmdline_user_args():
+		await capture("settings-controls")
+		controls.binding_buttons[binding_key].pressed.emit()
+		await capture("settings-controls-choices")
+		root.size = Vector2i(800, 900)
+		await capture("settings-controls-popup-narrow")
+		check(Rect2(Vector2.ZERO, Vector2(root.size)).encloses(controls.editor.panel.get_rect()), "The popup fits inside a narrow viewport")
+		root.size = Vector2i(1440, 900)
 	view.navigation_buttons[6].pressed.emit()
+	check(not controls.editor.visible, "Leaving Controls dismisses its popup")
 	check(view.sections[6].visible and not view.sections[5].visible and view.section_heading.text == "Info", "Info is reachable from the settings sidebar")
 	var info_text: Array[String] = []
 	for label in view.sections[6].find_children("*", "Label", true, false):
