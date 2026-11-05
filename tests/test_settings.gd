@@ -220,7 +220,7 @@ func run_checks() -> void:
 		check(view.navigation.get_parent() == shell.settings_navigation and not shell.libraries.visible, "Settings categories stay in the main sidebar at narrow widths.")
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-narrow-bottom")
-		for index in [1, 2, 3, 4]:
+		for index in [1, 2, 3, 4, 5, 6]:
 			view._show_section(index)
 			await capture("settings-narrow-" + str(index))
 			check(view.scroll.size.y >= 300 and shell.get_global_rect().end.x <= root.size.x, "Each narrow settings section remains visible and fits the window.")
@@ -285,6 +285,39 @@ func run_checks() -> void:
 	var reset_timing: Button = view.subtitle_controls.get_child(view.subtitle_controls.get_child_count() - 1)
 	reset_timing.pressed.emit()
 	check(subtitle_track.delay_ms == 0, "Reset timing clears the active subtitle delay")
+	var info_saves := fixture.saves
+	view.navigation_buttons[5].pressed.emit()
+	check(view.sections[5].visible and not view.sections[4].visible and view.section_heading.text == "Controls", "Controls is between Subtitles and Info")
+	var rebinding_text: Array[String] = []
+	for label in view.sections[5].find_children("*", "Label", true, false):
+		rebinding_text.append(label.text)
+	check("Coming soon" in rebinding_text and rebinding_text[1].contains("not ready yet"), "Controller rebinding explains that it is not ready yet")
+	view.navigation_buttons[6].pressed.emit()
+	check(view.sections[6].visible and not view.sections[5].visible and view.section_heading.text == "Info", "Info is reachable from the settings sidebar")
+	var info_text: Array[String] = []
+	for label in view.sections[6].find_children("*", "Label", true, false):
+		info_text.append(label.text)
+	check(str(ProjectSettings.get_setting("application/config/version")) in info_text, "Info shows the configured app version")
+	check(OS.get_name() in info_text and Engine.get_architecture_name() in info_text, "Info shows the running platform and architecture")
+	check(("Debug" if OS.is_debug_build() else "Release") in info_text, "Info identifies the running build type")
+	check(fixture.saves == info_saves, "Opening Info does not save settings")
+	check(view.hardware_labels["Headset"].text == "N/A" and view.hardware_labels["Left controller"].text == "N/A" and view.hardware_labels["Right controller"].text == "N/A", "Undetected VR hardware shows N/A")
+	var controller := XRControllerTracker.new()
+	controller.name = "left_hand"
+	controller.profile = "/interaction_profiles/oculus/touch_controller"
+	XRServer.add_tracker(controller)
+	view._refresh_hardware_info()
+	check(view.hardware_labels["Left controller"].text == "Oculus Touch Controller" and view.hardware_labels["Right controller"].text == "N/A", "Controller profiles appear independently for each hand")
+	controller.profile = "/interaction_profiles/none"
+	view._refresh_hardware_info()
+	check(view.hardware_labels["Left controller"].text == "N/A", "An inactive controller profile shows N/A")
+	XRServer.remove_tracker(controller)
+	view._refresh_hardware_info()
+	check(view.hardware_labels["Left controller"].text == "N/A", "A removed controller shows N/A")
+	if "--capture" in OS.get_cmdline_user_args():
+		await capture("settings-info")
+		view.scroll.scroll_vertical = 10000
+		await capture("settings-info-hardware")
 	print("Settings failures: ", failures)
 	quit(1 if failures else 0)
 
