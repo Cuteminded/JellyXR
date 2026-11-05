@@ -29,14 +29,17 @@ var sort_order_choices: HBoxContainer
 var environment_choices: VBoxContainer
 var environment_buttons: Dictionary = {}
 var follow_switch: CheckButton
+var hardware_labels: Dictionary = {}
 
-const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles"]
+const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles", "Controls", "Info"]
 const SECTION_ICONS := [
 	preload("res://assets/icons/material/video_library.svg"),
 	preload("res://assets/icons/material/tv.svg"),
 	preload("res://assets/icons/material/home.svg"),
 	preload("res://assets/icons/material/play_arrow.svg"),
-	preload("res://assets/icons/material/subtitles.svg")
+	preload("res://assets/icons/material/subtitles.svg"),
+	preload("res://assets/icons/material/controller.svg"),
+	preload("res://assets/icons/material/info.svg")
 ]
 
 func _ready() -> void:
@@ -68,6 +71,8 @@ func _ready() -> void:
 	subtitle_controls.appearance_changed.connect(func(): screen_changed.emit())
 	_card(sections[4], "Subtitle appearance and timing").add_child(subtitle_controls)
 	subtitle_controls.refresh()
+	_build_controller_rebinding(sections[5])
+	_build_info(sections[6])
 	resized.connect(_adapt_columns)
 	scroll.resized.connect(_adapt_columns)
 	_adapt_columns()
@@ -103,6 +108,7 @@ func _show_section(index: int) -> void:
 	navigation_buttons[index].button_pressed = true
 	section_heading.text = SECTION_TITLES[index]
 	scroll.scroll_vertical = 0
+	if index == 6: _refresh_hardware_info()
 
 func _card(parent: VBoxContainer, title: String = "") -> VBoxContainer:
 	var panel := PanelContainer.new()
@@ -152,6 +158,61 @@ func _build_library(parent: VBoxContainer) -> void:
 	for option in JellyXRSettings.LIBRARY_SORT_OPTIONS:
 		_choice(option[0], option[1] == settings.library_sort_by, group, sort_choices,
 			func(): settings.library_sort_by = option[1]; _save())
+
+func _build_controller_rebinding(parent: VBoxContainer) -> void:
+	var card := _card(parent, "Coming soon")
+	_hint("Controller rebinding is not ready yet. You'll be able to customize your controller buttons in a future update.", card)
+
+func _build_info(parent: VBoxContainer) -> void:
+	var app_card := _card(parent, str(ProjectSettings.get_setting("application/config/name", "jellyXR")))
+	_info_detail("App version", str(ProjectSettings.get_setting("application/config/version", "Unknown")), app_card)
+	var build_card := _card(parent, "Build information")
+	_info_detail("Platform", OS.get_name(), build_card)
+	_info_detail("Architecture", Engine.get_architecture_name(), build_card)
+	_info_detail("Build type", "Debug" if OS.is_debug_build() else "Release", build_card)
+	var hardware_card := _card(parent, "VR hardware")
+	for title in ["Headset", "Left controller", "Right controller"]:
+		hardware_labels[title] = _info_detail(title, "N/A", hardware_card)
+	var refresh := Timer.new()
+	refresh.wait_time = 1.0
+	refresh.timeout.connect(_refresh_hardware_info)
+	add_child(refresh)
+	refresh.start()
+
+func _info_detail(title: String, value: String, parent: VBoxContainer) -> Label:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	parent.add_child(row)
+	_hint(title, row)
+	var label := Widgets.label(value, row, 24)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.accessibility_name = title + ": " + value
+	return label
+
+func _refresh_hardware_info() -> void:
+	if not sections[6].is_visible_in_tree(): return
+	var headset := "N/A"
+	var xr := XRServer.find_interface("OpenXR")
+	if xr and xr.is_initialized():
+		headset = str(xr.get_system_info().get("OpenXRSystemName", "")).strip_edges()
+	var values := {
+		"Headset": headset,
+		"Left controller": _controller_name("left_hand"),
+		"Right controller": _controller_name("right_hand")
+	}
+	for title in values:
+		var value: String = values[title]
+		if value.is_empty(): value = "N/A"
+		var label: Label = hardware_labels[title]
+		label.text = value
+		label.accessibility_name = title + ": " + value
+
+func _controller_name(tracker_name: StringName) -> String:
+	var tracker := XRServer.get_tracker(tracker_name) as XRPositionalTracker
+	if tracker == null: return "N/A"
+	var profile := tracker.get_tracker_profile().strip_edges()
+	if profile.is_empty() or profile in ["none", "/interaction_profiles/none"]: return "N/A"
+	return profile.trim_prefix("/interaction_profiles/").replace("/", " ").capitalize()
 
 func _build_playback(parent: VBoxContainer) -> void:
 	parent = _card(parent, "Playback quality")
