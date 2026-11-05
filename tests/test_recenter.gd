@@ -77,12 +77,32 @@ func run_checks() -> void:
 	assert(not app.panel.visible and app.player_overlay.visible, "Headset recenter preserves menu visibility")
 	check_menu_placement(app)
 	await check_playback_placement(app)
+	check_projection_placement(app)
 	check_screen_follow(app)
 	app.playing = false
 	root.use_xr = false
 	if added_interface: XRServer.remove_interface(xr)
 	print("Startup recenter checks: PASS")
 	quit()
+
+func check_projection_placement(app: Node) -> void:
+	for environment in ["Void", "Passthrough", "Cinema", "Theatre"]:
+		app.settings.environment = environment
+		app._change_environment()
+		app._recenter()
+		var screen_transform: Transform3D = app.screen.global_transform
+		var theatre_transform: Transform3D = app.theatre.global_transform
+		var panorama_basis: Basis = app.world.panorama.global_basis
+		var menu_transform: Transform3D = app.panel.global_transform
+		for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.EQUIRECTANGULAR, VideoProjection.Mode.SCREEN]:
+			app.camera.position += Vector3(0.4, 0.2, 0.3)
+			app.camera.rotate_y(0.5)
+			app._select_projection(projection)
+			assert(app.screen.global_transform.is_equal_approx(screen_transform), "Changing projection preserves screen placement")
+			assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Changing projection preserves theatre placement")
+			assert(app.world.panorama.global_basis.is_equal_approx(panorama_basis), "Changing projection preserves panorama direction")
+			assert(app.panel.global_transform.is_equal_approx(menu_transform), "Changing projection preserves menu placement")
+			assert(app.world.panoramic == (projection != VideoProjection.Mode.SCREEN), "Changing projection still updates the projection mode")
 
 func check_screen_follow(app: Node) -> void:
 	app.settings.follow_screen = true
