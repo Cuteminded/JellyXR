@@ -45,8 +45,11 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: dist/artifacts
+          merge-multiple: true
+          skip-decompress: true
       - name: Zip artifacts
-        run: zip -r dist/jellyxr-release.zip dist/artifacts
+        working-directory: dist/artifacts
+        run: zip -r ../jellyxr-release.zip .
       - name: Upload release archive
         uses: actions/upload-artifact@v7
         with:
@@ -54,3 +57,4 @@ jobs:
           path: dist/jellyxr-release.zip
           if-no-files-found: error
           retention-days: 1
+          archive: false
