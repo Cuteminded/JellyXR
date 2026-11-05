@@ -56,12 +56,13 @@ func run_checks() -> void:
 	app.settings.environment = "Theatre"
 	app._change_environment()
 	app.screen.show()
+	var screen_transform: Transform3D = app.screen.global_transform
 	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
 	check(app.world.panorama.visible and app.screen.mesh == null, "360 uses the sphere instead of the screen")
 	check(not app.theatre.visible, "The cinema cannot obscure the panorama")
 	check(app.settings.environment == "Theatre", "360 preserves the preferred environment")
 	check(app.world.panorama.global_position.is_equal_approx(app.camera.global_position), "The viewer starts at the sphere center")
-	check(app.screen.global_position.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 3.0), "Controls stay in front of the viewer")
+	check(app.screen.global_transform.is_equal_approx(screen_transform), "Entering 360 preserves playback controls placement")
 	app.camera.position += Vector3(0.3, 0.1, 0.2)
 	app.camera.rotation = Vector3(0.2, 0.7, 0.1)
 	app._recenter()
@@ -113,13 +114,14 @@ func run_checks() -> void:
 
 func check_projection_window_position(app: Node) -> void:
 	var window_transform: Transform3D = app.panel.global_transform
+	var screen_transform: Transform3D = app.screen.global_transform
 	var viewer_transform: Transform3D = app.camera.global_transform
 	app.camera.position += Vector3(0.4, 0.2, 0.3)
 	app.camera.rotate_y(0.5)
 	for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.SCREEN, VideoProjection.Mode.EQUIRECTANGULAR, VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.SCREEN]:
 		app._select_projection(projection)
 		check(app.panel.global_transform.is_equal_approx(window_transform), "Projection switching preserves the settings window position and orientation")
-		check(app.screen.global_basis.is_equal_approx(app.camera.global_basis), "Projection switching centers playback toward the viewer")
+		check(app.screen.global_transform.is_equal_approx(screen_transform), "Projection switching preserves playback placement")
 		if projection != VideoProjection.Mode.SCREEN:
 			check(app.world.panorama.global_position.is_equal_approx(app.camera.global_position), "Projection switching centers the panorama on the viewer")
 	app.camera.global_transform = viewer_transform
