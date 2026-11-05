@@ -67,8 +67,59 @@ func run_checks() -> void:
 	check(aim.update(Vector2(500, 70), 0.016, true) == Vector2(500, 70), "Large intentional aim changes do not select the old target")
 	aim.reset()
 	check(aim.update(Vector2(20, 40), 0.016, false) == Vector2(20, 40), "Switching panels resets aim smoothing")
+	await check_player_pointer()
 	print("VR pointer and click feedback checks: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(1 if failures else 0)
+
+func check_player_pointer() -> void:
+	var overlay := PlayerOverlay.new()
+	root.add_child(overlay)
+	overlay.position.z = -2.0
+	overlay.show()
+	await process_frame
+	await process_frame
+	var laser := LaserPointer.new()
+	laser.panel = overlay
+	laser.viewport = overlay.viewport
+	root.add_child(laser)
+	laser.set_process(false)
+	for menu in ["audio", "subtitles", "screen_mode", "statistics"]:
+		laser.set_target(overlay, overlay.viewport, overlay.panel_size)
+		var button: Button = overlay.submenu_buttons[menu]
+		var target := button.get_global_rect().get_center()
+		laser.input.sample_trigger(0.0)
+		laser._update_aim(target, true, 0.016)
+		var destination := laser.dot.global_position
+		laser.input.sample_trigger(1.0)
+		laser._update_aim(target, true, 0.016)
+		check(overlay.active_menu == menu, "The laser opens the %s menu" % menu)
+		check(laser.dot.global_position.is_equal_approx(destination), "Opening %s preserves the laser's world position during the resize" % menu)
+		await process_frame
+		await process_frame
+		laser.set_target(overlay, overlay.viewport, overlay.panel_size)
+		target = button.get_global_rect().get_center()
+		laser.input.sample_trigger(0.0)
+		laser._update_aim(target, true, 0.016)
+		check(laser.dot.global_position.is_equal_approx(destination), "The laser stays on the %s button after layout settles" % menu)
+		var blank := Vector2(10, 10)
+		laser._update_aim(blank, true, 0.016)
+		check(not laser.beam.visible and not laser.dot.visible and not laser.input.hovering, "Transparent space beside %s hides the laser and clears hover" % menu)
+		laser._update_aim(overlay.quick_access.get_global_rect().get_center(), true, 0.016)
+		check(laser.beam.visible and laser.dot.visible, "The visible %s menu accepts the laser" % menu)
+		laser.input.cancel()
+		laser.aim.reset()
+		laser._update_aim(target, true, 0.016)
+		laser.input.sample_trigger(1.0)
+		laser._update_aim(target, true, 0.016)
+		check(overlay.active_menu.is_empty(), "The laser closes the %s menu" % menu)
+		check(laser.dot.global_position.is_equal_approx(destination), "Closing %s preserves the laser's world position during the resize" % menu)
+		await process_frame
+		await process_frame
+		laser.input.sample_trigger(0.0)
+		laser.input.cancel()
+	laser.queue_free()
+	overlay.queue_free()
+	await process_frame
 
 func sample(value: float, inside: bool = true) -> void:
 	pointer.sample_trigger(value)

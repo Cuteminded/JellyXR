@@ -8,6 +8,7 @@ var beam: MeshInstance3D
 var dot: MeshInstance3D
 var input := PointerInput.new()
 var aim := PointerAim.new()
+var aim_viewport_size := Vector2i.ZERO
 static var active_pointer: LaserPointer
 
 func _ready() -> void:
@@ -68,15 +69,23 @@ func _process(delta: float) -> void:
 	var distance := -origin.z / direction.z if absf(direction.z) > 0.00001 else -1.0
 	var hit := origin + direction * distance
 	var inside := distance > 0 and absf(hit.x) < panel_size.x / 2 and absf(hit.y) < panel_size.y / 2
+	var point := Vector2(hit.x / panel_size.x + 0.5, 0.5 - hit.y / panel_size.y) * Vector2(viewport.size)
+	_update_aim(point, inside, delta)
+
+func _update_aim(point: Vector2, inside: bool, delta: float) -> void:
+	if aim_viewport_size != viewport.size:
+		aim.reset()
+		aim_viewport_size = viewport.size
+	if inside:
+		point = aim.update(point, delta, input.just_pressed)
+		if panel.has_method("accepts_pointer_at"):
+			inside = panel.accepts_pointer_at(point)
 	beam.visible = inside
 	dot.visible = inside
-	var point := Vector2(hit.x / panel_size.x + 0.5, 0.5 - hit.y / panel_size.y) * Vector2(viewport.size)
 	if not inside:
 		input.aim(point, false)
 		aim.reset()
 		return
-	point = aim.update(point, delta, input.just_pressed)
-	input.aim(point, true)
 	var uv := point / Vector2(viewport.size)
 	var destination := panel.to_global(Vector3((uv.x - 0.5) * panel_size.x, (0.5 - uv.y) * panel_size.y, 0.008))
 	dot.global_position = destination
@@ -84,6 +93,7 @@ func _process(delta: float) -> void:
 	var up := Vector3.FORWARD if absf(direction_to_dot.normalized().dot(Vector3.UP)) > 0.99 else Vector3.UP
 	beam.global_transform = Transform3D(Basis.looking_at(direction_to_dot, up) * Basis(Vector3.RIGHT, PI / 2), (global_position + destination) / 2)
 	beam.scale.y = direction_to_dot.length()
+	input.aim(point, true)
 	if not input.trigger_down: _scroll(point, delta)
 
 func _scroll(point: Vector2, delta: float) -> void:
