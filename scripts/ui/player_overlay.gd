@@ -238,6 +238,9 @@ func _position_tooltip() -> void:
 func bar_height() -> float:
 	return panel_size.y * bar.size.y / float(viewport.size.y)
 
+func accepts_pointer_at(point: Vector2) -> bool:
+	return bar.get_global_rect().has_point(point) or (quick_access.is_visible_in_tree() and quick_access.get_global_rect().has_point(point))
+
 func fit_screen(width: float, aspect: float, curvature: float) -> void:
 	screen_dimensions = Vector3(width, aspect, curvature)
 	var panel_width := width * 0.94 * float(viewport.size.x) / 1400.0
