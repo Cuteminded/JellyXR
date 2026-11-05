@@ -33,7 +33,7 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 | Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
-| [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.2.0 | Testing depends on access to a borrowed headset. |
+| [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.2.1 | Testing depends on access to a borrowed headset. |
 | [Quest 2](https://www.meta.com/quest) | Untested | * | * | We don't have a Quest 2 to test with |
 | [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.1 ||
 | [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
