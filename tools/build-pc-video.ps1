@@ -13,7 +13,12 @@ New-Item -ItemType File -Force (Join-Path $projectRoot 'build/.gdignore') | Out-
 function Get-Dependency([string]$Name, [string]$Url, [string]$Hash, [string]$Directory) {
     $archive = Join-Path $dependencyRoot $Name
     if (-not (Test-Path -LiteralPath $archive)) {
-        Invoke-WebRequest -Uri $Url -OutFile $archive
+        Write-Host "Downloading $Name from $Url"
+        try {
+            Invoke-WebRequest -Uri $Url -OutFile $archive
+        } catch {
+            throw "Could not download $Name from ${Url}: $($_.Exception.Message)"
+        }
     }
     if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $Hash) {
         throw "Checksum mismatch for $Name. Remove the cached archive and retry."
@@ -46,9 +51,9 @@ $vulkanRoot = Get-Dependency 'vulkan-headers-1.4.321.zip' `
 $mpvRoot = Get-Dependency 'mpv-lgpl.zip' `
     'https://nightly.link/mpv-player/mpv/actions/runs/40835379230/libmpv-v0.41.0-dev-gcf764c61d-40835379230-x86_64-w64-mingw32-lgpl.zip' `
     '4AB059D0C6CE2FCCC239F14F54087F9411C60B680D40B7DCCA8CDA44EA6E8366' 'mpv-lgpl'
-$ffmpegRoot = Get-Dependency 'ffmpeg-lgpl.zip' `
-    'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-19-13-06/ffmpeg-n8.1.3-18-g46d899d7a0-win64-lgpl-shared-8.1.zip' `
-    '638DD2A073CC1838CB668E736A822A1A58A3CA5405A109B0ECA41C5EE03EC9A1' 'ffmpeg-n8.1.3-18-g46d899d7a0-win64-lgpl-shared-8.1'
+$ffmpegRoot = Get-Dependency 'ffmpeg-lgpl-2026-11-05.zip' `
+    'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-05-12-48/ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1.zip' `
+    '49A2EC2D75366A65D2977E9AE4C3DE49F98EAB1C049F5A055DFBEF86175118BA' 'ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1'
 
 $cmake = Join-Path $cmakeRoot 'bin/cmake.exe'
 $originalPath = $env:PATH
