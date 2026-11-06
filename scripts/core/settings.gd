@@ -5,9 +5,12 @@ const PATH := "user://settings.cfg"
 const SCREEN_HEIGHT_ORIGIN := -0.2
 const SCREEN_KEYS := ["width", "distance", "height", "curvature"]
 const PLAYBACK_MODES := ["auto", "original", "transcoded"]
+const DEFAULT_TRANSCODE_MAX_FPS := 30
+const TRANSCODE_MAX_FPS_OPTIONS := [24, 25, 30, 50, 60]
 const TRANSCODE_PRESETS := {
 	720: {"label": "720p", "width": 1280, "height": 720, "bitrate": 6000000},
 	1080: {"label": "1080p", "width": 1920, "height": 1080, "bitrate": 12000000},
+	1440: {"label": "2K", "width": 2560, "height": 1440, "bitrate": 20000000},
 	2160: {"label": "4K", "width": 3840, "height": 2160, "bitrate": 40000000}
 }
 const LIBRARY_SORT_OPTIONS := [
@@ -29,6 +32,7 @@ var library_sort_by := "SortName"
 var library_sort_order := "Ascending"
 var playback_mode := "auto"
 var transcode_resolution := 1080
+var transcode_max_fps := DEFAULT_TRANSCODE_MAX_FPS
 var subtitle_size := 48
 var subtitle_color := "White"
 var subtitle_height := 0.18
@@ -63,6 +67,9 @@ func load_settings(path: String = PATH) -> void:
 	if playback_mode not in PLAYBACK_MODES: playback_mode = "auto"
 	transcode_resolution = int(config.get_value("playback", "transcode_resolution", 1080))
 	if not TRANSCODE_PRESETS.has(transcode_resolution): transcode_resolution = 1080
+	transcode_max_fps = int(config.get_value("playback", "transcode_max_fps", DEFAULT_TRANSCODE_MAX_FPS))
+	if transcode_max_fps not in TRANSCODE_MAX_FPS_OPTIONS:
+		transcode_max_fps = DEFAULT_TRANSCODE_MAX_FPS
 	subtitle_size = clampi(int(config.get_value("subtitles", "size", 48)), 28, 80)
 	subtitle_color = str(config.get_value("subtitles", "color", "White"))
 	if subtitle_color not in ["White", "Yellow", "Green"]: subtitle_color = "White"
@@ -97,6 +104,7 @@ func save(path: String = PATH) -> Error:
 	config.set_value("library", "sort_order", library_sort_order)
 	config.set_value("playback", "mode", playback_mode)
 	config.set_value("playback", "transcode_resolution", transcode_resolution)
+	config.set_value("playback", "transcode_max_fps", transcode_max_fps)
 	config.set_value("subtitles", "size", subtitle_size)
 	config.set_value("subtitles", "color", subtitle_color)
 	config.set_value("subtitles", "height", subtitle_height)

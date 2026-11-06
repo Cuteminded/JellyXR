@@ -16,8 +16,8 @@ var sort_choices: GridContainer
 var screen_dimensions: GridContainer
 var reset_screen_button: Button
 var playback_choices: VBoxContainer
-var transcode_options: VBoxContainer
 var transcode_choices: HFlowContainer
+var transcode_fps_choices: HFlowContainer
 var sections: Array[VBoxContainer] = []
 var scroll: ScrollContainer
 var dragging_slider := false
@@ -66,6 +66,8 @@ func _ready() -> void:
 	_build_screen(sections[1])
 	_build_environment(sections[2])
 	_build_playback(sections[3])
+	_build_transcode_options(sections[3])
+	_build_transcode_fps(sections[3])
 	subtitle_controls = SubtitleSettings.new()
 	subtitle_controls.settings = settings
 	subtitle_controls.subtitles = subtitles
@@ -231,40 +233,46 @@ func _build_playback(parent: VBoxContainer) -> void:
 	playback_choices.add_theme_constant_override("separation", 12)
 	parent.add_child(playback_choices)
 	var group := ButtonGroup.new()
-	var conversion_hint := "Jellyfin converts the video to the resolution you choose below, up to 30 fps."
 	for option in [
 		["Automatic", "auto", "Play the original file when supported. Otherwise, Jellyfin converts it."],
 		["Original full resolution", "original", "Play the original file without conversion. Your device must support its format."],
-		["Transcoded", "transcoded", conversion_hint]
+		["Transcoded", "transcoded", "Always ask Jellyfin to convert the video."]
 	]:
 		var row := VBoxContainer.new()
 		playback_choices.add_child(row)
 		_choice(option[0], option[1] == settings.playback_mode, group, row,
 			func(): _select_playback_mode(option[1]))
 		_hint(option[2], row)
-	_build_transcode_options(parent)
 
 func _select_playback_mode(value: String) -> void:
 	settings.playback_mode = value
-	transcode_options.visible = value == "transcoded"
 	_save()
 
 func _build_transcode_options(parent: VBoxContainer) -> void:
-	transcode_options = VBoxContainer.new()
-	transcode_options.add_theme_constant_override("separation", 12)
-	transcode_options.visible = settings.playback_mode == "transcoded"
-	parent.add_child(transcode_options)
-	Widgets.label("Transcoded resolution", transcode_options, 26)
-	transcode_choices = HFlowContainer.new()
-	transcode_choices.add_theme_constant_override("h_separation", 12)
-	transcode_choices.add_theme_constant_override("v_separation", 12)
-	transcode_options.add_child(transcode_choices)
+	parent = _card(parent, "Transcoded resolution")
+	transcode_choices = _playback_choice_row(parent)
 	var group := ButtonGroup.new()
 	for resolution in JellyXRSettings.TRANSCODE_PRESETS:
 		var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS[resolution]
 		_choice(preset.label, settings.transcode_resolution == resolution, group, transcode_choices,
 			func(): settings.transcode_resolution = resolution; _save())
-	_hint("Choose a maximum resolution. Smaller videos keep their size. Higher resolutions need a faster connection and more server processing power.", transcode_options)
+	_hint("Sets the maximum resolution when Automatic or Transcoded converts the video. Smaller videos keep their size.", parent)
+
+func _build_transcode_fps(parent: VBoxContainer) -> void:
+	parent = _card(parent, "Maximum transcoding frame rate")
+	transcode_fps_choices = _playback_choice_row(parent)
+	var group := ButtonGroup.new()
+	for fps in JellyXRSettings.TRANSCODE_MAX_FPS_OPTIONS:
+		_choice("%d fps" % fps, settings.transcode_max_fps == fps, group, transcode_fps_choices,
+			func(): settings.transcode_max_fps = fps; _save())
+	_hint("Applies when Automatic or Transcoded converts the video.", parent)
+
+func _playback_choice_row(parent: VBoxContainer) -> HFlowContainer:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 12)
+	row.add_theme_constant_override("v_separation", 12)
+	parent.add_child(row)
+	return row
 
 func _choice(title: String, selected: bool, group: ButtonGroup, parent: Node, action: Callable) -> CheckBox:
 	var choice := CheckBox.new()

@@ -13,6 +13,7 @@ var api: JellyfinClient
 var settings: JellyXRSettings
 var active_playback_mode := "auto"
 var active_transcode_resolution := 1080
+var active_transcode_max_fps := JellyXRSettings.DEFAULT_TRANSCODE_MAX_FPS
 var item: Dictionary = {}
 var source: Dictionary = {}
 var session_id := ""
@@ -40,7 +41,8 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 		position_ticks = int(item.get("UserData", {}).get("PlaybackPositionTicks", 0))
 		fallback_attempted = false
 		active_playback_mode = settings.playback_mode if settings != null else "auto"
-		active_transcode_resolution = settings.transcode_resolution if settings != null and active_playback_mode == "transcoded" else 1080
+		active_transcode_resolution = settings.transcode_resolution if settings != null else 1080
+		active_transcode_max_fps = settings.transcode_max_fps if settings != null else JellyXRSettings.DEFAULT_TRANSCODE_MAX_FPS
 	started = false
 	var use_transcode := transcode or burn_subtitles or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
@@ -118,8 +120,8 @@ func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
 		codec_conditions = [{"Condition": "EqualsAny", "Property": "VideoRangeType", "Value": PC_VIDEO_RANGES, "IsRequired": true}]
 	var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyXRSettings.TRANSCODE_PRESETS[1080])
 	transcoding_profile["Conditions"] = []
-	for limit in [["Width", str(preset.width)], ["Height", str(preset.height)], ["VideoFramerate", "30"], ["VideoBitrate", str(preset.bitrate)]]:
-		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": limit[1], "IsRequired": true})
+	for limit in [["Width", preset.width], ["Height", preset.height], ["VideoFramerate", active_transcode_max_fps], ["VideoBitrate", preset.bitrate]]:
+		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": str(limit[1]), "IsRequired": true})
 	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {
 		"Name": ("jellyXR original " if original else ("jellyXR native " if native_pc else "jellyXR SDR ")) + OS.get_name(),

@@ -55,7 +55,8 @@ func run_checks() -> void:
 	check(not settings.follow_screen, "Screen following is off by default.")
 	settings.follow_screen = true
 	settings.playback_mode = "original"
-	settings.transcode_resolution = 2160
+	settings.transcode_resolution = 1440
+	settings.transcode_max_fps = 60
 	var path := "user://settings-test.cfg"
 	check(settings.save(path) == OK, "Settings can be saved.")
 	var restored := JellyXRSettings.new()
@@ -64,7 +65,8 @@ func run_checks() -> void:
 	check(restored.environment == "Passthrough", "Passthrough preference survives a restart.")
 	check(restored.follow_screen, "Screen following survives a restart.")
 	check(restored.playback_mode == "original", "Playback preference survives a restart.")
-	check(restored.transcode_resolution == 2160, "Transcoded 4K preference survives a restart.")
+	check(restored.transcode_resolution == 1440, "The 2K transcoding preference survives a restart.")
+	check(restored.transcode_max_fps == 60, "The transcoding frame rate limit survives a restart.")
 	var config := ConfigFile.new()
 	config.load(path)
 	config.set_value("library", "sort_by", "Invalid")
@@ -72,17 +74,21 @@ func run_checks() -> void:
 	config.set_value("screen", "environment", "Invalid")
 	config.set_value("playback", "mode", "Invalid")
 	config.set_value("playback", "transcode_resolution", 999)
+	config.set_value("playback", "transcode_max_fps", 999)
 	config.save(path)
 	restored.load_settings(path)
 	check(restored.library_sort_by == "SortName" and restored.library_sort_order == "Ascending", "Invalid sorting preferences use safe defaults.")
 	check(restored.environment == "Void", "Invalid environments fall back to Void.")
 	check(restored.playback_mode == "auto", "Invalid playback preferences fall back to Automatic.")
 	check(restored.transcode_resolution == 1080, "Invalid conversion resolutions fall back to 1080p.")
+	check(restored.transcode_max_fps == 30, "Invalid frame rate limits fall back to 30 fps.")
 	config.erase_section_key("playback", "transcode_resolution")
+	config.erase_section_key("playback", "transcode_max_fps")
 	config.erase_section_key("screen", "follow_screen")
 	config.save(path)
 	restored.load_settings(path)
 	check(restored.transcode_resolution == 1080, "Existing settings without a resolution keep the previous 1080p quality.")
+	check(restored.transcode_max_fps == 30, "Existing settings without a frame rate limit keep the 30 fps default.")
 	check(not restored.follow_screen, "Existing settings without screen following keep a stationary screen.")
 	for names in [["Theatre", "Cinema"], ["Theatre LowRes", "Theatre"]]:
 		if config.has_section_key("screen", "environment_version"):
@@ -232,31 +238,40 @@ func run_checks() -> void:
 	playback_tab.button_pressed = true
 	playback_tab.pressed.emit()
 	check(view.sections[3].visible and not view.sections[2].visible, "Playback has its own settings page.")
+	var automatic_choice: CheckBox = view.playback_choices.get_child(0).get_child(0)
 	var original_choice: CheckBox = view.playback_choices.get_child(1).get_child(0)
 	var transcoded_choice: CheckBox = view.playback_choices.get_child(2).get_child(0)
 	var saves_before := fixture.saves
 	original_choice.button_pressed = true
 	original_choice.pressed.emit()
 	check(fixture.playback_mode == "original" and fixture.saves == saves_before + 1, "Original playback selection saves once.")
-	check(not view.transcode_options.visible, "Original playback hides conversion resolution choices.")
-	transcoded_choice.button_pressed = true
-	transcoded_choice.pressed.emit()
-	check(fixture.playback_mode == "transcoded" and not original_choice.button_pressed, "Playback options are mutually exclusive.")
-	check(view.transcode_options.visible and view.transcode_choices.get_child_count() == 3, "Transcoded playback shows three resolution choices.")
+	check(view.transcode_choices.is_visible_in_tree(), "Original playback keeps the independent resolution setting visible.")
+	automatic_choice.button_pressed = true
+	automatic_choice.pressed.emit()
+	check(fixture.playback_mode == "auto" and not original_choice.button_pressed, "Playback options are mutually exclusive.")
+	check(view.transcode_choices.is_visible_in_tree() and view.transcode_choices.get_child_count() == 4, "Automatic playback shows all four resolution choices.")
 	check((view.transcode_choices.get_child(1) as CheckBox).button_pressed, "1080p is the default conversion resolution.")
-	for sample in [[0, 720], [1, 1080], [2, 2160]]:
+	for sample in [[0, 720], [1, 1080], [2, 1440], [3, 2160]]:
 		var quality: CheckBox = view.transcode_choices.get_child(sample[0])
 		saves_before = fixture.saves
 		quality.button_pressed = true
 		quality.pressed.emit()
-		check(fixture.transcode_resolution == sample[1] and fixture.saves == saves_before + 1, "Choosing a resolution saves the preference once.")
-	view._reset_screen()
-	check(fixture.playback_mode == "transcoded" and fixture.transcode_resolution == 2160, "Screen reset preserves playback mode and conversion resolution.")
-	original_choice.button_pressed = true
-	original_choice.pressed.emit()
+		check(fixture.transcode_resolution == sample[1] and fixture.saves == saves_before + 1 and fixture.playback_mode == "auto", "Choosing a resolution saves it without changing Automatic mode.")
+	check(view.transcode_fps_choices.is_visible_in_tree(), "Automatic playback shows the frame rate options.")
+	check((view.transcode_fps_choices.get_child(2) as CheckBox).button_pressed, "30 fps is selected by default.")
+	for index in JellyXRSettings.TRANSCODE_MAX_FPS_OPTIONS.size():
+		var fps_choice: CheckBox = view.transcode_fps_choices.get_child(index)
+		saves_before = fixture.saves
+		fps_choice.button_pressed = true
+		fps_choice.pressed.emit()
+		check(fixture.transcode_max_fps == JellyXRSettings.TRANSCODE_MAX_FPS_OPTIONS[index] and fixture.saves == saves_before + 1, "Choosing a frame rate saves it once.")
+	check(fixture.playback_mode == "auto" and fixture.transcode_resolution == 2160, "Changing the frame rate preserves the playback mode and resolution.")
 	transcoded_choice.button_pressed = true
 	transcoded_choice.pressed.emit()
-	check(view.transcode_options.visible and (view.transcode_choices.get_child(2) as CheckBox).button_pressed, "Returning to Transcoded keeps the chosen 4K resolution.")
+	check(view.transcode_choices.is_visible_in_tree() and (view.transcode_choices.get_child(3) as CheckBox).button_pressed, "Switching to Transcoded keeps the chosen 4K resolution.")
+	check(view.transcode_fps_choices.is_visible_in_tree() and (view.transcode_fps_choices.get_child(4) as CheckBox).button_pressed, "Switching to Transcoded keeps the chosen 60 fps limit.")
+	view._reset_screen()
+	check(fixture.playback_mode == "transcoded" and fixture.transcode_resolution == 2160, "Screen reset preserves playback mode and conversion resolution.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-playback")
 		view.scroll.scroll_vertical = 10000

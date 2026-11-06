@@ -168,9 +168,11 @@ Open **Settings > Playback**. The choice applies to the next video you start.
 
 - **Automatic** lets Jellyfin choose how to play the video on your device. Start with this option if you are unsure.
 - **Original full resolution** keeps the original video quality. Your headset or PC must be able to play the file.
-- **Transcoded** asks Jellyfin to prepare a version that is easier for your device to play. Choose **720p**, **1080p**, or **4K** under **Transcoded resolution**. This can help with files that will not play smoothly at their original quality.
+- **Transcoded** always asks Jellyfin to convert the video. This can help with files that will not play smoothly at their original quality.
 
-Start with **1080p**. Try **720p** if playback keeps stopping to load, or **4K** for a sharper picture if the video was recorded at that quality. Choosing 4K cannot add detail to a lower-quality video. Higher quality needs a faster connection and a computer running Jellyfin that can keep up. The app remembers your choice for the next video you start.
+Under **Transcoded resolution**, choose **720p**, **1080p**, **2K**, or **4K**. This sets the maximum resolution when Jellyfin converts the video in either **Automatic** or **Transcoded** mode. The app remembers your choice for the next video you start. Higher resolutions need a faster connection and more processing power on the Jellyfin server.
+
+Under **Maximum transcoding frame rate**, choose **24**, **25**, **30**, **50**, or **60 fps**. The default is **30 fps**. The same limit applies when either playback mode transcodes the video.
 
 Picture quality also depends on the video itself and your headset. For help getting started on a PC, see the [Windows launch instructions](INSTALLATION.md#try-it-on-windows-with-steamvr).
 

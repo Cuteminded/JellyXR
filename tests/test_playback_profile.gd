@@ -145,18 +145,19 @@ func check_playback_choices(session: PlaybackSession, api: FixtureClient, stream
 
 func check_transcode_resolutions(session: PlaybackSession, api: FixtureClient, streams: Array) -> void:
 	session.settings.playback_mode = "transcoded"
+	session.settings.transcode_max_fps = 50
 	api.direct = true
 	api.transcode_path = "/Videos/fixture/master.m3u8"
-	for sample in [[720, "1280", "720", "6000000"], [1080, "1920", "1080", "12000000"], [2160, "3840", "2160", "40000000"]]:
+	for sample in [[720, "1280", "720", "6000000"], [1080, "1920", "1080", "12000000"], [1440, "2560", "1440", "20000000"], [2160, "3840", "2160", "40000000"]]:
 		session.settings.transcode_resolution = sample[0]
 		await session.open({"Id": "fixture", "UserData": {"PlaybackPositionTicks": 450000000}})
 		var request: Dictionary = api.bodies.back()
-		var expected := {"Width": sample[1], "Height": sample[2], "VideoFramerate": "30", "VideoBitrate": sample[3]}
+		var expected := {"Width": sample[1], "Height": sample[2], "VideoFramerate": "50", "VideoBitrate": sample[3]}
 		var limits := {}
 		for condition in request.DeviceProfile.TranscodingProfiles[0].Conditions:
 			assert(condition.Condition == "LessThanEqual", "Resolution choices set a maximum and do not force upscaling")
 			limits[condition.Property] = condition.Value
-		assert(limits == expected, "Each resolution sends its own dimensions and bitrate budget")
+		assert(limits == expected, "Forced conversion sends the selected frame rate limit and the resolution's dimensions and bitrate")
 		for condition in request.DeviceProfile.CodecProfiles[0].Conditions:
 			if expected.has(condition.Property):
 				assert(condition.Value == expected[condition.Property], "Codec limits match the selected conversion quality")
@@ -164,14 +165,31 @@ func check_transcode_resolutions(session: PlaybackSession, api: FixtureClient, s
 		assert(streams.back()[1] == 45000, "Each resolution preserves the HLS resume position")
 
 	session.settings.transcode_resolution = 720
+	session.settings.transcode_max_fps = 24
 	session.position_ticks = 900000000
 	await session.open(session.item, true)
 	assert(session.active_transcode_resolution == 2160 and streams.back()[1] == 90000, "Seeking keeps the active 4K quality and requested position")
+	assert(session.active_transcode_max_fps == 50, "Seeking keeps the active frame rate limit")
 	await session.open({"Id": "fixture"})
 	assert(session.active_transcode_resolution == 720, "A new video uses the updated resolution preference")
+	assert(session.active_transcode_max_fps == 24, "A new video uses the updated frame rate limit")
 	session.settings.playback_mode = "auto"
-	session.settings.transcode_resolution = 2160
+	session.settings.transcode_resolution = 1440
+	session.settings.transcode_max_fps = 60
+	api.direct = false
 	await session.open({"Id": "fixture"})
-	assert(session.method == "DirectPlay" and session.active_transcode_resolution == 1080, "Automatic playback keeps its existing direct-play and conversion defaults")
+	var automatic_request: Dictionary = api.bodies.back()
+	var limits: Array = automatic_request.DeviceProfile.TranscodingProfiles[0].Conditions
+	assert(session.method == "Transcode" and automatic_request.EnableDirectPlay, "Automatic mode lets Jellyfin choose to transcode")
+	assert(limits[0].Value == "2560" and limits[1].Value == "1440", "Automatic negotiation sends the selected 2K conversion limits")
+	assert(limits[2].Property == "VideoFramerate" and limits[2].Value == "60", "Automatic negotiation sends the selected frame rate limit")
+	assert(automatic_request.DeviceProfile.CodecProfiles[0].Conditions.size() == 1, "Transcoding limits do not affect direct playback")
+	api.direct = true
+	await session.open({"Id": "fixture"})
+	assert(session.method == "DirectPlay", "Automatic mode still plays compatible originals")
+	session.settings.transcode_resolution = 720
+	session.settings.transcode_max_fps = 30
 	await session.retry_transcode()
-	assert(session.method == "Transcode" and session.active_transcode_resolution == 1080, "Automatic recovery retains its existing 1080p conversion default")
+	var retry_request: Dictionary = api.bodies.back()
+	assert(session.method == "Transcode" and not retry_request.AllowVideoStreamCopy, "Automatic recovery forces video conversion")
+	assert(retry_request.DeviceProfile.TranscodingProfiles[0].Conditions == limits, "Automatic recovery keeps the resolution and frame rate selected at playback start")
