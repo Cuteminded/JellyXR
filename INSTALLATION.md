@@ -64,4 +64,4 @@ Keep the executable and the `.so` file together. For ARM64, use `JellyXR-linux-a
 
 ## After installation
 
-Follow the [usage guide](USAGE.md) to sign in and play a video. See the [current limitations](README.md#current-limitations) for platform and headset compatibility.
+Follow the [usage guide](USAGE.md) to sign in and play a video.

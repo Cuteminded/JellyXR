@@ -192,4 +192,4 @@ Home always shows the newest additions first. The sort order does not affect Ran
 - If subtitles appear too early or too late, adjust Delay under Audio and subtitles.
 - If audio or subtitle choices are unavailable, select Use Automatic for this video on that page.
 
-For setup problems, see [Install and start jellyXR](INSTALLATION.md). The [README](README.md#current-limitations) lists the remaining limitations.
+For setup problems, see [Install and start jellyXR](INSTALLATION.md).
