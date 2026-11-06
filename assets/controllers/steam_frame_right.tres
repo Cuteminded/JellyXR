@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ControllerDiagramModel" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/controller_diagram_model.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/controllers/steam_frame_right.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+texture = ExtResource("2")
+canvas_size = Vector2(1024, 1536)
+mirror_right = false
+hotspot_diameter = 12.0
+button_positions = {
+"primary_click": Vector2(358, 580),
+"by_button": Vector2(791, 501),
+"ax_button": Vector2(692, 600),
+"grip_click": Vector2(319, 937)
+}
+button_labels = {
+"primary_click": "Thumbstick click",
+"by_button": "B button",
+"ax_button": "A button",
+"grip_click": "Grip"
+}
