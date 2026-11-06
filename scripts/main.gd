@@ -22,7 +22,7 @@ var browsing_return_status := ""
 var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
-var theatre: TheatreEnvironment
+var cinema: CinemaEnvironment
 var world: ViewingWorld
 var player_overlay: PlayerOverlay
 var mode := Stereo.Mode.MONO
@@ -89,7 +89,7 @@ func _setup_world() -> void:
 	world.player_loading.cancelled.connect(_show_library)
 	world.player_skip_popup.skip_requested.connect(_skip_segment)
 	material = world.material
-	theatre = world.theatre
+	cinema = world.cinema
 	video.material = material
 	world.menu_requested.connect(_toggle_menu)
 	world.settings_requested.connect(_toggle_settings)
@@ -678,10 +678,10 @@ func _restore_browsing_page() -> void:
 func _resize_screen() -> void:
 	var panoramic := projection_mode != VideoProjection.Mode.SCREEN
 	var aspect_ratio := 16.0 / 9.0 if panoramic else Stereo.aspect(video_size.x, video_size.y, mode)
-	var fixed_screen := settings.is_theatre() and not panoramic
+	var fixed_screen := settings.is_cinema() and not panoramic
 	var dimensions := Vector2(settings.width, settings.width / aspect_ratio)
 	if panoramic: dimensions = Vector2(3.6, 3.6 / aspect_ratio)
-	elif fixed_screen: dimensions = theatre.video_size(aspect_ratio)
+	elif fixed_screen: dimensions = cinema.video_size(aspect_ratio)
 	var curvature := 0.0 if fixed_screen or panoramic else settings.curvature
 	screen.mesh = null if panoramic else Stereo.mesh(dimensions.x, aspect_ratio, curvature)
 	material.set_shader_parameter("stereo", mode != Stereo.Mode.MONO)
@@ -704,7 +704,7 @@ func _select_stereo(value: int) -> void:
 
 func _change_environment() -> void:
 	world.apply_environment()
-	if not theatre.visible: screen.global_basis = camera.global_basis
+	if not cinema.visible: screen.global_basis = camera.global_basis
 	_position_screen()
 	_resize_screen()
 
@@ -715,7 +715,7 @@ func _recenter() -> void:
 
 func _recenter_video() -> void:
 	screen.global_basis = camera.global_basis
-	theatre.recenter(camera.global_transform)
+	cinema.recenter(camera.global_transform)
 	world.panorama.global_position = camera.global_position
 	world.panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
 	_position_screen()
@@ -724,8 +724,8 @@ func _recenter_video() -> void:
 func _position_screen() -> void:
 	if projection_mode != VideoProjection.Mode.SCREEN:
 		screen.global_position = camera.global_position - screen.global_basis.z * 3.0
-	elif settings.is_theatre():
-		screen.global_transform = theatre.projection_transform()
+	elif settings.is_cinema():
+		screen.global_transform = cinema.projection_transform()
 	else:
 		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.screen_height_offset()
 

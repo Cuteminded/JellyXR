@@ -91,7 +91,7 @@ func check_projection_placement(app: Node) -> void:
 		app._change_environment()
 		app._recenter()
 		var screen_transform: Transform3D = app.screen.global_transform
-		var theatre_transform: Transform3D = app.theatre.global_transform
+		var cinema_transform: Transform3D = app.cinema.global_transform
 		var panorama_basis: Basis = app.world.panorama.global_basis
 		var menu_transform: Transform3D = app.panel.global_transform
 		for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.EQUIRECTANGULAR, VideoProjection.Mode.SCREEN]:
@@ -99,7 +99,7 @@ func check_projection_placement(app: Node) -> void:
 			app.camera.rotate_y(0.5)
 			app._select_projection(projection)
 			assert(app.screen.global_transform.is_equal_approx(screen_transform), "Changing projection preserves screen placement")
-			assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Changing projection preserves theatre placement")
+			assert(app.cinema.global_transform.is_equal_approx(cinema_transform), "Changing projection preserves cinema placement")
 			assert(app.world.panorama.global_basis.is_equal_approx(panorama_basis), "Changing projection preserves panorama direction")
 			assert(app.panel.global_transform.is_equal_approx(menu_transform), "Changing projection preserves menu placement")
 			assert(app.world.panoramic == (projection != VideoProjection.Mode.SCREEN), "Changing projection still updates the projection mode")
@@ -157,7 +157,7 @@ func check_playback_placement(app: Node) -> void:
 		app._change_environment()
 		app._recenter()
 		var screen_transform: Transform3D = app.screen.global_transform
-		var theatre_transform: Transform3D = app.theatre.global_transform
+		var cinema_transform: Transform3D = app.cinema.global_transform
 		var panorama_basis: Basis = app.world.panorama.global_basis
 		app.camera.position += Vector3(0.4, 0.2, 0.3)
 		app.camera.rotate_y(0.5)
@@ -166,7 +166,7 @@ func check_playback_placement(app: Node) -> void:
 		for path in ["Normal.mp4", "Beach.VR180.mp4", "Beach.360.mp4", "Normal.mp4"]:
 			await app._play_stream("", {"Path": path}, 0)
 			assert(app.screen.global_transform.is_equal_approx(screen_transform), "Starting a stream preserves screen placement")
-			assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Starting a stream preserves theatre placement")
+			assert(app.cinema.global_transform.is_equal_approx(cinema_transform), "Starting a stream preserves cinema placement")
 			assert(app.world.panorama.global_basis.is_equal_approx(panorama_basis), "Starting a stream preserves panorama direction")
 			app.camera.rotate_y(0.2)
 

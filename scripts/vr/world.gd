@@ -15,7 +15,7 @@ var panorama: MeshInstance3D
 var panoramic := false
 var panorama_angle := TAU
 var material: ShaderMaterial
-var theatre: TheatreEnvironment
+var cinema: CinemaEnvironment
 var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
 var player_loading: PlayerLoading
@@ -81,7 +81,7 @@ func setup() -> void:
 	screen.add_child(player_loading)
 	player_skip_popup = PlayerSkipPopup.new()
 	screen.add_child(player_skip_popup)
-	_build_theatre()
+	_build_cinema()
 	if immersive:
 		controller_models = OpenXRRenderModelManager.new()
 		controller_models.render_model_added.connect(_prepare_controller_model)
@@ -155,18 +155,18 @@ func _prepare_controller_model(node: Node) -> void:
 	for child in node.get_children():
 		_prepare_controller_model(child)
 
-func _build_theatre() -> void:
-	theatre = TheatreEnvironment.new()
-	add_child(theatre)
-	theatre.build(settings.environment == "Theatre")
-	theatre.visible = settings.is_theatre()
+func _build_cinema() -> void:
+	cinema = CinemaEnvironment.new()
+	add_child(cinema)
+	cinema.build(settings.environment == "Theatre")
+	cinema.visible = settings.is_cinema()
 
 func apply_environment() -> void:
 	var immersive_video := panoramic and screen != null and screen.visible
 	passthrough.apply(settings.environment == "Passthrough" and not immersive_video)
-	if theatre != null:
-		if settings.is_theatre(): theatre.set_low_res(settings.environment == "Theatre")
-		theatre.visible = settings.is_theatre() and not immersive_video
+	if cinema != null:
+		if settings.is_cinema(): cinema.set_low_res(settings.environment == "Theatre")
+		cinema.visible = settings.is_cinema() and not immersive_video
 
 func set_panoramic(enabled: bool, horizontal_angle: float = TAU) -> void:
 	panoramic = enabled

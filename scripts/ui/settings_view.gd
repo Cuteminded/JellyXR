@@ -312,7 +312,7 @@ func _build_screen_position(parent: VBoxContainer) -> void:
 func _screen_position_hint() -> String:
 	if projection_mode != VideoProjection.Mode.SCREEN:
 		return "Screen position does not affect 180° or 360° video. Recenter to change your forward direction."
-	if settings.is_theatre():
+	if settings.is_cinema():
 		return "Cinema and Theatre have fixed screens. Choose Void or Passthrough on the Environment page to adjust it."
 	return "Set the screen size, distance, height and curve."
 
@@ -391,7 +391,7 @@ func _slider(entry: Array, parent: Node) -> void:
 	slider.max_value = entry[3]
 	slider.step = 0.05
 	slider.value = settings.get(entry[1])
-	slider.editable = not settings.is_theatre() and projection_mode == VideoProjection.Mode.SCREEN
+	slider.editable = not settings.is_cinema() and projection_mode == VideoProjection.Mode.SCREEN
 	row.add_child(slider)
 	slider.value_changed.connect(func(value: float):
 		settings.set(entry[1], value)

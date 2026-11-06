@@ -50,10 +50,7 @@ func load_settings(path: String = PATH) -> void:
 		height = clampf(saved_height + saved_origin - SCREEN_HEIGHT_ORIGIN, -2.0, 2.0)
 	curvature = clampf(config.get_value("screen", "curvature", curvature), 0.0, 1.2)
 	follow_screen = config.get_value("screen", "follow_screen", false) == true
-	environment = config.get_value("screen", "environment", "Void")
-	if int(config.get_value("screen", "environment_version", 1)) < 2:
-		if environment == "Theatre": environment = "Cinema"
-		elif environment == "Theatre LowRes": environment = "Theatre"
+	environment = str(config.get_value("screen", "environment", "Void"))
 	if environment not in ["Void", "Cinema", "Theatre", "Passthrough"]: environment = "Void"
 	server = config.get_value("connection", "server", "")
 	device_id = config.get_value("connection", "device_id", "")
@@ -81,7 +78,7 @@ func load_settings(path: String = PATH) -> void:
 func screen_height_offset() -> float:
 	return height + SCREEN_HEIGHT_ORIGIN
 
-func is_theatre() -> bool:
+func is_cinema() -> bool:
 	return environment in ["Cinema", "Theatre"]
 
 func reset_screen() -> void:
@@ -97,7 +94,6 @@ func save(path: String = PATH) -> Error:
 	config.set_value("screen", "height_origin", SCREEN_HEIGHT_ORIGIN)
 	config.set_value("screen", "environment", environment)
 	config.set_value("screen", "follow_screen", follow_screen)
-	config.set_value("screen", "environment_version", 2)
 	config.set_value("connection", "server", server)
 	config.set_value("connection", "device_id", device_id)
 	config.set_value("library", "sort_by", library_sort_by)

@@ -69,13 +69,13 @@ func run_checks() -> void:
 	assert(app.page.get_children() == previous_page, "Photos preserve the library instead of opening a preview page")
 	var texture := ImageTexture.create_from_image(image)
 	var screen_transform: Transform3D = app.screen.global_transform
-	var theatre_transform: Transform3D = app.theatre.global_transform
+	var cinema_transform: Transform3D = app.cinema.global_transform
 	app.camera.position += Vector3(0.5, 0.2, 0.3)
 	app.camera.rotation.y += 0.6
 	app._photo_ready(texture)
 	assert(not indicator.visible, "A ready photo clears loading feedback")
 	assert(app.screen.global_transform.is_equal_approx(screen_transform), "Opening a photo preserves screen placement after head movement")
-	assert(app.theatre.global_transform.is_equal_approx(theatre_transform), "Opening a photo does not recenter the theatre")
+	assert(app.cinema.global_transform.is_equal_approx(cinema_transform), "Opening a photo does not recenter the cinema")
 	assert(app.photo_active and not app.playing)
 	assert(app.screen.visible and app.screen.material_override == app.material)
 	assert(app.world.panorama.material_override == app.material)

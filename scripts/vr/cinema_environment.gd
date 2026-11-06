@@ -1,7 +1,7 @@
-class_name TheatreEnvironment
+class_name CinemaEnvironment
 extends Node3D
 
-const INTERIOR := "res://assets/theatre/cinema.res"
+const INTERIOR := "res://assets/environments/cinema/cinema.res"
 const VIEWER_POSITION := Vector3(-69.6159, 1.18, -27.60)
 const SOURCE_SCREEN_CENTER := Vector3(-69.47193, 1.7916, -22.45828)
 const SCREEN_SIZE := Vector2(4.06, 1.84)

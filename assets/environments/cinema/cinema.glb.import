@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cpfx458iawof0"
-path="res://.godot/imported/cinema.glb-fc1e06cd69bbb75115c0dbd71f9dbb66.scn"
+path="res://.godot/imported/cinema.glb-77a4c19d8a26f25cb8a02b6300dd716f.scn"
 
 [deps]
 
-source_file="res://assets/cinema.glb"
-dest_files=["res://.godot/imported/cinema.glb-fc1e06cd69bbb75115c0dbd71f9dbb66.scn"]
+source_file="res://assets/environments/cinema/cinema.glb"
+dest_files=["res://.godot/imported/cinema.glb-77a4c19d8a26f25cb8a02b6300dd716f.scn"]
 
 [params]
 

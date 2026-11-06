@@ -1,8 +1,8 @@
 extends SceneTree
 
-const SOURCE := "res://assets/cinema.glb"
-const OUTPUT := "res://assets/theatre/cinema.res"
-const MATERIAL_SOURCE := "res://assets/theatre/materials.tres"
+const SOURCE := "res://assets/environments/cinema/cinema.glb"
+const OUTPUT := "res://assets/environments/cinema/cinema.res"
+const MATERIAL_SOURCE := "res://assets/environments/cinema/materials.tres"
 
 var groups: Dictionary = {}
 var finishes: Dictionary = {}
@@ -43,7 +43,7 @@ func build() -> void:
 	var error := packed.pack(scene)
 	if error == OK:
 		error = ResourceSaver.save(packed, OUTPUT, ResourceSaver.FLAG_COMPRESS)
-	print("Theatre build: ", error, "; material batches: ", groups.size())
+	print("Cinema build: ", error, "; material batches: ", groups.size())
 	source.free()
 	scene.free()
 	quit(error)
@@ -52,7 +52,7 @@ func collect(node: Node) -> void:
 	if node.name == "wall_screen": return
 	if node is MeshInstance3D:
 		var orientation := Basis(Vector3.UP, PI)
-		var placement := Transform3D(orientation, -(orientation * TheatreEnvironment.VIEWER_POSITION))
+		var placement := Transform3D(orientation, -(orientation * CinemaEnvironment.VIEWER_POSITION))
 		for surface in node.mesh.get_surface_count():
 			var material: Material = node.mesh.surface_get_material(surface)
 			if not groups.has(material):

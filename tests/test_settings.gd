@@ -90,16 +90,12 @@ func run_checks() -> void:
 	check(restored.transcode_resolution == 1080, "Existing settings without a resolution keep the previous 1080p quality.")
 	check(restored.transcode_max_fps == 30, "Existing settings without a frame rate limit keep the 30 fps default.")
 	check(not restored.follow_screen, "Existing settings without screen following keep a stationary screen.")
-	for names in [["Theatre", "Cinema"], ["Theatre LowRes", "Theatre"]]:
-		if config.has_section_key("screen", "environment_version"):
-			config.erase_section_key("screen", "environment_version")
+	config.set_value("screen", "environment_version", 1)
+	for names in [["Theatre", "Theatre"], ["Theatre LowRes", "Void"], [123, "Void"]]:
 		config.set_value("screen", "environment", names[0])
-		check(config.save(path) == OK, "Legacy environment fixture can be saved.")
+		check(config.save(path) == OK, "Environment fixture can be saved.")
 		restored.load_settings(path)
-		check(restored.environment == names[1], "Renaming preserves the selected legacy environment.")
-		check(restored.save(path) == OK, "Migrated environment can be saved.")
-		restored.load_settings(path)
-		check(restored.environment == names[1], "Migrated environment names stay stable after another restart.")
+		check(restored.environment == names[1], "Saved environments use their exact name or fall back to Void.")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var api := FixtureApi.new()
 	root.add_child(api)
@@ -177,24 +173,24 @@ func run_checks() -> void:
 	environment_tab.button_pressed = true
 	environment_tab.pressed.emit()
 	check(view.sections[2].visible and not view.sections[1].visible, "Environment has its own settings page.")
-	var theatre_choice: CheckBox = view.environment_buttons["Cinema"]
-	theatre_choice.button_pressed = true
-	theatre_choice.pressed.emit()
-	var theatre_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
-	check(not theatre_slider.editable, "Fixed Theatre projection disables Void screen positioning.")
+	var cinema_choice: CheckBox = view.environment_buttons["Cinema"]
+	cinema_choice.button_pressed = true
+	cinema_choice.pressed.emit()
+	var cinema_slider: HSlider = view.screen_dimensions.get_child(0).get_child(1)
+	check(not cinema_slider.editable, "Fixed Cinema projection disables Void screen positioning.")
 	var low_res_choice: CheckBox = view.environment_buttons["Theatre"]
 	low_res_choice.button_pressed = true
 	low_res_choice.pressed.emit()
-	check(fixture.environment == "Theatre" and fixture.is_theatre(), "LowRes is a separate theatre option.")
-	check(not (view.screen_dimensions.get_child(0).get_child(1) as HSlider).editable, "LowRes has a fixed screen.")
+	check(fixture.environment == "Theatre" and fixture.is_cinema(), "Theatre is a separate cinema option.")
+	check(not (view.screen_dimensions.get_child(0).get_child(1) as HSlider).editable, "Theatre has a fixed screen.")
 	var saved := JellyXRSettings.new()
 	saved.device_id = "test-device"
 	saved.environment = "Theatre"
 	var low_res_path := "user://settings-lowres-test.cfg"
-	check(saved.save(low_res_path) == OK, "LowRes selection can be saved.")
+	check(saved.save(low_res_path) == OK, "Theatre selection can be saved.")
 	var restored_low_res := JellyXRSettings.new()
 	restored_low_res.load_settings(low_res_path)
-	check(restored_low_res.environment == "Theatre", "LowRes selection survives restarting the app.")
+	check(restored_low_res.environment == "Theatre", "Theatre selection survives restarting the app.")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(low_res_path))
 	var passthrough_choice: CheckBox = view.environment_buttons["Passthrough"]
 	check(passthrough_choice.disabled, "Unsupported devices cannot select Passthrough.")
@@ -210,8 +206,8 @@ func run_checks() -> void:
 		view.scroll.scroll_vertical = 10000
 		await capture("settings-screen-position")
 		view._show_section(2)
-	theatre_choice.button_pressed = true
-	theatre_choice.pressed.emit()
+	cinema_choice.button_pressed = true
+	cinema_choice.pressed.emit()
 	passthrough_choice.disabled = true
 	if "--capture" in OS.get_cmdline_user_args():
 		await capture("settings-environment")

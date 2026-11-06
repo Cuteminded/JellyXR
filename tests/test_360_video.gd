@@ -59,7 +59,7 @@ func run_checks() -> void:
 	var screen_transform: Transform3D = app.screen.global_transform
 	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
 	check(app.world.panorama.visible and app.screen.mesh == null, "360 uses the sphere instead of the screen")
-	check(not app.theatre.visible, "The cinema cannot obscure the panorama")
+	check(not app.cinema.visible, "The cinema cannot obscure the panorama")
 	check(app.settings.environment == "Theatre", "360 preserves the preferred environment")
 	check(app.world.panorama.global_position.is_equal_approx(app.camera.global_position), "The viewer starts at the sphere center")
 	check(app.screen.global_transform.is_equal_approx(screen_transform), "Entering 360 preserves playback controls placement")
@@ -91,10 +91,10 @@ func run_checks() -> void:
 	check(app.world.panoramic and app.mode == Stereo.Mode.TOP_BOTTOM, "Decoder fallback preserves manual projection and stereo choices")
 	app.screen.hide()
 	app.world._process(0.0)
-	check(not app.world.panorama.visible and app.theatre.visible, "Stopping hides the panorama and restores the environment")
+	check(not app.world.panorama.visible and app.cinema.visible, "Stopping hides the panorama and restores the environment")
 	app.screen.show()
 	app._select_projection(VideoProjection.Mode.SCREEN)
-	check(not app.world.panorama.visible and app.screen.mesh != null and app.theatre.visible, "Screen mode restores cinema playback")
+	check(not app.world.panorama.visible and app.screen.mesh != null and app.cinema.visible, "Screen mode restores cinema playback")
 	app.projection_overridden = false
 	app.stereo_overridden = false
 	await app._play_stream("", {"Path": "Beach.360.mp4"}, 0)
@@ -132,7 +132,7 @@ func check_180_playback(app: Node) -> void:
 	await app._play_stream("", {"Path": "Beach.VR180.FSBS.mp4"}, 0)
 	check(app.world.panoramic and is_equal_approx(app.world.panorama_angle, PI), "180 stream creates a hemisphere")
 	check(app.mode == Stereo.Mode.FULL_SBS, "180 stream retains automatic stereo detection")
-	check(app.screen.mesh == null and not app.theatre.visible, "180 hides the screen and cinema")
+	check(app.screen.mesh == null and not app.cinema.visible, "180 hides the screen and cinema")
 	var arrays: Array = app.world.panorama.mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
@@ -162,4 +162,4 @@ func check_180_playback(app: Node) -> void:
 	app._select_projection(VideoProjection.Mode.EQUIRECTANGULAR)
 	check(is_equal_approx(app.world.panorama_angle, TAU), "Switching from 180 to 360 restores the full sphere")
 	app._select_projection(VideoProjection.Mode.SCREEN)
-	check(not app.world.panorama.visible and app.screen.mesh != null and app.theatre.visible, "Switching from panorama to screen restores the cinema")
+	check(not app.world.panorama.visible and app.screen.mesh != null and app.cinema.visible, "Switching from panorama to screen restores the cinema")
