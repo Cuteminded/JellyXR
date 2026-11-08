@@ -326,7 +326,7 @@ func _build_environment(parent: VBoxContainer) -> void:
 	var group := ButtonGroup.new()
 	var descriptions := [
 		"A dark background. Change the screen size and position in Screen settings.",
-		"See your room around the screen. Change its size and position in Screen settings." if passthrough_supported else "This device does not support passthrough.",
+		_passthrough_description(),
 		"A cinema with a fixed screen. Recenter to face it.",
 		"A simpler cinema with a fixed screen. Recenter to face it."
 	]
@@ -342,6 +342,11 @@ func _build_environment(parent: VBoxContainer) -> void:
 			choice.disabled = true
 			choice.tooltip_text = descriptions[index]
 	_build_follow_switch(adjustable)
+
+func _passthrough_description() -> String:
+	if passthrough_supported:
+		return "See your room around the screen. Change its size and position in Screen settings."
+	return "Passthrough is unavailable with your current VR setup."
 
 func _build_follow_switch(parent: VBoxContainer) -> void:
 	var toggle := CheckButton.new()
