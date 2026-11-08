@@ -140,6 +140,28 @@ func resume_items() -> Dictionary:
 func details(id: String) -> Dictionary:
 	return await request("/Users/%s/Items/%s" % [user_id, id.uri_encode()])
 
+func extras(id: String) -> Dictionary:
+	var items: Array = []
+	var seen := {}
+	var errors: Array[String] = []
+	for endpoint in ["SpecialFeatures", "LocalTrailers"]:
+		var result := await request("/Users/%s/Items/%s/%s" % [user_id.uri_encode(), id.uri_encode(), endpoint])
+		if not result.ok:
+			errors.append(str(result.get("error", "Could not load extras.")))
+			continue
+		if not result.data is Array:
+			errors.append("The server returned an unexpected extras response.")
+			continue
+		for extra in result.data:
+			if not extra is Dictionary: continue
+			var extra_id := str(extra.get("Id", ""))
+			if extra_id.is_empty() or seen.has(extra_id): continue
+			seen[extra_id] = true
+			var selected: Dictionary = extra.duplicate(true)
+			if endpoint == "LocalTrailers": selected["ExtraType"] = "Trailer"
+			items.append(selected)
+	return {"ok": errors.is_empty(), "data": {"Items": items}, "error": " ".join(errors)}
+
 func movie_parts(item: Dictionary) -> Dictionary:
 	var id := str(item.get("SelectedMediaSourceId", ""))
 	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []

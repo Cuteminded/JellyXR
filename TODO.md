@@ -43,7 +43,7 @@ Implementation does not mean a feature has been tested on every headset.
 
 ## Title details and watch history
 
-- [ ] Browse and play trailers and extras.
+- [x] Browse and play trailers and extras.
 - [x] Show descriptions, release years, runtimes, ratings, and genres.
 - [x] Show cast and crew portraits, names, and roles.
 - [x] Show studio and video/audio stream information when available.

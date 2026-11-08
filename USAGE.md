@@ -35,6 +35,8 @@ On a title's details page, **Play from start** appears beside **Resume** when sa
 
 Play and Resume use the first available version. If a movie or episode has several versions, select **Choose version** to pick the one you want to watch.
 
+Movies and series show an **Extras** section when Jellyfin has bonus videos or local trailers. Open a season to see its extras below the episodes. Select **Play extra** or **Resume extra** to watch one. Stopping or finishing an extra returns to its movie or season. Extras must be recognized by Jellyfin using its [supported folders or filenames](https://jellyfin.org/docs/general/server/media/movies/#extras).
+
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
 ## View photos

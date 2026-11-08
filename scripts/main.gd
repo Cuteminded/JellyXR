@@ -507,7 +507,7 @@ func _choose_media_version(item: Dictionary) -> void:
 	shell.heading.text = "Playback"
 	panel.show()
 	player_overlay.hide()
-	Widgets.button("Back to details", _details.bind(item), page)
+	Widgets.button("Back to details", _details.bind(item.get("ExtraReturnItem", item), item.get("ExtraReturnSeason", {})), page)
 	var title := Widgets.label("Choose a version", page, 36)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var name_label := Widgets.label(DetailsMetadata.title(item), page, 26)
@@ -605,6 +605,9 @@ func _return_to_title(refresh: bool = false) -> void:
 	var item := session.item
 	if item.is_empty():
 		_show_library()
+		return
+	if item.has("ExtraReturnItem"):
+		await _details(item.ExtraReturnItem, item.get("ExtraReturnSeason", {}))
 		return
 	var target_id := str(item.get("SeriesId", "")) if item.get("Type", "") == "Episode" else str(item.Id)
 	if item.has("MovieParentId"): target_id = str(item.MovieParentId)
@@ -845,7 +848,7 @@ func _ended() -> void:
 		else:
 			await _start(next_part, true)
 		return
-	if previous.get("Type", "") != "Episode":
+	if previous.has("ExtraReturnItem") or previous.get("Type", "") != "Episode":
 		await _return_to_title(true)
 		return
 	panel.hide()

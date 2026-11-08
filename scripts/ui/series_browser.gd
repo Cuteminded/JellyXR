@@ -24,6 +24,7 @@ var watched_host: VBoxContainer
 var watched_control: VBoxContainer
 var next_up_section: VBoxContainer
 var next_up_list: VBoxContainer
+var extras_view: VBoxContainer
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 20)
@@ -138,6 +139,7 @@ func open_season(season: Dictionary) -> void:
 	episode_heading.text = str(season.get("Name", "Season")) + " episodes"
 	season_description.text = str(season.get("Overview") if season.get("Overview") else "")
 	season_description.visible = not season_description.text.is_empty()
+	_load_season_extras()
 	_clear(episode_list)
 	_label("Loading episodes...", episode_list, 22)
 	section_changed.emit()
@@ -172,6 +174,20 @@ func open_season(season: Dictionary) -> void:
 		card.watched_control.changed.connect(_refresh_season_watched)
 	_refresh_season_watched()
 	section_changed.emit()
+
+func _load_season_extras() -> void:
+	if is_instance_valid(extras_view):
+		episode_section.remove_child(extras_view)
+		extras_view.queue_free()
+	extras_view = preload("res://scripts/ui/extras_view.gd").new()
+	extras_view.api = api
+	extras_view.artwork = artwork
+	extras_view.item_id = str(selected_season.Id)
+	extras_view.return_item = series_item if not series_item.is_empty() else {"Id": series_id}
+	extras_view.return_season = selected_season
+	extras_view.play_requested.connect(func(extra: Dictionary): play_requested.emit(extra))
+	extras_view.version_requested.connect(func(extra: Dictionary): version_requested.emit(extra))
+	episode_section.add_child(extras_view)
 
 func _refresh_season_watched() -> void:
 	if watched_control.busy: return

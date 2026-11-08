@@ -27,6 +27,7 @@ var cast_carousel: CastCarousel
 var series_playback_status: Label
 var series_playback_loading := false
 var movie_parts_view: MoviePartsView
+var extras_view: VBoxContainer
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 18)
@@ -68,6 +69,15 @@ func _ready() -> void:
 		series_browser.version_requested.connect(func(episode: Dictionary): version_requested.emit(episode))
 		series_browser.section_changed.connect(_scroll_to_series)
 		body.add_child(series_browser)
+	if item.get("Type", "") in ["Movie", "Series", "MusicVideo"]:
+		extras_view = preload("res://scripts/ui/extras_view.gd").new()
+		extras_view.api = api
+		extras_view.artwork = artwork
+		extras_view.item_id = str(item.Id)
+		extras_view.return_item = item
+		extras_view.play_requested.connect(func(extra: Dictionary): play_requested.emit(extra))
+		extras_view.version_requested.connect(func(extra: Dictionary): version_requested.emit(extra))
+		body.add_child(extras_view)
 	_build_people()
 
 func _build_header() -> void:

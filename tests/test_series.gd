@@ -1,6 +1,9 @@
 extends SceneTree
 
 class FixtureApi extends JellyfinClient:
+	func extras(_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
 	var calls: Array = []
 	var fail_seasons := false
 	var fail_episodes := false

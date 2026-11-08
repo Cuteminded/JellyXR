@@ -1,6 +1,9 @@
 extends SceneTree
 
 class FixtureApi extends JellyfinClient:
+	func extras(_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
 	var detail_calls: Array[String] = []
 	var hold_details := false
 	var fail_details := false
@@ -471,6 +474,16 @@ func run_checks() -> void:
 	app.panel.hide()
 	await app._ended()
 	check(app.panel.visible and app.page.get_child(0) is DetailsView and app.page.get_child(0).item.Id == "movie", "Natural completion returns from the library to the playing movie details")
+	var extra := {"Id": "bonus", "Type": "Episode", "ExtraReturnItem": {"Id": "show"}, "ExtraReturnSeason": {"Id": "season-two", "Name": "Season 2", "IndexNumber": 2}}
+	await app._start(extra)
+	await app._ended()
+	await settle()
+	var extra_return: DetailsView = app.page.get_child(0)
+	check(extra_return.item.Id == "show" and extra_return.series_browser.selected_season.Id == "season-two", "An extra returns to its parent season without starting the next episode")
+	check(not app.autoplay_pending and not app.playing, "Finishing an extra never starts episode autoplay")
+	await app._start({"Id": "bonus", "Type": "Video", "ExtraReturnItem": {"Id": "movie"}})
+	await app._stop()
+	check(app.page.get_child(0).item.Id == "movie", "Stopping an extra returns to its parent movie")
 	await app._start({"Id": "movie", "Type": "Movie"})
 	session.hold_stop = true
 	app._player_action("stop")

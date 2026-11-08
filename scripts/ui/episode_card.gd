@@ -14,6 +14,8 @@ var play_button: Button
 var version_button: Button
 var thumbnail: TextureRect
 var title_label: Label
+var media_label := "episode"
+var category := ""
 
 func _ready() -> void:
 	add_theme_stylebox_override("panel", Widgets.surface(Color("162133"), 14, 18))
@@ -45,8 +47,9 @@ func _ready() -> void:
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.add_theme_constant_override("separation", 12)
 	row.add_child(text)
-	title_label = _label(DetailsMetadata.title(item, "Episode"), text, 26)
+	title_label = _label(DetailsMetadata.title(item, media_label.capitalize()), text, 26)
 	var facts := DetailsMetadata.facts(item)
+	if not category.is_empty(): facts.push_front(category)
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	watched_badge = Widgets.watched_badge(frame)
 	watched_badge.visible = user.get("Played", false)
@@ -55,7 +58,7 @@ func _ready() -> void:
 	facts_label = _label("  /  ".join(facts), text, 20)
 	facts_label.add_theme_color_override("font_color", Color("b0bbce"))
 	_label(str(item.get("Overview") if item.get("Overview") else "No description available."), text, 22)
-	play_button = Widgets.button("Resume episode" if position > 0 else "Play episode", func(): chosen.emit(item), image_column)
+	play_button = Widgets.button(("Resume " if position > 0 else "Play ") + media_label, func(): chosen.emit(item), image_column)
 	play_button.custom_minimum_size = Vector2(190, 56)
 	play_button.accessibility_name = play_button.text + " " + title_label.text
 	if user.get("Played", false):
@@ -75,10 +78,11 @@ func _refresh_user_data() -> void:
 	var user: Dictionary = item.UserData
 	var position := int(user.get("PlaybackPositionTicks", 0))
 	var facts := DetailsMetadata.facts(item)
+	if not category.is_empty(): facts.push_front(category)
 	if position > 0: facts.append("Continue from " + DetailsMetadata.duration(position))
 	facts_label.text = "  /  ".join(facts)
 	watched_badge.visible = user.get("Played", false)
-	play_button.text = "Resume episode" if position > 0 else "Play episode"
+	play_button.text = ("Resume " if position > 0 else "Play ") + media_label
 	play_button.accessibility_name = play_button.text + " " + title_label.text + (", watched" if user.get("Played", false) else "")
 
 func _label(value: String, parent: Node, font_size: int) -> Label:
