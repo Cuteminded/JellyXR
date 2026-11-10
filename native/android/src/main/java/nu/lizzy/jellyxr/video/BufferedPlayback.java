@@ -24,6 +24,7 @@ final class BufferedPlayback {
         void completed();
         void failed(String message);
         void sizeChanged(int width, int height);
+        default void decoderChanged(String name) {}
     }
 
     private final ExoPlayer player;
@@ -59,6 +60,10 @@ final class BufferedPlayback {
     private void prepare(Surface surface, String url, int startMs, Listener listener) {
         player.setVideoSurface(surface);
         player.addAnalyticsListener(new AnalyticsListener() {
+            @Override public void onVideoDecoderInitialized(EventTime eventTime, String decoderName, long initializedAt, long duration) {
+                listener.decoderChanged(decoderName);
+            }
+
             @Override public void onLoadCompleted(EventTime eventTime, LoadEventInfo load,
                                                    MediaLoadData media) {
                 if (media.dataType != C.DATA_TYPE_MEDIA) return;

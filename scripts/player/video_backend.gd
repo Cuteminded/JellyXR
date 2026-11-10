@@ -13,6 +13,20 @@ var volume := 1.0
 var muted := false
 var material: ShaderMaterial
 
+enum DecodeSupport { UNKNOWN, HARDWARE, UNSUPPORTED }
+
+func scan_decoders() -> void:
+	pass
+
+func decode_support(_stream: Dictionary) -> DecodeSupport:
+	return DecodeSupport.UNKNOWN
+
+func active_decode_support() -> DecodeSupport:
+	return DecodeSupport.UNKNOWN
+
+func decoder_summary() -> String:
+	return "Hardware decoder information is unavailable."
+
 func set_volume(level: float) -> void:
 	volume = clampf(level, 0.0, 1.0)
 	if volume > 0.0: muted = false

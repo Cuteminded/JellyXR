@@ -11,6 +11,7 @@ const PC_VIDEO_RANGES := "SDR|HDR10|HDR10Plus|HLG|DOVIWithHDR10|DOVIWithHDR10Plu
 
 var api: JellyfinClient
 var settings: JellyXRSettings
+var video_backend: VideoBackend
 var active_playback_mode := "auto"
 var active_transcode_resolution := 1080
 var active_transcode_max_fps := JellyXRSettings.DEFAULT_TRANSCODE_MAX_FPS
@@ -46,7 +47,13 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 	started = false
 	var use_transcode := transcode or burn_subtitles or active_playback_mode == "transcoded"
 	var original := active_playback_mode == "original"
-	var profile := _device_profile(use_transcode, original)
+	var video_stream := _source_video(_selected_source(continuing))
+	if not use_transcode and not original:
+		use_transcode = _decode_support(video_stream) == VideoBackend.DecodeSupport.UNSUPPORTED
+	var profile := _device_profile(use_transcode, original, str(video_stream.get("Codec", "")))
+	if use_transcode and profile.TranscodingProfiles.is_empty():
+		failed.emit("This device reported no supported H.264 conversion target for the selected playback limits.")
+		return
 	var body := {
 		"UserId": api.user_id, "StartTimeTicks": position_ticks, "IsPlayback": true,
 		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode and audio_index < 0, "EnableDirectStream": not use_transcode and not original,
@@ -75,6 +82,15 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 		failed.emit("The selected version is no longer available. Reopen the item and choose another version.")
 		return
 	media_source_id = str(source.Id)
+	var resolved_video := _source_video(source)
+	if not use_transcode and not original and resolved_video != video_stream \
+			and _decode_support(resolved_video) == VideoBackend.DecodeSupport.UNSUPPORTED:
+		await open(item, true, true)
+		return
+	if video_backend != null and not use_transcode and not original and video_stream.is_empty() \
+			and not str(resolved_video.get("Codec", "")).is_empty():
+		await open(item, false, true)
+		return
 	if needs_source_selection and source.get("DefaultSubtitleStreamIndex") != null and int(source.DefaultSubtitleStreamIndex) >= 0:
 		await open(item, transcode, true)
 		return
@@ -108,26 +124,67 @@ func is_hls() -> bool:
 	var path := str(source.get("TranscodingUrl", "")).get_slice("?", 0).to_lower()
 	return protocol == "hls" or path.ends_with(".m3u8")
 
-func _device_profile(transcode: bool, original: bool = false) -> Dictionary:
+func _selected_source(continuing: bool) -> Dictionary:
+	if continuing and not source.is_empty(): return source
+	var candidates: Variant = item.get("MediaSources")
+	if candidates is Array:
+		for candidate in candidates:
+			if str(candidate.get("Id", "")) == media_source_id: return candidate
+	return {}
+
+func _source_video(candidate: Dictionary) -> Dictionary:
+	var streams: Variant = candidate.get("MediaStreams")
+	if streams is Array:
+		for stream in streams:
+			if stream.get("Type") == "Video": return stream
+	return {}
+
+func _decode_support(stream: Dictionary) -> VideoBackend.DecodeSupport:
+	if video_backend == null or stream.is_empty(): return VideoBackend.DecodeSupport.UNKNOWN
+	return video_backend.decode_support(stream)
+
+func _transcode_limits() -> Dictionary:
+	var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyXRSettings.TRANSCODE_PRESETS[1080])
+	var requested := {"width": preset.width, "height": preset.height, "fps": active_transcode_max_fps, "bitrate": preset.bitrate}
+	if active_playback_mode != "auto" or video_backend == null: return requested
+	var unverified := {}
+	for height in [2160, 1440, 1080, 720]:
+		if height > active_transcode_resolution: continue
+		var candidate: Dictionary = JellyXRSettings.TRANSCODE_PRESETS[height]
+		for fps in [active_transcode_max_fps, 30, 24]:
+			if fps > active_transcode_max_fps: continue
+			var stream := {"Codec": "h264", "Profile": "High", "BitDepth": 8,
+				"Width": candidate.width, "Height": height, "RealFrameRate": fps}
+			var support := _decode_support(stream)
+			var limits := {"width": candidate.width, "height": height, "fps": fps, "bitrate": candidate.bitrate}
+			if support == VideoBackend.DecodeSupport.HARDWARE: return limits
+			if support == VideoBackend.DecodeSupport.UNKNOWN and unverified.is_empty(): unverified = limits
+	return unverified
+
+func _device_profile(transcode: bool, original: bool = false, selected_codec: String = "") -> Dictionary:
 	var native_pc := _uses_native_pc_decoder()
 	var direct_profile := {"Container": "mp4,m4v,mkv,webm", "Type": "Video"}
 	if not original:
-		direct_profile["VideoCodec"] = PC_VIDEO_CODECS if native_pc else "h264,hevc,vp9"
+		if video_backend == null:
+			direct_profile["VideoCodec"] = PC_VIDEO_CODECS if native_pc else "h264,hevc,vp9"
+		elif not selected_codec.is_empty():
+			direct_profile["VideoCodec"] = selected_codec
 		direct_profile["AudioCodec"] = PC_AUDIO_CODECS if native_pc else "aac,mp3,opus,vorbis"
 	var transcoding_profile := {"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 2, "BreakOnNonKeyFrames": true}
 	var codec_conditions := [{"Condition": "Equals", "Property": "VideoRangeType", "Value": "SDR", "IsRequired": true}]
 	if native_pc and not transcode:
 		codec_conditions = [{"Condition": "EqualsAny", "Property": "VideoRangeType", "Value": PC_VIDEO_RANGES, "IsRequired": true}]
-	var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS.get(active_transcode_resolution, JellyXRSettings.TRANSCODE_PRESETS[1080])
+	var preset := _transcode_limits()
 	transcoding_profile["Conditions"] = []
-	for limit in [["Width", preset.width], ["Height", preset.height], ["VideoFramerate", active_transcode_max_fps], ["VideoBitrate", preset.bitrate]]:
-		transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": str(limit[1]), "IsRequired": true})
+	if not preset.is_empty():
+		for limit in [["Width", preset.width], ["Height", preset.height], ["VideoFramerate", preset.fps], ["VideoBitrate", preset.bitrate]]:
+			transcoding_profile.Conditions.append({"Condition": "LessThanEqual", "Property": limit[0], "Value": str(limit[1]), "IsRequired": true})
 	if transcode: codec_conditions.append_array(transcoding_profile.Conditions)
 	return {
 		"Name": ("jellyXR original " if original else ("jellyXR native " if native_pc else "jellyXR SDR ")) + OS.get_name(),
 		"MaxStreamingBitrate": 2147483647 if original or native_pc else 80000000,
 		"DirectPlayProfiles": [] if transcode else [direct_profile],
-		"TranscodingProfiles": [] if original else [transcoding_profile],
+		"TranscodingProfiles": [] if original or preset.is_empty() else [transcoding_profile],
 		"CodecProfiles": [] if original else [{"Type": "Video", "Conditions": codec_conditions}],
 		"SubtitleProfiles": [{"Format": "vtt", "Method": "External"}, {"Format": "pgssub", "Method": "Encode"}, {"Format": "dvdsub", "Method": "Encode"}, {"Format": "dvbsub", "Method": "Encode"}]
 	}
@@ -143,8 +200,9 @@ func retry_transcode() -> void:
 		failed.emit("Playback failed after Jellyfin tried to convert the video. Check the server's transcoding settings and logs.")
 		return
 	fallback_attempted = true
+	var current := generation
 	await report("Stopped")
-	await open(item, true)
+	if current == generation: await open(item, true, true)
 
 func report(event: String, paused: bool = false) -> void:
 	if session_id.is_empty(): return

@@ -49,7 +49,7 @@ option(JELLYXR_BUILD_VAAPI_TESTS "Build the Linux VAAPI render-graph test extens
 
 add_library(jellyxr_mpv SHARED
     mpv_video.cpp render_worker.cpp render_gl.cpp render_gl_worker.cpp
-    gl_functions.cpp register_types.cpp render_vulkan.cpp
+    gl_functions.cpp register_types.cpp render_vulkan.cpp decoder_probe.cpp
     video_decoder.cpp video_decoder_frames.cpp video_decoder_packets.cpp video_decoder_planes.cpp video_plane.cpp video_sync.cpp)
 target_link_libraries(jellyxr_mpv PRIVATE godot-cpp ${MPV_TARGET} ${FFMPEG_LIBRARIES} Threads::Threads)
 if(WIN32)

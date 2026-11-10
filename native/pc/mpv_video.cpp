@@ -36,6 +36,10 @@ void JellyXRMpv::_bind_methods() {
     ClassDB::bind_method(D_METHOD("rendering_backend"), &JellyXRMpv::rendering_backend);
     ClassDB::bind_method(D_METHOD("video_shader_parameters"), &JellyXRMpv::video_shader_parameters);
     ClassDB::bind_method(D_METHOD("playback_diagnostics"), &JellyXRMpv::playback_diagnostics);
+    ClassDB::bind_method(D_METHOD("scan_decoders"), &JellyXRMpv::scan_decoders);
+    ClassDB::bind_method(D_METHOD("decode_support", "codec", "profile", "depth", "width", "height"), &JellyXRMpv::decode_support);
+    ClassDB::bind_method(D_METHOD("active_decode_support"), &JellyXRMpv::active_decode_support);
+    ClassDB::bind_method(D_METHOD("decoder_summary"), &JellyXRMpv::decoder_summary);
     ClassDB::bind_method(D_METHOD("stop_video"), &JellyXRMpv::stop_video);
     ADD_SIGNAL(MethodInfo("prepared"));
     ADD_SIGNAL(MethodInfo("ended"));
@@ -216,6 +220,30 @@ Dictionary JellyXRMpv::playback_diagnostics() const {
         values["video_buffer_count"] = int64_t(video_buffer_count);
     }
     return values;
+}
+
+void JellyXRMpv::scan_decoders() {
+    decoder_probe.start();
+}
+
+String JellyXRMpv::decoder_summary() {
+    return decoder_probe.summary();
+}
+
+int JellyXRMpv::decode_support(String codec, String profile, int depth, int width, int height) {
+    return decoder_probe.supports(codec, profile, depth, width, height);
+}
+
+int JellyXRMpv::active_decode_support() const {
+    if (!active || texture.is_null()) return 0;
+    if (vulkan_renderer.is_valid()) {
+        return vulkan_renderer->uses_hardware_decoding() ? 1 : 2;
+    }
+    char *decoder = mpv_get_property_string(player, "hwdec-current");
+    if (!decoder) return 0;
+    const int support = String(decoder) == "no" ? 2 : 1;
+    mpv_free(decoder);
+    return support;
 }
 
 void JellyXRMpv::fallback_to_software() {

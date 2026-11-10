@@ -30,6 +30,9 @@ var environment_choices: VBoxContainer
 var environment_buttons: Dictionary = {}
 var follow_switch: CheckButton
 var hardware_labels: Dictionary = {}
+var video_backend: VideoBackend
+var decoder_codecs: HFlowContainer
+var last_decoder_summary := ""
 var controller_controls: ControllerSettings
 
 const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles", "Controls", "Info"]
@@ -185,6 +188,15 @@ func _build_info(parent: VBoxContainer) -> void:
 	var hardware_card := _card(parent, "VR hardware")
 	for title in ["Headset", "Left controller", "Right controller"]:
 		hardware_labels[title] = _info_detail(title, "N/A", hardware_card)
+	var decoder_card := _card(parent, "Hardware video decoding")
+	hardware_labels["Startup check"] = _info_detail("Startup check", "Checking hardware decoders...", decoder_card)
+	decoder_codecs = HFlowContainer.new()
+	decoder_codecs.add_theme_constant_override("h_separation", 8)
+	decoder_codecs.add_theme_constant_override("v_separation", 8)
+	decoder_card.add_child(decoder_codecs)
+	decoder_codecs.hide()
+	decoder_card.add_child(HSeparator.new())
+	hardware_labels["Current playback"] = _info_detail("Current playback", "Waiting for video", decoder_card)
 	var refresh := Timer.new()
 	refresh.wait_time = 1.0
 	refresh.timeout.connect(_refresh_hardware_info)
@@ -210,14 +222,52 @@ func _refresh_hardware_info() -> void:
 	var values := {
 		"Headset": headset,
 		"Left controller": _controller_name("left_hand"),
-		"Right controller": _controller_name("right_hand")
+		"Right controller": _controller_name("right_hand"),
+		"Current playback": "Waiting for video"
 	}
+	var summary := "Hardware decoder information is unavailable."
+	if video_backend != null:
+		summary = video_backend.decoder_summary()
+		match video_backend.active_decode_support():
+			VideoBackend.DecodeSupport.HARDWARE: values["Current playback"] = "Hardware decoding"
+			VideoBackend.DecodeSupport.UNSUPPORTED: values["Current playback"] = "Software decoding"
 	for title in values:
 		var value: String = values[title]
 		if value.is_empty(): value = "N/A"
 		var label: Label = hardware_labels[title]
 		label.text = value
 		label.accessibility_name = title + ": " + value
+	_refresh_decoder_summary(summary)
+
+func _refresh_decoder_summary(summary: String) -> void:
+	if summary == last_decoder_summary: return
+	last_decoder_summary = summary
+	for child in decoder_codecs.get_children():
+		decoder_codecs.remove_child(child)
+		child.queue_free()
+	var label: Label = hardware_labels["Startup check"]
+	var codecs := ""
+	label.text = summary
+	var desktop := summary.split(" reports support at ", false, 1)
+	if desktop.size() == 2:
+		var result := desktop[1].split(" for ", false, 1)
+		if result.size() == 2:
+			var backend: String = {"d3d11va": "Direct3D 11", "vaapi": "VA-API"}.get(desktop[0], desktop[0])
+			label.text = backend
+			codecs = result[1]
+	elif summary.begins_with("Android reported hardware decoders for "):
+		label.text = "Android MediaCodec"
+		codecs = summary.trim_prefix("Android reported hardware decoders for ")
+	label.accessibility_name = "Startup check: " + label.text
+	for codec in codecs.trim_suffix(".").split(", ", false):
+		var badge := PanelContainer.new()
+		var style := Widgets.surface(Color("24344a"), 8, 10)
+		style.content_margin_top = 5
+		style.content_margin_bottom = 5
+		badge.add_theme_stylebox_override("panel", style)
+		decoder_codecs.add_child(badge)
+		Widgets.label(codec, badge, 20)
+	decoder_codecs.visible = decoder_codecs.get_child_count() > 0
 
 func _controller_name(tracker_name: StringName) -> String:
 	var tracker := XRServer.get_tracker(tracker_name) as XRPositionalTracker

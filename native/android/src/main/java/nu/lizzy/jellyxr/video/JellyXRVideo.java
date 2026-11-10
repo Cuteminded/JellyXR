@@ -37,6 +37,23 @@ public final class JellyXRVideo extends GodotPlugin {
     private final AtomicInteger generation = new AtomicInteger();
     private volatile int readyGeneration = -1;
     private int textureGeneration = -1;
+    private final HardwareDecoders decoders = new HardwareDecoders();
+    private final AtomicBoolean scanStarted = new AtomicBoolean();
+    private volatile String activeDecoder = "";
+
+    @UsedByGodot public void scan_decoders() {
+        if (scanStarted.compareAndSet(false, true)) new Thread(decoders::scan, "JellyXR codecs").start();
+    }
+
+    @UsedByGodot public int decode_support(String codec, String profile, int depth, int width, int height, double fps) {
+        return decoders.supports(codec, profile, depth, width, height, fps);
+    }
+
+    @UsedByGodot public int active_decode_support() {
+        return has_video_frame() ? decoders.active(activeDecoder) : HardwareDecoders.UNKNOWN;
+    }
+
+    @UsedByGodot public String decoder_summary() { return decoders.summary(); }
 
     public JellyXRVideo(Godot godot) {
         super(godot);
@@ -59,6 +76,7 @@ public final class JellyXRVideo extends GodotPlugin {
         main.post(() -> {
             if (opening != generation.get()) return;
             releasePlayer();
+            activeDecoder = "";
             runOnRenderThread(() -> {
                 if (opening != generation.get()) return;
                 releaseSurface();
@@ -107,6 +125,10 @@ public final class JellyXRVideo extends GodotPlugin {
 
                     @Override public void sizeChanged(int width, int height) {
                         if (current()) emitSignal("video_size", width, height);
+                    }
+
+                    @Override public void decoderChanged(String name) {
+                        if (current()) activeDecoder = name;
                     }
                 });
             main.post(pollPlayback);

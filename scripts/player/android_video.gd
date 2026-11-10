@@ -21,6 +21,28 @@ func _ready() -> void:
 func available() -> bool:
 	return bridge != null
 
+func scan_decoders() -> void:
+	if _has_decoder_probe(): bridge.scan_decoders()
+
+func _has_decoder_probe() -> bool:
+	if not available(): return false
+	return bridge.has_java_method("scan_decoders") if bridge.has_method("has_java_method") else bridge.has_method("scan_decoders")
+
+func decode_support(stream: Dictionary) -> DecodeSupport:
+	if not _has_decoder_probe(): return DecodeSupport.UNKNOWN
+	var fps := float(str(stream.get("RealFrameRate")))
+	if fps <= 0: fps = float(str(stream.get("AverageFrameRate")))
+	return bridge.decode_support(str(stream.get("Codec", "")), str(stream.get("Profile", "")),
+		int(str(stream.get("BitDepth"))), int(str(stream.get("Width"))), int(str(stream.get("Height"))),
+		fps) as DecodeSupport
+
+func active_decode_support() -> DecodeSupport:
+	if not frame_visible or not _has_decoder_probe(): return DecodeSupport.UNKNOWN
+	return bridge.active_decode_support() as DecodeSupport
+
+func decoder_summary() -> String:
+	return bridge.decoder_summary() if _has_decoder_probe() else super.decoder_summary()
+
 func _has_system_volume() -> bool:
 	if bridge == null: return false
 	if bridge.has_method("has_java_method"):

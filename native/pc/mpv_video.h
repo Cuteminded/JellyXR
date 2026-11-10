@@ -5,6 +5,7 @@
 #include "render_vulkan.h"
 #include "playback_watchdog.h"
 #include "playback_clock.h"
+#include "decoder_probe.h"
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/node.hpp>
 
@@ -22,6 +23,10 @@ public:
     bool is_buffering() const;
     godot::String rendering_backend() const;
     godot::Dictionary playback_diagnostics() const;
+    void scan_decoders();
+    int decode_support(godot::String codec, godot::String profile, int depth, int width, int height);
+    int active_decode_support() const;
+    godot::String decoder_summary();
     // Vulkan exposes YUV planes; texture_changed carries the luma texture.
     godot::Dictionary video_shader_parameters() const;
     void stop_video();
@@ -56,6 +61,7 @@ private:
     int64_t duration = 0;
     bool active = false;
     bool prepared = false;
+    DecoderProbe decoder_probe;
     bool paused = false;
     double volume = 1.0;
     bool buffering = false;

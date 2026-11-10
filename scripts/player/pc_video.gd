@@ -16,18 +16,39 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 	if not available():
 		failed.emit(unavailable_message())
 		return
-	if bridge == null:
-		bridge = ClassDB.instantiate("JellyXRMpv")
-		add_child(bridge)
-		bridge.prepared.connect(func(): prepared.emit())
-		bridge.ended.connect(func(): ended.emit())
-		bridge.failed.connect(func(message: String): failed.emit(message))
-		bridge.size_changed.connect(func(w: int, h: int): size_changed.emit(w, h))
-		bridge.texture_changed.connect(_set_texture)
+	_initialize_bridge()
 	_apply_volume()
 	paused = false
 	var error: String = bridge.open_video(url, authorization, start_ms)
 	if not error.is_empty(): failed.emit(error)
+
+func _initialize_bridge() -> void:
+	if bridge != null: return
+	bridge = ClassDB.instantiate("JellyXRMpv")
+	add_child(bridge)
+	bridge.prepared.connect(func(): prepared.emit())
+	bridge.ended.connect(func(): ended.emit())
+	bridge.failed.connect(func(message: String): failed.emit(message))
+	bridge.size_changed.connect(func(w: int, h: int): size_changed.emit(w, h))
+	bridge.texture_changed.connect(_set_texture)
+
+func scan_decoders() -> void:
+	if not ClassDB.class_exists("JellyXRMpv"): return
+	_initialize_bridge()
+	if bridge.has_method("scan_decoders"): bridge.scan_decoders()
+
+func decode_support(stream: Dictionary) -> DecodeSupport:
+	if bridge == null or not bridge.has_method("decode_support"): return DecodeSupport.UNKNOWN
+	return bridge.decode_support(str(stream.get("Codec", "")), str(stream.get("Profile", "")),
+		int(str(stream.get("BitDepth"))), int(str(stream.get("Width"))), int(str(stream.get("Height")))) as DecodeSupport
+
+func active_decode_support() -> DecodeSupport:
+	if bridge == null or not bridge.has_method("active_decode_support"): return DecodeSupport.UNKNOWN
+	return bridge.active_decode_support() as DecodeSupport
+
+func decoder_summary() -> String:
+	if bridge == null or not bridge.has_method("decoder_summary"): return super.decoder_summary()
+	return bridge.decoder_summary()
 
 func _set_texture(texture: Texture2D) -> void:
 	if material == null: return

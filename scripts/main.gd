@@ -59,6 +59,7 @@ func _ready() -> void:
 	session.settings = settings
 	add_child(session)
 	add_child(video)
+	session.video_backend = video
 	add_child(subtitles)
 	_setup_world()
 	add_child(MenuFeedback.new())
@@ -71,6 +72,7 @@ func _ready() -> void:
 	video.ended.connect(_ended)
 	video.size_changed.connect(func(w: int, h: int): video_size = Vector2i(w, h); decoder_size = video_size; _resize_screen())
 	_show_login()
+	video.scan_decoders.call_deferred()
 	await _restore_session()
 
 func _setup_world() -> void:
@@ -643,6 +645,7 @@ func _screen_settings() -> void:
 	var view := SettingsView.new()
 	view.navigation_host = shell.settings_navigation
 	view.settings = settings
+	view.video_backend = video
 	view.subtitles = subtitles
 	view.subtitle_timing_enabled = playing and not photo_active
 	view.passthrough_supported = world.passthrough.is_supported()
@@ -933,6 +936,10 @@ func _process(delta: float) -> void:
 	timeline_elapsed += delta
 	if timeline_elapsed >= 0.25:
 		timeline_elapsed = 0.0
+		if decoder_ready and not photo_active and session.active_playback_mode == "auto" and session.method != "Transcode" \
+				and video.active_decode_support() == VideoBackend.DecodeSupport.UNSUPPORTED:
+			_video_failed("Switching to a hardware-decodable stream.")
+			return
 		_update_timeline()
 	if seeking or not decoder_ready: return
 	elapsed += delta

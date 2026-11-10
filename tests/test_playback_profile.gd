@@ -5,6 +5,14 @@ class PlatformSession extends PlaybackSession:
 	func _uses_native_pc_decoder() -> bool:
 		return native_pc
 
+class FixtureDecoder extends VideoBackend:
+	func decode_support(stream: Dictionary) -> DecodeSupport:
+		if stream.Codec == "hevc": return DecodeSupport.UNSUPPORTED
+		if stream.Codec == "av1": return DecodeSupport.HARDWARE
+		if stream.Codec == "h264":
+			return DecodeSupport.HARDWARE if stream.Height <= 1080 and stream.RealFrameRate <= 30 else DecodeSupport.UNSUPPORTED
+		return DecodeSupport.UNKNOWN
+
 class FixtureClient extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var direct := true
@@ -52,10 +60,36 @@ func run_checks() -> void:
 	await check_transcode_resolutions(session, api, streams)
 	await check_media_versions(session, api, streams)
 	await check_native_pc_profile(session, api)
+	await check_hardware_profile(session, api)
 	session.queue_free()
 	api.queue_free()
 	print("Playback profile checks: PASS")
 	quit()
+
+func check_hardware_profile(session: PlaybackSession, api: FixtureClient) -> void:
+	var decoder := FixtureDecoder.new()
+	session.add_child(decoder)
+	session.video_backend = decoder
+	session.settings.playback_mode = "auto"
+	session.settings.transcode_resolution = 2160
+	session.settings.transcode_max_fps = 60
+	var video_stream := {"Type": "Video", "Codec": "hevc", "Height": 2160, "RealFrameRate": 60}
+	var media_source := {"Id": "hardware-fixture", "MediaStreams": [video_stream],
+		"SupportsDirectPlay": true, "TranscodingUrl": "/hardware.m3u8"}
+	api.sources = [media_source]
+	await session.open({"Id": "fixture", "MediaSources": [media_source]})
+	var request: Dictionary = api.bodies.back()
+	assert(not request.EnableDirectPlay and not request.AllowVideoStreamCopy, "Unsupported video is converted before opening the player")
+	var output: Array = request.DeviceProfile.TranscodingProfiles[0].Conditions
+	assert(output[1].Value == "1080" and output[2].Value == "30", "Automatic conversion chooses a hardware-decodable output")
+	await session.open({"Id": "fixture"})
+	assert(not api.bodies.back().AllowVideoStreamCopy, "Server-resolved video is checked when item metadata is missing")
+	video_stream.Codec = "av1"
+	await session.open({"Id": "fixture", "MediaSources": [media_source]})
+	assert(session.method == "DirectPlay" and api.bodies.back().DeviceProfile.DirectPlayProfiles[0].VideoCodec == "av1",
+		"Hardware-supported AV1 can be advertised on Android")
+	session.video_backend = null
+	decoder.queue_free()
 
 func check_native_pc_profile(session: PlatformSession, api: FixtureClient) -> void:
 	session.native_pc = true
