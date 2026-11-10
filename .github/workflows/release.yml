@@ -27,7 +27,7 @@ jobs:
   linux:
     name: Linux
     needs: test
-    uses: ./.github/workflows/build-linux.yml
+    uses: ./.github/workflows/build-linux-appimage.yml
 
   windows:
     name: Windows

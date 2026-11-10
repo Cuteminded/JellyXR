@@ -96,7 +96,7 @@ The target system supplies libmpv and FFmpeg. The workflow uploads this as `Jell
 
 ### Package an AppImage
 
-The AppImage uses pinned LGPL playback libraries. Install the additional source-build dependencies listed in the [Linux workflow](.github/workflows/build-linux.yml), including `meson`, `ninja-build`, `nasm`, and `patchelf`. Build and export into a separate folder:
+The AppImage uses pinned LGPL playback libraries. Install the additional source-build dependencies listed in the [Linux AppImage workflow](.github/workflows/build-linux-appimage.yml), including `meson`, `ninja-build`, `nasm`, and `patchelf`. Build and export into a separate folder:
 
 ```sh
 bash tools/build-pc-video.sh --lgpl
@@ -231,7 +231,7 @@ This renders synthetic panoramas to check top-bottom eye selection and the dark 
 
 ## GitHub Actions
 
-The [Android](.github/workflows/build-android.yml), [Windows](.github/workflows/build-windows.yml), and [Linux](.github/workflows/build-linux.yml) workflows build and upload their platform packages and keep artifacts for 14 days. Android requires the `ANDROID_KEYSTORE_BASE64` repository secret described above. Windows and Linux need no repository secrets. Run the playback tests separately with the commands above.
+The [Android](.github/workflows/build-android.yml), [Windows](.github/workflows/build-windows.yml), [Linux tar](.github/workflows/build-linux-tar.yml), and [Linux AppImage](.github/workflows/build-linux-appimage.yml) workflows build and upload their platform packages and keep artifacts for 14 days. Android requires the `ANDROID_KEYSTORE_BASE64` repository secret described above. Windows and Linux need no repository secrets. Run the playback tests separately with the commands above.
 
 ## Code layout
 

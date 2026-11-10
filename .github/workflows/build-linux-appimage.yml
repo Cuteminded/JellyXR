@@ -1,4 +1,4 @@
-name: Build Linux
+name: Build Linux AppImage
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: linux-${{ github.workflow }}-${{ github.ref }}
+  group: linux-appimage-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    name: Linux ${{ matrix.arch }} build
+    name: Linux AppImage ${{ matrix.arch }} build
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
@@ -51,7 +51,7 @@ jobs:
 
       - name: Build PC video plugin
         run: |
-          bash tools/build-pc-video.sh
+          bash tools/build-pc-video.sh --lgpl
 
       - name: Install Godot and export templates
         run: |
@@ -76,55 +76,23 @@ jobs:
 
       - name: Export Linux build
         run: |
-          output="dist/linux-${ARCH}"
+          output="dist/linux-${ARCH}-lgpl"
           mkdir -p "$output"
           godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyxr.${ARCH}"
 
       - name: Verify Linux export files
         run: |
-          output="dist/linux-${ARCH}"
+          output="dist/linux-${ARCH}-lgpl"
           test -s "$output/jellyxr.${ARCH}"
           test -s "$output/jellyxr_mpv.linux.${ARCH}.so"
           chmod +x "$output/jellyxr.${ARCH}"
 
       - name: Verify exported renderer settings
-        run: timeout 30 godot --headless --xr-mode off --main-pack "dist/linux-${ARCH}/jellyxr.${ARCH}" --script tests/test_export_renderer.gd
+        run: timeout 30 godot --headless --xr-mode off --main-pack "dist/linux-${ARCH}-lgpl/jellyxr.${ARCH}" --script tests/test_export_renderer.gd
 
       - name: Copy Linux licenses and installation guide
         run: |
-          output="dist/linux-${ARCH}"
-          cp -r "build/linux/${ARCH}/licenses" "$output/"
-          cp LICENSE "$output/licenses/jellyxr.txt"
-          cp LICENSING.md "$output/licenses/"
-
-      - name: Check Linux decoder dependencies
-        run: |
-          output="dist/linux-${ARCH}"
-          ldd "$output/jellyxr_mpv.linux.${ARCH}.so" | tee "$RUNNER_TEMP/dependencies.log"
-          if grep -q 'not found' "$RUNNER_TEMP/dependencies.log"; then
-            echo 'The exported decoder has missing shared libraries.' >&2
-            exit 1
-          fi
-
-      - name: Package Linux build with system libraries
-        run: |
-          tar -czf "dist/JellyXR-linux-${ARCH}.tar.gz" -C "dist/linux-${ARCH}" .
-
-      - name: Upload Linux build with system libraries
-        uses: actions/upload-artifact@v7
-        with:
-          name: JellyXR-linux-${{ matrix.arch }}-system-libs
-          path: dist/JellyXR-linux-${{ matrix.arch }}.tar.gz
-          if-no-files-found: error
-          retention-days: 1
-          archive: false
-
-      - name: Build Linux AppImage
-        run: |
-          bash tools/build-pc-video.sh --lgpl
           output="dist/linux-${ARCH}-lgpl"
-          mkdir -p "$output"
-          godot --headless --xr-mode off --path . --export-release "$EXPORT_PRESET" "$output/jellyxr.${ARCH}"
           cp -r "build/linux/${ARCH}-lgpl/licenses" "$output/"
           cp LICENSE "$output/licenses/jellyxr.txt"
           cp LICENSING.md "$output/licenses/"
