@@ -364,6 +364,9 @@ func run_checks() -> void:
 		and view.decoder_codecs.get_child_count() == 2, "Decoder results show a backend and a badge for each codec")
 	view._refresh_decoder_summary("Hardware decoder information is unavailable.")
 	check(not view.decoder_codecs.visible, "Unavailable decoder results clear the codec badges")
+	view._refresh_decoder_summary("V4L2 reported hardware decoders for H.264, HEVC, VP9.")
+	check(view.hardware_labels["Startup check"].text == "V4L2"
+		and view.decoder_codecs.get_child_count() == 3, "Info displays V4L2 codecs as badges")
 	check(("Debug" if OS.is_debug_build() else "Release") in info_text, "Info identifies the running build type")
 	check(fixture.saves == info_saves, "Opening Info does not save settings")
 	check(view.hardware_labels["Headset"].text == "N/A" and view.hardware_labels["Left controller"].text == "N/A" and view.hardware_labels["Right controller"].text == "N/A", "Undetected VR hardware shows N/A")

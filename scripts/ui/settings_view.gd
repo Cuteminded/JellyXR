@@ -258,6 +258,9 @@ func _refresh_decoder_summary(summary: String) -> void:
 	elif summary.begins_with("Android reported hardware decoders for "):
 		label.text = "Android MediaCodec"
 		codecs = summary.trim_prefix("Android reported hardware decoders for ")
+	elif summary.begins_with("V4L2 reported hardware decoders for "):
+		label.text = "V4L2"
+		codecs = summary.trim_prefix("V4L2 reported hardware decoders for ")
 	label.accessibility_name = "Startup check: " + label.text
 	for codec in codecs.trim_suffix(".").split(", ", false):
 		var badge := PanelContainer.new()

@@ -39,6 +39,9 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     }
     int64_t started = av_gettime_relative();
     hardware_active = frame->hw_frames_ctx != nullptr;
+#ifdef __linux__
+    if (v4l2_active) hardware_active = true;
+#endif
     bool converted;
     output.hardware_frame.reset();
     output.exported_frame.reset();

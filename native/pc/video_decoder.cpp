@@ -1,5 +1,8 @@
 #include "video_decoder.h"
 #include "stream_identity.h"
+#ifdef __linux__
+#include "v4l2_decoder.h"
+#endif
 #ifdef _WIN32
 #include "d3d11_gpu.h"
 #include "d3d12_gpu.h"
@@ -101,6 +104,26 @@ int VideoDecoder::open(const std::string &url, const std::string &authorization)
         if (result < 0) return result;
         codec->thread_count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
         configure_hardware(hardware_decoder);
+#ifdef __linux__
+        if (!codec->hw_device_ctx) {
+            const auto *parameters = input->streams[stream_index]->codecpar;
+            const auto *pixel = av_pix_fmt_desc_get(static_cast<AVPixelFormat>(parameters->format));
+            const int depth = pixel ? pixel->comp[0].depth : parameters->bits_per_raw_sample;
+            for (const auto &format : scan_v4l2_decoders()) {
+                if (format.decoder->id != parameters->codec_id ||
+                    !format.supports_profile(parameters->profile, depth) ||
+                    (!format.sizes.empty() && !format.supports_size(parameters->width, parameters->height)))
+                    continue;
+                if (open_v4l2(format.decoder) >= 0) {
+                    hardware_device = "v4l2m2m";
+                    codec_name = format.decoder->name;
+                    v4l2_active = true;
+                    return read_geometry();
+                }
+                break;
+            }
+        }
+#endif
         decoder = codec->hw_device_ctx ? hardware_decoder : software_decoder;
         if (codec->hw_device_ctx) codec->thread_count = 1;
         result = avcodec_open2(codec, decoder, nullptr);
@@ -117,6 +140,25 @@ int VideoDecoder::open(const std::string &url, const std::string &authorization)
     codec_name = decoder->name;
     return read_geometry();
 }
+
+#ifdef __linux__
+int VideoDecoder::open_v4l2(const AVCodec *decoder) {
+    AVCodecContext *candidate = avcodec_alloc_context3(decoder);
+    if (!candidate) return AVERROR(ENOMEM);
+    const auto *stream = input->streams[stream_index];
+    int result = avcodec_parameters_to_context(candidate, stream->codecpar);
+    candidate->pkt_timebase = stream->time_base;
+    candidate->thread_count = 1;
+    if (result >= 0) result = avcodec_open2(candidate, decoder, nullptr);
+    if (result < 0) {
+        avcodec_free_context(&candidate);
+        return result;
+    }
+    avcodec_free_context(&codec);
+    codec = candidate;
+    return 0;
+}
+#endif
 
 int VideoDecoder::read_geometry() {
     source_width = codec->width;
@@ -152,6 +194,9 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     stopping = false;
     decode_error = 0;
     hardware_active = false;
+#ifdef __linux__
+    v4l2_active = false;
+#endif
     pinned_download = false;
     hardware_device.clear();
 #ifdef _WIN32
@@ -252,6 +297,9 @@ void VideoDecoder::decode_loop() {
     if (!packet || !frame) decode_error = AVERROR(ENOMEM);
     uint64_t codec_generation = 0;
     int consecutive_errors = 0;
+#ifdef __linux__
+    bool v4l2_submitted = false;
+#endif
     while (!stopping && decode_error >= 0) {
         int64_t started = av_gettime_relative();
         int result = avcodec_receive_frame(codec, frame);
@@ -274,6 +322,16 @@ void VideoDecoder::decode_loop() {
         if (!read_packet(packet, codec_generation, flush, result)) break;
         if (result < 0 && (flush || result != AVERROR_EOF)) { decode_error = result; break; }
         if (flush) {
+#ifdef __linux__
+            if (v4l2_active && v4l2_submitted) {
+                const AVCodec *decoder = codec->codec;
+                // The V4L2 wrapper needs the old device released before reopening it.
+                avcodec_free_context(&codec);
+                result = open_v4l2(decoder);
+                if (result < 0) { decode_error = result; break; }
+                v4l2_submitted = false;
+            } else
+#endif
             avcodec_flush_buffers(codec);
             end_of_stream = false;
             consecutive_errors = 0;
@@ -282,6 +340,9 @@ void VideoDecoder::decode_loop() {
         started = av_gettime_relative();
         bool draining = result == AVERROR_EOF;
         result = avcodec_send_packet(codec, draining ? nullptr : packet);
+#ifdef __linux__
+        if (v4l2_active && result >= 0) v4l2_submitted = true;
+#endif
         decode_us += av_gettime_relative() - started;
         av_packet_unref(packet);
         if (result == AVERROR_INVALIDDATA && ++consecutive_errors <= 8) {

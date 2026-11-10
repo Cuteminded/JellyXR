@@ -91,6 +91,10 @@ private:
     static constexpr size_t max_buffer_packets = 4096;
     static int interrupt(void *owner);
     void configure_hardware(const struct AVCodec *decoder);
+#ifdef __linux__
+    int open_v4l2(const struct AVCodec *decoder);
+    bool v4l2_active = false;
+#endif
 #ifdef _WIN32
     bool configure_windows_hardware(const struct AVCodec *decoder);
 #endif

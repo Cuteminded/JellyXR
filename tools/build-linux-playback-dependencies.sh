@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH="$prefix/lib:$prefix/lib/$(gcc -dumpmachine)"
 make -C "$sources/nv-codec-headers.tar.gz.src" PREFIX="$prefix" install
 cd "$sources/ffmpeg.tar.xz.src"
 ./configure --prefix="$prefix" --enable-shared --disable-static --disable-gpl --disable-nonfree \
-    --enable-gnutls --enable-libdav1d --enable-ffnvcodec --disable-doc --disable-debug
+    --enable-gnutls --enable-libdav1d --enable-ffnvcodec --enable-v4l2-m2m --disable-doc --disable-debug
 make -j"${JOBS:-4}"
 make install
 cp COPYING.LGPLv2.1 "$dependency_root/licenses/ffmpeg-lgpl.txt"

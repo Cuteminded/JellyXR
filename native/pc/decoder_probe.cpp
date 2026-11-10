@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #else
+#include <godot_cpp/variant/packed_string_array.hpp>
 #include <va/va.h>
 #endif
 extern "C" {
@@ -98,10 +99,21 @@ void DecoderProbe::start() {
 #else
         const auto type = AV_HWDEVICE_TYPE_VAAPI;
 #endif
-        if (av_hwdevice_ctx_create(&reference, type, nullptr, nullptr, 0) < 0)
-            return ScanResult{nullptr, "No decoder device was found by the startup check. JellyXR checks the player during playback."};
-        std::shared_ptr<AVBufferRef> device(reference, [](AVBufferRef *value) { av_buffer_unref(&value); });
-        return ScanResult{device, describe_device(reinterpret_cast<AVHWDeviceContext *>(reference->data))};
+        ScanResult found{nullptr, "No decoder device was found by the startup check. JellyXR checks the player during playback."};
+        if (av_hwdevice_ctx_create(&reference, type, nullptr, nullptr, 0) >= 0) {
+            found.device = std::shared_ptr<AVBufferRef>(reference, [](AVBufferRef *value) { av_buffer_unref(&value); });
+            found.description = describe_device(reinterpret_cast<AVHWDeviceContext *>(reference->data));
+        }
+#ifdef __linux__
+        found.v4l2_formats = scan_v4l2_decoders();
+        if (!found.device && !found.v4l2_formats.empty()) {
+            godot::PackedStringArray labels;
+            for (const auto &format : found.v4l2_formats)
+                if (!labels.has(format.label)) labels.append(format.label);
+            found.description = String("V4L2 reported hardware decoders for ") + String(", ").join(labels) + ".";
+        }
+#endif
+        return found;
     });
 }
 
@@ -116,7 +128,17 @@ String DecoderProbe::summary() {
 
 int DecoderProbe::supports(const String &codec, const String &profile, int depth, int width, int height) {
     update();
-    if (!result.device || width <= 0 || height <= 0) return 0;
+    if (width <= 0 || height <= 0) return 0;
+#ifdef __linux__
+    const auto name = codec.utf8();
+    const auto profile_name = profile.to_lower().utf8();
+    const int profile_id = v4l2_profile(name.get_data(), profile_name.get_data());
+    for (const auto &format : result.v4l2_formats)
+        if (std::string_view(format.codec) == name.get_data() && depth == 8 &&
+            format.supports_profile(profile_id, depth) && format.supports_size(width, height))
+            return 1;
+#endif
+    if (!result.device) return 0;
     auto *context = reinterpret_cast<AVHWDeviceContext *>(result.device->data);
     // This device has no frame-rate query and the player may select a different device.
     // Its answer is advisory. Only playback can confirm hardware decoding.
