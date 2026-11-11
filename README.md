@@ -38,7 +38,7 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 | [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.1 ||
 | [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
 | [Xreal aura](https://www.xreal.com/aura) | Waiting for device | * | * | Not yet released in Europe |
-| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 beta | Video playback works well up to 2K. AV1 requires server-side transcoding. |
+| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 beta | Video playback works well up to 1440p<br> AV1 requires server-side transcoding |
 
 ### Hardware through SteamVR
 
