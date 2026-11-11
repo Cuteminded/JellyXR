@@ -215,10 +215,7 @@ func _info_detail(title: String, value: String, parent: VBoxContainer) -> Label:
 
 func _refresh_hardware_info() -> void:
 	if not sections[6].is_visible_in_tree(): return
-	var headset := "N/A"
-	var xr := XRServer.find_interface("OpenXR")
-	if xr and xr.is_initialized():
-		headset = str(xr.get_system_info().get("OpenXRSystemName", "")).strip_edges()
+	var headset := preload("res://scripts/vr/headset_name.gd").current()
 	var values := {
 		"Headset": headset,
 		"Left controller": _controller_name("left_hand"),

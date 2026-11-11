@@ -1,6 +1,8 @@
 class_name JellyfinClient
 extends Node
 
+const HeadsetName = preload("res://scripts/vr/headset_name.gd")
+
 var server := ""
 var token := ""
 var user_id := ""
@@ -19,12 +21,8 @@ func authorization() -> String:
 	return value
 
 func headset_name() -> String:
-	var xr := XRServer.find_interface("OpenXR")
-	if xr and xr.is_initialized():
-		var name := str(xr.get_system_info().get("OpenXRSystemName", "")).strip_edges()
-		if not name.is_empty():
-			return name
-	return "OpenXR"
+	var name := HeadsetName.current()
+	return "OpenXR" if name.is_empty() else name
 
 func configure(address: String) -> bool:
 	var clean := address.strip_edges().trim_suffix("/")
