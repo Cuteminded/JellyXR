@@ -24,27 +24,30 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 
 ## Hardware status
 
+### Standalone headsets
+| Device | Status | Build | Tested version | Notes |
+|---|---|---|---|---|
+| [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.2.1 | Testing depends on access to a borrowed headset. |
+| [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.1 ||
+| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 beta | Video playback works well up to 1440p<br>AV1 requires server-side transcoding |
+
+### SteamVR
 | Runtime | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
 | [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.2.1 | Tested on a Steam Machine.|
 | [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.2.1 ||
 
-### Standalone headsets
-
-| Device | Status | Build | Tested version | Notes |
-|---|---|---|---|---|
-| [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.2.1 | Testing depends on access to a borrowed headset. |
-| [Quest 2](https://www.meta.com/quest) | Untested | * | * | We don't have a Quest 2 to test with |
-| [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.1 ||
-| [Quest Pro](https://www.meta.com/quest) | Untested  | * | * | We don't have a Quest Pro to test with |
-| [Xreal aura](https://www.xreal.com/aura) | Waiting for device | * | * | Not yet released in Europe |
-| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 beta | Video playback works well up to 1440p<br> AV1 requires server-side transcoding |
-
-### Hardware through SteamVR
-
+#### Hardware through SteamVR
 | Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
 | [PSVR 2](https://www.playstation.com/ps-vr2) | Working | Windows X64 | 0.2.0 | Tested by [@jpablomsan](https://github.com/Cuteminded/JellyXR/issues/7) |
+
+### Untested devices
+| Device | Status | Notes |
+|---|---|---|
+| [Quest 2](https://www.meta.com/quest) | Untested | We don't have a Quest 2 to test with |
+| [Quest Pro](https://www.meta.com/quest) | Untested | We don't have a Quest Pro to test with |
+| [Xreal aura](https://www.xreal.com/aura) | Waiting for device | Not yet released in Europe |
 
 To report results for a listed or unlisted device, [Open an issue](https://github.com/Cuteminded/JellyXR/issues/new?template=hardware-testing.md).
 
