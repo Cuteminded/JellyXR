@@ -10,7 +10,7 @@ const TRANSCODE_MAX_FPS_OPTIONS := [24, 25, 30, 50, 60]
 const TRANSCODE_PRESETS := {
 	720: {"label": "720p", "width": 1280, "height": 720, "bitrate": 6000000},
 	1080: {"label": "1080p", "width": 1920, "height": 1080, "bitrate": 12000000},
-	1440: {"label": "2K", "width": 2560, "height": 1440, "bitrate": 20000000},
+	1440: {"label": "1440p", "width": 2560, "height": 1440, "bitrate": 20000000},
 	2160: {"label": "4K", "width": 3840, "height": 2160, "bitrate": 40000000}
 }
 const LIBRARY_SORT_OPTIONS := [
