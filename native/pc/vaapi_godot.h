@@ -1,6 +1,7 @@
 #pragma once
 #include "video_decoder.h"
 #include "vaapi_vulkan_import.h"
+
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <memory>
 
@@ -11,6 +12,7 @@ public:
     const std::string &render_node() const { return node; }
     std::string failure() const { std::lock_guard<std::mutex> lock(reason_mutex); return reason; }
     uint64_t copies() const { return copied; }
+    uint64_t v4l2_copies() const { return v4l2_copied; }
     uint64_t outstanding() const { return inflight->load(); }
 private:
     struct Job;
@@ -23,5 +25,5 @@ private:
     std::string node, reason;
     mutable std::mutex reason_mutex;
     std::shared_ptr<std::atomic<uint64_t>> inflight = std::make_shared<std::atomic<uint64_t>>(0);
-    std::atomic<uint64_t> copied{0};
+    std::atomic<uint64_t> copied{0}, v4l2_copied{0};
 };

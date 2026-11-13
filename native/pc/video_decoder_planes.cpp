@@ -112,6 +112,15 @@ bool VideoDecoder::download_planes(AVFrame *frame, VideoPlanes &output, bool pre
 }
 
 bool VideoDecoder::download_frame(VideoPlanes &output) {
+#ifdef __linux__
+    if (output.v4l2_copy_frame) {
+        auto source = std::move(output.v4l2_copy_frame);
+        int64_t started = av_gettime_relative();
+        bool result = convert(source.get(), output);
+        conversion_us += av_gettime_relative() - started;
+        return result;
+    }
+#endif
 #ifdef _WIN32
     if (output.d3d12_frame) {
         int64_t started = av_gettime_relative();

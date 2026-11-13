@@ -49,6 +49,9 @@ struct VideoPlanes {
     std::array<VideoPlane, 3> planes;
     std::shared_ptr<AVFrame> hardware_frame;
     std::shared_ptr<VaapiFrame> exported_frame;
+#ifdef __linux__
+    std::shared_ptr<AVFrame> v4l2_copy_frame;
+#endif
 #ifdef _WIN32
     std::shared_ptr<D3D11Frame> d3d11_frame;
     std::shared_ptr<D3D12Frame> d3d12_frame;
@@ -78,6 +81,9 @@ public:
     bool has_frame();
     void enable_vaapi_frames(bool enabled) { vaapi_frames = enabled; }
     void set_vaapi_device(const std::string &device) { vaapi_device = device; }
+#ifdef __linux__
+    void enable_v4l2_copy(bool enabled) { v4l2_copy_enabled = enabled; }
+#endif
     bool download_frame(VideoPlanes &frame);
 #ifdef _WIN32
     void set_d3d11_bridge(std::shared_ptr<D3D11Gpu> bridge) { d3d11 = std::move(bridge); }
@@ -94,6 +100,7 @@ private:
 #ifdef __linux__
     int open_v4l2(const struct AVCodec *decoder);
     bool v4l2_active = false;
+    std::atomic<bool> v4l2_copy_enabled{false};
 #endif
 #ifdef _WIN32
     bool configure_windows_hardware(const struct AVCodec *decoder);

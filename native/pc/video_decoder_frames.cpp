@@ -5,12 +5,14 @@
 #endif
 #ifdef __linux__
 #include "vaapi_frame.h"
+#include "v4l2_dmabuf.h"
 #endif
 #include <godot_cpp/variant/variant.hpp>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/intreadwrite.h>
 #include <libavutil/time.h>
 #include <libavutil/pixfmt.h>
 #include <libswscale/swscale.h>
@@ -40,11 +42,27 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     int64_t started = av_gettime_relative();
     hardware_active = frame->hw_frames_ctx != nullptr;
 #ifdef __linux__
-    if (v4l2_active) hardware_active = true;
+    output.v4l2_copy_frame.reset();
+    if (v4l2_active) {
+        hardware_active = true;
+        if (v4l2_copy_enabled && codec->codec_id == AV_CODEC_ID_H264 &&
+                frame->opaque_ref && frame->opaque_ref->size == sizeof(JellyXRV4L2DmaBuf) &&
+                AV_RN64(frame->opaque_ref->data) == JELLYXR_V4L2_DMABUF_SIGNATURE) {
+            auto source = std::shared_ptr<AVFrame>(av_frame_clone(frame),
+                [](AVFrame *source) { av_frame_free(&source); });
+            if (source && prepare_planes(frame, output, frame->width, frame->height, false))
+                output.v4l2_copy_frame = std::move(source);
+        }
+    }
 #endif
     bool converted;
     output.hardware_frame.reset();
     output.exported_frame.reset();
+#ifdef __linux__
+    if (output.v4l2_copy_frame) {
+        converted = true;
+    } else
+#endif
 #ifdef _WIN32
     output.d3d11_frame.reset();
     output.d3d12_frame.reset();

@@ -1,5 +1,6 @@
 #include "vaapi_godot.h"
 #include "vaapi_frame.h"
+#include "v4l2_dmabuf.h"
 extern "C" {
 #include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
@@ -13,6 +14,7 @@ using namespace jellyxr_vaapi;
 
 struct VaapiGodot::Job {
     std::shared_ptr<VaapiFrame> exported;
+    std::shared_ptr<AVFrame> capture;
     std::array<GpuImage, 2> imported;
     std::array<PlaneLayout, 2> layout;
     std::array<VkImage, 2> destination;
@@ -53,23 +55,33 @@ bool VaapiGodot::initialize(RenderingDevice *p_device) {
 }
 
 bool VaapiGodot::copy(const VideoPlanes &frame, const std::array<RID, 3> &planes) {
-    if (!frame.hardware_frame || inflight->load() >= 8) {
+    if ((!frame.hardware_frame && !frame.v4l2_copy_frame) || inflight->load() >= 8) {
         std::lock_guard<std::mutex> lock(reason_mutex);
         reason = "VAAPI frame limit reached";
         return false;
     }
     try {
         std::unique_ptr<Job> job = std::make_unique<Job>();
-        auto *source = frame.hardware_frame.get();
-        job->exported = frame.exported_frame;
-        if (!job->exported) throw std::runtime_error("VAAPI DMA-BUF export failed in decoder worker");
-        auto *frames = reinterpret_cast<AVHWFramesContext *>(source->hw_frames_ctx->data);
-        job->layout = video_layout(*job->exported->descriptor(), frames->sw_format, source->width,
-            source->height, frames->width, frames->height);
+        const AVDRMFrameDescriptor *descriptor;
+        if (frame.v4l2_copy_frame) {
+            job->capture = frame.v4l2_copy_frame;
+            const auto *source = job->capture.get();
+            const auto &data = *reinterpret_cast<const JellyXRV4L2DmaBuf *>(source->opaque_ref->data);
+            descriptor = &data.descriptor;
+            job->layout = video_layout(*descriptor, source->format, source->width, source->height, data.width, data.height);
+        } else {
+            auto *source = frame.hardware_frame.get();
+            job->exported = frame.exported_frame;
+            if (!job->exported) throw std::runtime_error("VAAPI DMA-BUF export failed in decoder worker");
+            auto *frames = reinterpret_cast<AVHWFramesContext *>(source->hw_frames_ctx->data);
+            descriptor = job->exported->descriptor();
+            job->layout = video_layout(*descriptor, frames->sw_format, source->width,
+                source->height, frames->width, frames->height);
+        }
         Importer importer;
         importer.initialize(physical, device);
         for (int i = 0; i < 2; ++i) {
-            importer.import_image(job->imported[i], *job->exported->descriptor(), i, job->layout[i]);
+            importer.import_image(job->imported[i], *descriptor, i, job->layout[i]);
             job->destination[i] = (VkImage)rd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_TEXTURE, planes[i], 0);
         }
         job->queue_family = queue_family;
@@ -82,10 +94,11 @@ bool VaapiGodot::copy(const VideoPlanes &frame, const std::array<RID, 3> &planes
             uint64_t(&release), uint64_t(job.get()), targets)));
         if (result != OK) {
             --*inflight;
-            throw std::runtime_error("Godot rejected VAAPI GPU copy");
+            throw std::runtime_error("Godot rejected DMA-BUF GPU copy");
         }
         job.release();
-        ++copied;
+        if (frame.v4l2_copy_frame) ++v4l2_copied;
+        else ++copied;
         return true;
     } catch (const std::exception &error) {
         std::lock_guard<std::mutex> lock(reason_mutex);

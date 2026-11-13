@@ -19,7 +19,7 @@ public:
     int start(godot::String url, godot::String authorization, int64_t start_ms);
     void stop();
     void set_clock(int64_t milliseconds) { decoder.set_clock(milliseconds); }
-    void seek(int64_t milliseconds) { decoder.seek(milliseconds); frame_ready = false; presented_timestamp = -1; }
+    void seek(int64_t milliseconds);
     int64_t timestamp_ms() const { return presented_timestamp; }
     bool take_frame();
     int error() const;
@@ -52,6 +52,9 @@ private:
 #ifdef __linux__
     VaapiGodot vaapi;
     std::atomic<bool> vaapi_available{false};
+    std::atomic<bool> v4l2_copy_enabled{false};
+    std::atomic<bool> seeking_v4l2{false};
+    void drain_v4l2_copies();
 #endif
     VideoDecoder decoder;
     VideoPlanes frame;

@@ -28,6 +28,21 @@ export PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/lib/$(gcc -dumpmachine)/pk
 export LD_LIBRARY_PATH="$prefix/lib:$prefix/lib/$(gcc -dumpmachine)"
 make -C "$sources/nv-codec-headers.tar.gz.src" PREFIX="$prefix" install
 cd "$sources/ffmpeg.tar.xz.src"
+cp "$project_root/tools/ffmpeg-v4l2-dmabuf.h" libavcodec/jellyxr_v4l2_dmabuf.h
+cp "$project_root/native/pc/v4l2_dmabuf.h" libavcodec/jellyxr_v4l2_dmabuf_data.h
+if ! grep -q '^#define _GNU_SOURCE$' libavcodec/v4l2_buffers.c; then
+    sed -i '1i #define _GNU_SOURCE' libavcodec/v4l2_buffers.c
+fi
+if ! grep -q 'jellyxr_export_capture(frame, avbuf)' libavcodec/v4l2_buffers.c; then
+    sed -i '/^int ff_v4l2_buffer_buf_to_avframe(/i #include "jellyxr_v4l2_dmabuf.h"' libavcodec/v4l2_buffers.c
+    sed -i '/frame->sample_aspect_ratio = avbuf->context->sample_aspect_ratio;/a\    jellyxr_export_capture(frame, avbuf);' libavcodec/v4l2_buffers.c
+fi
+grep -Fq '#include "jellyxr_v4l2_dmabuf.h"' libavcodec/v4l2_buffers.c
+grep -Fq 'jellyxr_export_capture(frame, avbuf);' libavcodec/v4l2_buffers.c
+if ! grep -q 'int jellyxr_capture_export_failed;' libavcodec/v4l2_context.h; then
+    sed -i '/^typedef struct V4L2Context {/a\    int jellyxr_capture_export_failed;' libavcodec/v4l2_context.h
+fi
+grep -Fq 'int jellyxr_capture_export_failed;' libavcodec/v4l2_context.h
 ./configure --prefix="$prefix" --enable-shared --disable-static --disable-gpl --disable-nonfree \
     --enable-gnutls --enable-libdav1d --enable-ffnvcodec --enable-v4l2-m2m --disable-doc --disable-debug
 make -j"${JOBS:-4}"

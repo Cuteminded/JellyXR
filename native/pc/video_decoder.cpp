@@ -272,6 +272,9 @@ void VideoDecoder::seek(int64_t milliseconds) {
         end_of_stream = false;
         frame_ready = false;
         awaiting_first_frame = true;
+#ifdef __linux__
+        pending.v4l2_copy_frame.reset();
+#endif
     }
     wake.notify_all();
 }
@@ -324,6 +327,7 @@ void VideoDecoder::decode_loop() {
         if (flush) {
 #ifdef __linux__
             if (v4l2_active && v4l2_submitted) {
+                staging.v4l2_copy_frame.reset();
                 const AVCodec *decoder = codec->codec;
                 // The V4L2 wrapper needs the old device released before reopening it.
                 avcodec_free_context(&codec);

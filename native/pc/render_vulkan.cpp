@@ -5,6 +5,8 @@
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <mpv/client.h>
 #include <chrono>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
 
@@ -38,8 +40,32 @@ void RenderVulkan::initialize_on_render_thread() {
     vaapi_available = vaapi.initialize(device);
     decoder.enable_vaapi_frames(vaapi_available);
     decoder.set_vaapi_device(vaapi_available ? vaapi.render_node() : "");
+    v4l2_copy_enabled = vaapi_available && OS::get_singleton()->get_environment("JELLYXR_V4L2_GPU_COPY") != "0";
+    decoder.enable_v4l2_copy(v4l2_copy_enabled);
 #endif
 }
+
+void RenderVulkan::seek(int64_t milliseconds) {
+#ifdef __linux__
+    if (v4l2_copy_enabled || vaapi.v4l2_copies() > 0) {
+        seeking_v4l2 = true;
+        run_sync(&RenderVulkan::drain_v4l2_copies);
+    }
+#endif
+    decoder.seek(milliseconds);
+    frame_ready = false;
+    presented_timestamp = -1;
+#ifdef __linux__
+    seeking_v4l2 = false;
+#endif
+}
+
+#ifdef __linux__
+void RenderVulkan::drain_v4l2_copies() {
+    if (device && vaapi.outstanding() > 0) device->call("jellyxr_vulkan_drain");
+    frame.v4l2_copy_frame.reset();
+}
+#endif
 
 int RenderVulkan::start(String url, String authorization, int64_t start_ms) {
     run_sync(&RenderVulkan::initialize_on_render_thread);
@@ -93,6 +119,12 @@ bool RenderVulkan::create_textures() {
 }
 
 void RenderVulkan::present_on_render_thread() {
+#ifdef __linux__
+    if (seeking_v4l2) {
+        queued = false;
+        return;
+    }
+#endif
     if (!stopping && decoder.take_frame(frame) && frame.generation == decoder.current_generation()) {
         present_frame();
         presentation_us += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - presentation_started).count();
@@ -136,6 +168,15 @@ void RenderVulkan::present_frame() {
     }
 #endif
 #ifdef __linux__
+    if (frame.v4l2_copy_frame && v4l2_copy_enabled) {
+        if (vaapi.copy(frame, planes)) {
+            frame.v4l2_copy_frame.reset();
+            return;
+        }
+        v4l2_copy_enabled = false;
+        decoder.enable_v4l2_copy(false);
+        UtilityFunctions::print("JellyXR V4L2 GPU copy falling back to CPU upload: ", vaapi.failure().c_str());
+    }
     if (frame.hardware_frame && vaapi_available) {
         if (vaapi.copy(frame, planes)) {
             frame.hardware_frame.reset();
@@ -195,6 +236,8 @@ Dictionary RenderVulkan::diagnostics() const {
     values["vaapi_inflight_frames"] = int64_t(vaapi.outstanding());
     values["vaapi_fallback_reason"] = String(vaapi.failure().c_str());
     values["vaapi_render_node"] = String(vaapi.render_node().c_str());
+    values["v4l2_gpu_copy"] = v4l2_copy_enabled.load() && vaapi.v4l2_copies() > 0;
+    values["v4l2_gpu_frames"] = int64_t(vaapi.v4l2_copies());
 #endif
     values["presented_frames"] = int64_t(count);
     values["presentation_ms"] = count ? double(presentation_us.load()) / count / 1000.0 : 0;
@@ -219,6 +262,9 @@ void RenderVulkan::destroy_on_render_thread() {
 
 void RenderVulkan::stop() {
     stopping = true;
+#ifdef __linux__
+    if (v4l2_copy_enabled || vaapi.v4l2_copies() > 0) run_sync(&RenderVulkan::drain_v4l2_copies);
+#endif
     decoder.stop();
     run_sync(&RenderVulkan::destroy_on_render_thread);
     presented_parameters.clear();
