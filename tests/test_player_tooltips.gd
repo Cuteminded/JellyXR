@@ -68,13 +68,14 @@ func run_checks() -> void:
 	check(overlay.tooltip.text == "Play", "Keyboard focus also exposes the button's label")
 	var session := PlaybackSession.new()
 	var video := VideoBackend.new()
-	session.source = {"Bitrate": 25000000, "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 2160, "AverageFrameRate": 23.976, "Codec": "hevc"}]}
+	session.source = {"Bitrate": 25000000, "MediaStreams": [{"Type": "Video", "Width": 3840, "Height": 2160, "AverageFrameRate": 23.976, "Codec": "hevc", "BitDepth": 10}]}
 	overlay.statistics_provider = func(): return preload("res://scripts/ui/playback_statistics.gd").snapshot(session, video)
 	overlay.set_statistics_visible(true)
 	await process_frame
 	await process_frame
 	check(overlay.statistics_panel.visible and overlay.submenu_buttons["statistics"].button_pressed, "The statistics button opens and marks the panel active")
 	check(overlay.statistics_values["Source video"].text == "3840 x 2160 / 23.976 fps", "Statistics show source resolution and frame rate")
+	check(overlay.statistics_values["Source bit depth"].text == "10-bit", "Statistics show the source bit depth")
 	var renderer_fps: String = overlay.statistics_values["Renderer / FPS"].text
 	check(renderer_fps != "N/A" and renderer_fps.contains(" / ") and renderer_fps.get_slice(" / ", 1).is_valid_int(), "Statistics display the rendering driver and app FPS")
 	check(overlay.statistics_values["Dropped frames"].text == "N/A", "Missing decoder counters are not presented as zero")

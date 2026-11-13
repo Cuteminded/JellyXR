@@ -17,6 +17,9 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 	var width := int(stream.get("Width", 0))
 	var height := int(stream.get("Height", 0))
 	var fps := float(stream.get("AverageFrameRate", stream.get("RealFrameRate", 0.0)))
+	var bit_depth := int(str(stream.get("BitDepth", 0)))
+	if bit_depth <= 0 and session.method == "DirectPlay":
+		bit_depth = int(diagnostics.get("source_bit_depth", 0))
 	var bitrate := int(session.source.get("Bitrate", 0))
 	var driver := RenderingServer.get_current_rendering_driver_name()
 	var renderer: String = {
@@ -31,6 +34,7 @@ static func snapshot(session: PlaybackSession, video: VideoBackend, playback_siz
 		"Playback": session.method,
 		"Source video": "%d x %d / %.3f fps" % [width, height, fps] if width > 0 else "N/A",
 		"Source codec": str(stream.get("Codec", "N/A")).to_upper(),
+		"Source bit depth": "%d-bit" % bit_depth if bit_depth > 0 else "N/A",
 		"Source bitrate": "%.2f Mbps" % (bitrate / 1000000.0) if bitrate > 0 else "N/A",
 		"Renderer / FPS": "%s / %d" % [renderer, Engine.get_frames_per_second()],
 		"Player state": "Buffering" if video.is_buffering() else ("Paused" if video.paused else "Playing"),

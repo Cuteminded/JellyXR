@@ -47,7 +47,7 @@ func _build_statistics(parent: Node) -> void:
 	statistics_panel = VBoxContainer.new()
 	statistics_panel.add_theme_constant_override("separation", 0)
 	parent.add_child(statistics_panel)
-	for key in ["Source video", "Playback", "Source codec", "Source bitrate", "Video decoder", "Player state", "Playback resolution", "Hardware decoding", "Read ahead", "Renderer / FPS", "Dropped frames"]:
+	for key in ["Source video", "Playback", "Source codec", "Source bit depth", "Source bitrate", "Video decoder", "Player state", "Playback resolution", "Hardware decoding", "Read ahead", "Renderer / FPS", "Dropped frames"]:
 		var divider := HSeparator.new()
 		var line := StyleBoxLine.new()
 		line.color = Color("3d4c63")
