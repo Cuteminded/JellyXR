@@ -79,6 +79,7 @@ func run_checks() -> void:
 	var view := show_details(shell, item)
 	await settle()
 	check(view.play_button.text == "Resume", "Saved playback must offer Resume.")
+	check(absf(view.resume_progress.value - 100.0 * 12.0 / 129.0) < 0.05, "The resume bar reflects the saved position relative to the runtime.")
 	check(view.version_button == null, "A title without multiple versions does not show Choose version.")
 	view.play_button.pressed.emit()
 	check(selected == [item], "Resume must pass the original item to playback.")
@@ -115,6 +116,7 @@ func run_checks() -> void:
 		check(view.title_label.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Long titles must not escape the details panel.")
 		check(view.play_from_start_button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "The restart button fits narrow details panels.")
 		check(view.version_button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "Choose version fits narrow details panels.")
+		check(view.favourite_control.button.get_global_rect().end.x <= view.scroll.get_global_rect().end.x, "The favourite action fits narrow details panels.")
 	root.size.x = 1536
 	view = show_details(shell, {"Id": "plain", "Name": "A movie without artwork", "Type": "Movie", "Overview": null, "UserData": null, "Genres": null, "People": null})
 	await settle()

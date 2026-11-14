@@ -19,6 +19,7 @@ var version_button: Button
 var watched_control: VBoxContainer
 var favourite_control: VBoxContainer
 var resume_label: Label
+var resume_progress: ProgressBar
 var back_button: Button
 var title_label: Label
 var overview_label: Label
@@ -83,29 +84,56 @@ func _ready() -> void:
 
 func _build_header() -> void:
 	var hero := PanelContainer.new()
-	hero.add_theme_stylebox_override("panel", Widgets.surface(Color("162133"), 18))
+	hero.add_theme_stylebox_override("panel", Widgets.surface(Color("131e2b"), 18))
 	body.add_child(hero)
 	backdrop = _image(hero)
 	artwork.fetch(backdrop, item, true)
-	var shade := _image(hero)
-	var gradient := Gradient.new()
-	gradient.colors = PackedColorArray([Color(0.04, 0.065, 0.10, 0.97), Color(0.04, 0.065, 0.10, 0.82)])
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	shade.texture = texture
+	_add_backdrop_fade(hero, Vector2.RIGHT, [0.95, 0.85, 0.62])
+	_add_backdrop_fade(hero, Vector2.DOWN, [0.0, 0.12, 0.85])
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
+		margin.add_theme_constant_override("margin_" + side, 28)
 	hero.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 28)
+	row.add_theme_constant_override("separation", 32)
 	margin.add_child(row)
+	_build_poster(row)
+	var summary := VBoxContainer.new()
+	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	summary.add_theme_constant_override("separation", 12)
+	row.add_child(summary)
+	title_label = _wrapped(DetailsMetadata.title(item), summary, 46)
+	_build_header_metadata(summary)
+	_build_playback(summary)
+	_build_title_actions(summary)
+
+func _add_backdrop_fade(parent: Control, direction: Vector2, opacity: Array[float]) -> void:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	var colors := PackedColorArray()
+	for alpha in opacity:
+		var shade_color := Color("101624")
+		shade_color.a = alpha
+		colors.append(shade_color)
+	gradient.colors = colors
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_to = direction
+	var shade := _image(parent)
+	shade.stretch_mode = TextureRect.STRETCH_SCALE
+	shade.texture = texture
+
+func _build_poster(row: HBoxContainer) -> void:
 	var frame := PanelContainer.new()
-	frame.custom_minimum_size = Vector2(230, 345)
-	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	frame.custom_minimum_size = Vector2(220, 330)
+	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var frame_style := Widgets.surface(Color("25334a"), 12)
 	frame_style.set_border_width_all(1)
 	frame_style.border_color = Color(1, 1, 1, 0.15)
+	frame_style.shadow_color = Color(0, 0, 0, 0.45)
+	frame_style.shadow_size = 12
+	frame_style.shadow_offset = Vector2(0, 6)
 	frame.add_theme_stylebox_override("panel", frame_style)
 	row.add_child(frame)
 	frame.visible = size.x >= 760
@@ -116,42 +144,29 @@ func _build_header() -> void:
 	poster = _image(frame)
 	poster.accessibility_name = "Poster for " + str(item.get("Name", "Untitled"))
 	artwork.fetch(poster, item)
-	var summary := VBoxContainer.new()
-	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	summary.add_theme_constant_override("separation", 16)
-	row.add_child(summary)
-	_muted("TV series" if item.get("Type", "") == "Series" else "Movie", summary, 20)
-	title_label = _wrapped(DetailsMetadata.title(item), summary, 42)
+
+func _build_header_metadata(summary: VBoxContainer) -> void:
+	var values := DetailsMetadata.facts(item)
 	var facts := HFlowContainer.new()
-	facts.add_theme_constant_override("h_separation", 10)
-	facts.add_theme_constant_override("v_separation", 10)
+	facts.add_theme_constant_override("h_separation", 18)
+	facts.add_theme_constant_override("v_separation", 4)
 	summary.add_child(facts)
-	for fact in DetailsMetadata.facts(item):
-		var badge := PanelContainer.new()
-		badge.add_theme_stylebox_override("panel", Widgets.surface(Color("202a3d"), 8, 10))
-		facts.add_child(badge)
-		Widgets.label(fact, badge, 20)
+	for fact in values:
+		var label := Widgets.label(fact, facts, 20)
+		label.add_theme_color_override("font_color", Color("c2cbd9"))
+	facts.visible = not values.is_empty()
 	var genres: Array = item.get("Genres", []) if item.get("Genres") else []
-	if not genres.is_empty(): _muted(" / ".join(genres), summary)
+	if not genres.is_empty(): _muted(", ".join(genres), summary, 20)
 	var taglines: Array = item.get("Taglines", []) if item.get("Taglines") else []
-	if not taglines.is_empty(): _wrapped(str(taglines[0]), summary, 24)
-	_build_playback(summary)
-	if item.get("Type", "") in ["Movie", "Series", "Video", "MusicVideo"]:
-		favourite_control = preload("res://scripts/ui/favourite_control.gd").new()
-		favourite_control.api = api
-		favourite_control.item = item
-		summary.add_child(favourite_control)
+	if not taglines.is_empty(): _wrapped(str(taglines[0]), summary, 22)
 
 func _build_playback(parent: VBoxContainer) -> void:
 	var is_series: bool = item.get("Type", "") == "Series"
 	var user: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
 	var position := int(user.get("PlaybackPositionTicks", 0))
-	var actions := HFlowContainer.new()
-	actions.add_theme_constant_override("h_separation", 12)
-	actions.add_theme_constant_override("v_separation", 12)
-	parent.add_child(actions)
+	var actions := _action_row(parent)
 	play_button = Widgets.button("Play series" if is_series else ("Resume" if position > 0 else "Play movie"), _play_item, actions)
-	play_button.custom_minimum_size = Vector2(200, 64)
+	play_button.custom_minimum_size = Vector2(160, 60)
 	play_button.icon = preload("res://assets/icons/material/play_arrow.svg")
 	play_button.add_theme_constant_override("icon_max_width", 28)
 	play_button.add_theme_constant_override("h_separation", 12)
@@ -169,24 +184,56 @@ func _build_playback(parent: VBoxContainer) -> void:
 		return
 	if position > 0:
 		play_from_start_button = Widgets.button("Play from start", func(): play_from_start_requested.emit(item), actions)
-		play_from_start_button.custom_minimum_size = Vector2(200, 64)
-		resume_label = _muted("Continue from " + DetailsMetadata.duration(position), parent, 20)
-	var secondary_actions := HFlowContainer.new()
-	secondary_actions.add_theme_constant_override("h_separation", 12)
-	secondary_actions.add_theme_constant_override("v_separation", 12)
-	parent.add_child(secondary_actions)
-	if item.get("Type", "") in ["Movie", "Episode"]:
+		play_from_start_button.custom_minimum_size.y = 60
+		_build_resume_status(parent, position)
+
+func _build_resume_status(parent: VBoxContainer, position: int) -> void:
+	var status := _action_row(parent)
+	resume_label = Widgets.label("Continue from " + DetailsMetadata.duration(position), status, 19)
+	resume_label.add_theme_color_override("font_color", Color("c2cbd9"))
+	var runtime := int(item.get("RunTimeTicks", 0) if item.get("RunTimeTicks") else 0)
+	if runtime <= 0: return
+	resume_progress = ProgressBar.new()
+	resume_progress.show_percentage = false
+	resume_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	resume_progress.custom_minimum_size = Vector2(128, 5)
+	resume_progress.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	resume_progress.add_theme_stylebox_override("background", Widgets.surface(Color("425165"), 3))
+	resume_progress.add_theme_stylebox_override("fill", Widgets.surface(Color("6de3cf"), 3))
+	resume_progress.value = 100.0 * float(position) / runtime
+	status.add_child(resume_progress)
+
+func _build_title_actions(parent: VBoxContainer) -> void:
+	var actions := _action_row(parent)
+	var type := str(item.get("Type", ""))
+	if type in ["Movie", "Episode"]:
 		watched_control = preload("res://scripts/ui/watched_control.gd").new()
 		watched_control.api = api
 		watched_control.item = item
+		watched_control.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		watched_control.changed.connect(_refresh_playback_state)
-		secondary_actions.add_child(watched_control)
-		watched_control.button.custom_minimum_size.y = 64
+		actions.add_child(watched_control)
+		watched_control.button.add_theme_font_size_override("font_size", 19)
+	if type in ["Movie", "Series", "Video", "MusicVideo"]:
+		favourite_control = preload("res://scripts/ui/favourite_control.gd").new()
+		favourite_control.api = api
+		favourite_control.item = item
+		favourite_control.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		actions.add_child(favourite_control)
+		favourite_control.button.add_theme_font_size_override("font_size", 19)
 	var sources: Array = item.get("MediaSources", []) if item.get("MediaSources") else []
-	if sources.size() > 1:
-		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), secondary_actions)
-		version_button.custom_minimum_size = Vector2(200, 64)
+	if type != "Series" and sources.size() > 1:
+		version_button = Widgets.button("Choose version", func(): version_requested.emit(item), actions)
+		version_button.add_theme_font_size_override("font_size", 19)
 		version_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	actions.visible = actions.get_child_count() > 0
+
+func _action_row(parent: Control) -> HFlowContainer:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 12)
+	row.add_theme_constant_override("v_separation", 10)
+	parent.add_child(row)
+	return row
 
 func _play_item() -> void:
 	if item.get("Type", "") != "Series":
@@ -223,6 +270,9 @@ func _refresh_playback_state() -> void:
 	if is_instance_valid(resume_label):
 		resume_label.visible = position > 0
 		resume_label.text = "Continue from " + DetailsMetadata.duration(position)
+	if is_instance_valid(resume_progress):
+		resume_progress.visible = position > 0
+		resume_progress.value = 100.0 * float(position) / int(item.RunTimeTicks)
 
 func _build_information() -> void:
 	var section := VBoxContainer.new()
