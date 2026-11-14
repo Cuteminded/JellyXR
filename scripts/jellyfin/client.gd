@@ -93,6 +93,17 @@ func library(search: String = "", offset: int = 0, parent_id: String = "") -> Di
 func favourites(search: String, offset: int) -> Dictionary:
 	return await _browse_titles(search, offset, "", true)
 
+func person_titles(person_id: String, excluded_title_id: String, search: String, offset: int) -> Dictionary:
+	var values := {
+		"UserId": user_id, "PersonIds": person_id, "Recursive": "true",
+		"IncludeItemTypes": "Movie,Series,Video,MusicVideo", "Fields": "Overview,UserData",
+		"SortBy": "SortName", "SortOrder": "Ascending", "CollapseBoxSetItems": "false",
+		"Limit": 25, "StartIndex": offset,
+	}
+	if not excluded_title_id.is_empty(): values["ExcludeItemIds"] = excluded_title_id
+	if not search.is_empty(): values["SearchTerm"] = search
+	return await request("/Items" + query(values))
+
 func _browse_titles(search: String, offset: int, parent_id: String, favourites_only: bool) -> Dictionary:
 	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video,MusicVideo,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
 	if favourites_only:

@@ -1,6 +1,8 @@
 class_name CastCarousel
 extends VBoxContainer
 
+signal person_selected(person: Dictionary)
+
 var people: Array = []
 var artwork: ArtworkLoader
 var scroll: ScrollContainer
@@ -29,6 +31,7 @@ func _ready() -> void:
 	scroll = ScrollContainer.new()
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	scroll.follow_focus = true
 	scroll.custom_minimum_size.y = 360
 	scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(scroll)
@@ -44,13 +47,19 @@ func _ready() -> void:
 	_update_navigation.call_deferred()
 
 func _add_person(person: Dictionary) -> void:
+	var tile := PanelContainer.new()
+	tile.custom_minimum_size.x = PORTRAIT_SIZE.x
+	tile.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cards.add_child(tile)
 	var card := VBoxContainer.new()
-	card.custom_minimum_size.x = PORTRAIT_SIZE.x
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_theme_constant_override("separation", 8)
-	cards.add_child(card)
+	tile.add_child(card)
 	var frame := PanelContainer.new()
 	frame.custom_minimum_size = PORTRAIT_SIZE
 	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_theme_stylebox_override("panel", Widgets.surface(Color("25334a"), 12))
 	card.add_child(frame)
 	var fallback := Widgets.label(str(person.Name).left(1).to_upper(), frame, 48)
@@ -63,15 +72,25 @@ func _add_person(person: Dictionary) -> void:
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait.accessibility_name = "Portrait of " + str(person.Name)
 	frame.add_child(portrait)
-	if person.get("Id"):
-		var image_item := person.duplicate()
-		if person.get("PrimaryImageTag"):
-			image_item["ImageTags"] = {"Primary": person.PrimaryImageTag}
-		artwork.fetch(portrait, image_item)
+	artwork.fetch_person(portrait, person)
 	_caption(str(person.Name), card, 22)
 	var role := str(person.get("Role") if person.get("Role") else person.get("Type", ""))
 	if not role.is_empty():
 		_caption(role, card, 20).add_theme_color_override("font_color", Color("b0bbce"))
+	if person.get("Id"): _add_person_button(tile, person)
+
+func _add_person_button(tile: PanelContainer, person: Dictionary) -> void:
+	var button := Widgets.button("", func(): person_selected.emit(person), tile)
+	button.custom_minimum_size = Vector2.ZERO
+	button.accessibility_name = "Open " + str(person.Name)
+	button.tooltip_text = button.accessibility_name
+	var outline := Widgets.surface(Color.TRANSPARENT, 12)
+	outline.draw_center = false
+	outline.set_border_width_all(3)
+	outline.border_color = Color("6de3cf")
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	for state in ["hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, outline)
 
 func _caption(value: String, parent: Node, font_size: int) -> Label:
 	var label := Widgets.label(value, parent, font_size)

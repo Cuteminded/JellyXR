@@ -1,5 +1,9 @@
 extends SceneTree
 
+class FixtureApi extends JellyfinClient:
+	func extras(_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
 class FixtureArtwork extends ArtworkLoader:
 	var fetched: Array = []
 	func fetch(target: TextureRect, item: Dictionary, _backdrop: bool = false) -> void:
@@ -39,7 +43,7 @@ func run_checks() -> void:
 	people[1].Role = "A character with a long name that must remain fully readable"
 	people.append({"Id": "unnamed"})
 	var view := DetailsView.new()
-	view.api = JellyfinClient.new()
+	view.api = FixtureApi.new()
 	view.add_child(view.api)
 	view.artwork = artwork
 	view.item = {"Id": "movie", "Type": "Movie", "Name": "Movie details", "People": people}
@@ -53,7 +57,10 @@ func run_checks() -> void:
 	await settle()
 	check(cast.cards.get_child_count() == 12, "Each named person must have one portrait card.")
 	check(artwork.fetched.size() == 1 and artwork.fetched[0].ImageTags.Primary == "portrait-tag", "Jellyfin person image tags must load portraits by person ID.")
-	check(cast.cards.get_child(0).get_child(0).get_child(1).texture != null, "Available portraits must appear in their cards.")
+	check(cast.cards.get_child(0).get_child(0).get_child(0).get_child(1).texture != null, "Available portraits must appear in their cards.")
+	var chosen: Array = []
+	view.person_requested.connect(func(person: Dictionary): chosen.append(person))
+	var person_button: Button = cast.cards.get_child(0).get_child(1)
 	check(cast.previous_button.disabled and not cast.next_button.disabled, "Only forward navigation should be available at the start.")
 	check(not cast.scroll.get_h_scroll_bar().visible, "The cast scrollbar must stay hidden.")
 	var outer_position := view.scroll.scroll_vertical
@@ -91,6 +98,17 @@ func run_checks() -> void:
 	cast.scroll.scroll_horizontal = 0
 	await settle()
 	check(cast.cards.get_child(1).get_combined_minimum_size().y <= cast.scroll.size.y, "Long names and roles must not be clipped vertically.")
+	view.scroll.ensure_control_visible(cast)
+	await settle()
+	var point := person_button.get_global_rect().position + Vector2(90, 90)
+	for pressed in [true, false]:
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = pressed
+		click.position = point
+		click.global_position = point
+		root.push_input(click, true)
+	check(chosen == [people[0]], "Clicking a cast card opens the credited person by ID.")
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://dist/cast-preview.png")

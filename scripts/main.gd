@@ -1,5 +1,7 @@
 extends Node3D
 
+const PersonView = preload("res://scripts/ui/person_view.gd")
+
 var settings := JellyXRSettings.new()
 var session_store := SessionStore.new()
 var api := JellyfinClient.new()
@@ -20,6 +22,7 @@ var page: VBoxContainer
 var browsing_return_page: Control
 var browsing_return_heading := ""
 var browsing_return_status := ""
+var credit_history: Array[Dictionary] = []
 var status: Label
 var keyboard: VRKeyboard
 var material: ShaderMaterial
@@ -163,6 +166,7 @@ func _field(placeholder: String, secret: bool = false) -> LineEdit:
 	return field
 
 func _show_login() -> void:
+	_clear_credit_history()
 	library_navigation_states.clear()
 	library_folder_path.clear()
 	shell.set_signed_in(false)
@@ -305,6 +309,7 @@ func _toggle_panel() -> void:
 	keyboard.hide()
 
 func _open_library(id: String, title: String, folder_path: Array = [], navigation_states: Dictionary = {}) -> void:
+	_clear_credit_history()
 	library_navigation_states = navigation_states.duplicate(true)
 	_clear_page()
 	var loading_page := {"generation": page_generation}
@@ -355,8 +360,12 @@ func _load_libraries() -> void:
 		Widgets.button("Retry libraries", _load_libraries, shell.libraries).add_theme_font_size_override("font_size", 17)
 
 func _details(item: Dictionary, season: Dictionary = {}) -> void:
+	var person_page: LibraryView
 	for child in page.get_children():
-		if child is LibraryView: library_navigation_states = child.save_navigation_state()
+		if child is PersonView:
+			person_page = child
+		elif child is LibraryView:
+			library_navigation_states = child.save_navigation_state()
 	if item.get("Type", "") == "Photo":
 		photo_sequence = PhotoSequence.new()
 		for child in page.get_children():
@@ -374,6 +383,7 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 		status.text = result.error
 		return
 	var detail: Dictionary = result.data
+	if is_instance_valid(person_page): _remember_credit_page(person_page)
 	_clear_page()
 	shell.set_content_loading(true)
 	var view := DetailsView.new()
@@ -384,10 +394,59 @@ func _details(item: Dictionary, season: Dictionary = {}) -> void:
 	view.play_requested.connect(_start)
 	view.play_from_start_requested.connect(_start.bind(true))
 	view.version_requested.connect(_choose_media_version)
-	view.back_requested.connect(_show_library)
+	view.back_requested.connect(_back_from_title)
+	view.person_requested.connect(_show_person.bind(view))
 	page.add_child(view)
+	if not credit_history.is_empty(): view.back_button.text = "Back to person"
 	status.text = "Ready."
 	shell.finish_content_loading()
+
+func _show_person(person: Dictionary, source: DetailsView) -> void:
+	if source.get_parent() != page or not person.get("Id"): return
+	_remember_credit_page(source)
+	_clear_page()
+	var view := PersonView.new()
+	view.api = api
+	view.person = person
+	view.excluded_title_id = str(source.item.Id)
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.back_requested.connect(_restore_credit_page)
+	view.selected.connect(_details)
+	status.text = ""
+	page.add_child(view)
+	view.field.focus_entered.connect(func(): keyboard.edit.call_deferred(view.field))
+	view.back_button.grab_focus.call_deferred()
+
+func _remember_credit_page(view: Control) -> void:
+	credit_history.append({
+		"view": view,
+		"focus": viewport.gui_get_focus_owner(),
+		"heading": shell.heading.text,
+		"status": status.text,
+	})
+	view.hide()
+	view.reparent(viewport)
+
+func _back_from_title() -> void:
+	if credit_history.is_empty():
+		_show_library()
+	else:
+		_restore_credit_page()
+
+func _restore_credit_page() -> void:
+	var previous: Dictionary = credit_history.pop_back()
+	_clear_page()
+	var view: Control = previous.view
+	view.reparent(page)
+	view.show()
+	shell.heading.text = previous.heading
+	status.text = previous.status
+	var focus: Control = previous.focus
+	if is_instance_valid(focus) and view.is_ancestor_of(focus): focus.grab_focus.call_deferred()
+
+func _clear_credit_history() -> void:
+	for entry in credit_history: entry.view.queue_free()
+	credit_history.clear()
 
 func _show_photo(item: Dictionary) -> void:
 	page_generation += 1

@@ -17,6 +17,13 @@ func fetch_profile(target: TextureRect) -> void:
 	var url := api.profile_image_url()
 	if not url.is_empty(): _fetch_url(target, url)
 
+func fetch_person(target: TextureRect, person: Dictionary) -> void:
+	if not person.get("Id"): return
+	var image_item := person.duplicate()
+	if person.get("PrimaryImageTag"):
+		image_item["ImageTags"] = {"Primary": person.PrimaryImageTag}
+	fetch(target, image_item)
+
 func _fetch_url(target: TextureRect, url: String) -> void:
 	if cache.has(url):
 		target.texture = cache[url]

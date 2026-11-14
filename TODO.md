@@ -24,11 +24,10 @@ Implementation does not mean a feature has been tested on every headset.
 ## Libraries and discovery
 
 - [ ] Filter by watched status, genre, year, or other metadata.
-- [x] Add, remove, and browse favourites.
 - [ ] Browse collections.
-- [ ] Browse, create, and play playlists or a user-managed playback queue.
 - [ ] Show recommendations and similar titles.
-- [ ] Open actor or crew pages and browse their other titles.
+- [x] Open actor or crew pages and browse their other titles.
+- [x] Add, remove, and browse favourites.
 - [x] Browse movies, series, and video items with posters and backdrops.
 - [x] Select individual server libraries from the sidebar.
 - [x] Show recently added titles on Home.
@@ -40,6 +39,7 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Browse series by season and episode.
 - [x] Display watched indicators and saved playback progress supplied by Jellyfin.
 - [X] Show a Next up row for series. Automatic playback of the next episode already exists.
+- <del>[ ] Browse, create, and play playlists or a user-managed playback queue.</del>
 
 ## Title details and watch history
 

@@ -39,6 +39,10 @@ Movies and series show an **Extras** section when Jellyfin has bonus videos or l
 
 In VR, point your controller at a button and squeeze the trigger to select it. Point at a text box to open the keyboard. Use the thumbstick to scroll through a list.
 
+## Cast and crew
+
+Select a person under **Cast & crew** on a title's details page. Their page shows other movies, series, and videos credited to them in your Jellyfin libraries.
+
 ## View photos
 
 Select a photo in your library to open it. A "Loading photo..." indicator appears while the image loads. Use the previous and next controls to browse photos; the same indicator appears while another photo is loading. If loading fails, the app returns to the library with an error message so you can try again.

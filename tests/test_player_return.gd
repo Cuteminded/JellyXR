@@ -14,9 +14,13 @@ class FixtureApi extends JellyfinClient:
 	signal release_library
 	signal release_resume
 	var seasons_list := [{"Id": "season-one", "Name": "Season 1", "IndexNumber": 1}, {"Id": "season-two", "Name": "Season 2", "IndexNumber": 2}]
+	var credits_query := ""
 
-	func request(_path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
+	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
 		await get_tree().process_frame
+		if "PersonIds=" in path:
+			credits_query = path
+			return {"ok": true, "data": {"Items": [{"Id": "credited", "Name": "Another movie", "Type": "Movie"}], "TotalRecordCount": 1}}
 		return {"ok": true, "data": {"Items": [], "TotalRecordCount": 0}}
 
 	func details(id: String) -> Dictionary:
@@ -502,8 +506,31 @@ func run_checks() -> void:
 	session.release_stop.emit()
 	await settle()
 	check(app.page.get_child(0) == library_after_stop, "A delayed Stop report cannot replace a page opened by the user")
+	await check_credits(app, api)
 	app.playing = false
 	app.queue_free()
 	await process_frame
 	print("Player return checks: ", "PASS" if failures == 0 else str(failures) + " failures")
 	quit(1 if failures else 0)
+
+func check_credits(app: Node, api: FixtureApi) -> void:
+	await app._details({"Id": "movie"})
+	var original: DetailsView = app.page.get_child(0)
+	original.person_requested.emit({"Id": "person", "Name": "Example person", "Type": "Director"})
+	await settle()
+	var credits: LibraryView = app.page.get_child(0)
+	check("PersonIds=person" in api.credits_query and "ExcludeItemIds=movie" in api.credits_query, "Credits are scoped to the person and exclude the originating title")
+	credits.field.text = "Another movie"
+	credits.field.text_submitted.emit(credits.field.text)
+	await settle()
+	check("SearchTerm=Another%20movie" in api.credits_query, "Credits can be searched without leaving the person page")
+	credits.grid.get_child(0).pressed.emit()
+	await settle()
+	var credited: DetailsView = app.page.get_child(0)
+	check(credited.item.Id == "credited" and credited.back_button.text == "Back to person", "A credited title opens its normal details")
+	credited.back_button.pressed.emit()
+	await settle()
+	check(app.page.get_child(0) == credits and credits.field.text == "Another movie", "Back restores the person page and search")
+	credits.back_requested.emit()
+	await settle()
+	check(app.page.get_child(0) == original and app.credit_history.is_empty(), "Back from the person restores the originating details")

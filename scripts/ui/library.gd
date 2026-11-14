@@ -9,11 +9,13 @@ var api: JellyfinClient
 var library_id := ""
 var library_name := "Home"
 var favourites_only := false
+var show_hero := true
 var folder_mode := false
 var folder_path: Array = []
 var folder_navigation: HBoxContainer
 var up_button: Button
 var path_label: Label
+var search_row: HBoxContainer
 var field: LineEdit
 var content: VBoxContainer
 var artwork: ArtworkLoader
@@ -46,12 +48,13 @@ func _ready() -> void:
 		path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		path_label.clip_text = true
 		path_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var tools := HBoxContainer.new()
-	add_child(tools)
-	field = Widgets.input("Search " + library_name, tools)
+	if search_row == null:
+		search_row = HBoxContainer.new()
+		add_child(search_row)
+	field = Widgets.input("Search " + library_name, search_row)
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.text_submitted.connect(refresh)
-	Widgets.button("Search", func(): refresh(field.text), tools)
+	Widgets.button("Search", func(): refresh(field.text), search_row)
 	scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -157,7 +160,7 @@ func _more(current: int) -> void:
 		return
 	var items: Array = result.data.get("Items", [])
 	if offset == 0:
-		if not favourites_only and not folder_mode and search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
+		if show_hero and not favourites_only and not folder_mode and search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
 			var hero := LibraryHero.new()
 			hero.item = _choose_hero(items.filter(func(item: Dictionary): return item.get("Type", "") != "Photo"))
 			hero.artwork = artwork
@@ -165,7 +168,8 @@ func _more(current: int) -> void:
 			content.add_child(hero)
 			content.move_child(hero, 0)
 		var title := "Recently Added" if library_id.is_empty() else folder_name()
-		Widgets.label(title if search.is_empty() else "Search results", content, 28)
+		if not search.is_empty(): title = "Search results"
+		if not title.is_empty(): Widgets.label(title, content, 28)
 	_cards(items)
 	if offset == 0 and restore_scroll < 0: loading_changed.emit(false)
 	offset += items.size()

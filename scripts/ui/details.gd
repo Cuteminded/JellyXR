@@ -5,6 +5,7 @@ signal play_requested(item: Dictionary)
 signal play_from_start_requested(item: Dictionary)
 signal version_requested(item: Dictionary)
 signal back_requested
+signal person_requested(person: Dictionary)
 
 var item: Dictionary
 var api: JellyfinClient
@@ -306,6 +307,7 @@ func _build_people() -> void:
 	cast_carousel = CastCarousel.new()
 	cast_carousel.people = people
 	cast_carousel.artwork = artwork
+	cast_carousel.person_selected.connect(person_requested.emit)
 	body.add_child(cast_carousel)
 
 func _image(parent: Node) -> TextureRect:
