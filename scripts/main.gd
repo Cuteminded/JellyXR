@@ -766,6 +766,8 @@ func _update_timeline() -> void:
 	var position_ms := int(transcode_offset / 10000) + video.position_ms()
 	var duration_ms := _duration_ms()
 	var ready := decoder_ready and not seeking
+	player_overlay.hardware_decoding_notice.visible = ready \
+		and video.active_decode_support() == VideoBackend.DecodeSupport.UNSUPPORTED
 	var buffered := video.buffered_position_ms() if decoder_ready and not seeking else -1
 	player_overlay.update_time(position_ms, duration_ms, ready, video.paused)
 	player_overlay.timeline.update_buffer(buffered + int(transcode_offset / 10000) if buffered >= 0 else -1, duration_ms, ready)

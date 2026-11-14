@@ -21,6 +21,7 @@ var photo_mode := false
 var previous_photo: Button
 var next_photo: Button
 var episode_label: Label
+var hardware_decoding_notice: Label
 var bar: PanelContainer
 var quick_access: PlayerQuickAccess
 var submenu_buttons: Dictionary = {}
@@ -55,10 +56,25 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
 	panel.add_child(body)
-	episode_label = Widgets.label("", body, 16)
+	var metadata_row := HBoxContainer.new()
+	metadata_row.alignment = BoxContainer.ALIGNMENT_END
+	metadata_row.add_theme_constant_override("separation", 16)
+	body.add_child(metadata_row)
+	episode_label = Widgets.label("", metadata_row, 16)
 	episode_label.clip_text = true
+	episode_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	episode_label.add_theme_color_override("font_color", Color("a4aec0"))
 	episode_label.hide()
+	hardware_decoding_notice = Widgets.label("Hardware decoding unavailable", metadata_row, 16)
+	hardware_decoding_notice.size_flags_horizontal = Control.SIZE_SHRINK_END
+	hardware_decoding_notice.add_theme_color_override("font_color", Color("a4aec0"))
+	hardware_decoding_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hardware_decoding_notice.hide()
+	metadata_row.hide()
+	episode_label.visibility_changed.connect(func():
+		metadata_row.visible = episode_label.visible or hardware_decoding_notice.visible)
+	hardware_decoding_notice.visibility_changed.connect(func():
+		metadata_row.visible = episode_label.visible or hardware_decoding_notice.visible)
 	title = Widgets.label("Now playing", body, 36)
 	title.clip_text = true
 	timeline = PlaybackTimeline.new()
@@ -180,6 +196,7 @@ func _add_control(label: String, action_name: String, icon_name: String, parent:
 
 func set_photo_mode(enabled: bool) -> void:
 	photo_mode = enabled
+	if enabled: hardware_decoding_notice.hide()
 	set_statistics_visible(false)
 	previous_photo.visible = enabled
 	next_photo.visible = enabled
