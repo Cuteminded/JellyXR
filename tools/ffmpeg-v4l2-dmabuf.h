@@ -18,7 +18,8 @@ static void jellyxr_free_capture(void *opaque, uint8_t *data)
 static void jellyxr_export_capture(AVFrame *frame, V4L2Buffer *buffer)
 {
     const char *copy = getenv("JELLYXR_V4L2_GPU_COPY");
-    if ((copy && !strcmp(copy, "0")) || logger(buffer)->codec_id != AV_CODEC_ID_H264 ||
+    const enum AVCodecID codec = logger(buffer)->codec_id;
+    if ((copy && !strcmp(copy, "0")) || (codec != AV_CODEC_ID_H264 && codec != AV_CODEC_ID_HEVC) ||
         frame->opaque_ref || buffer->context->jellyxr_capture_export_failed)
         return;
     const struct v4l2_format *fmt = &buffer->context->format;

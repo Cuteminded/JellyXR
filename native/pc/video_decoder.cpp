@@ -164,6 +164,8 @@ int VideoDecoder::read_geometry() {
     source_width = codec->width;
     source_height = codec->height;
     auto *stream = input->streams[stream_index];
+    const auto *pixel = av_pix_fmt_desc_get(static_cast<AVPixelFormat>(stream->codecpar->format));
+    source_bit_depth = pixel && pixel->nb_components ? pixel->comp[0].depth : stream->codecpar->bits_per_raw_sample;
 #if LIBAVFORMAT_VERSION_MAJOR >= 61
     const AVPacketSideData *display = av_packet_side_data_get(stream->codecpar->coded_side_data,
         stream->codecpar->nb_coded_side_data, AV_PKT_DATA_DISPLAYMATRIX);
@@ -192,6 +194,7 @@ int VideoDecoder::read_geometry() {
 int VideoDecoder::start(const std::string &url, const std::string &authorization, int64_t start_ms) {
     stop();
     stopping = false;
+    source_bit_depth = 0;
     decode_error = 0;
     hardware_active = false;
 #ifdef __linux__

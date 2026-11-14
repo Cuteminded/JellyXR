@@ -45,7 +45,7 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
     output.v4l2_copy_frame.reset();
     if (v4l2_active) {
         hardware_active = true;
-        if (v4l2_copy_enabled && codec->codec_id == AV_CODEC_ID_H264 &&
+        if (v4l2_copy_enabled && (codec->codec_id == AV_CODEC_ID_H264 || codec->codec_id == AV_CODEC_ID_HEVC) &&
                 frame->opaque_ref && frame->opaque_ref->size == sizeof(JellyXRV4L2DmaBuf) &&
                 AV_RN64(frame->opaque_ref->data) == JELLYXR_V4L2_DMABUF_SIGNATURE) {
             auto source = std::shared_ptr<AVFrame>(av_frame_clone(frame),
@@ -147,6 +147,7 @@ bool VideoDecoder::publish(AVFrame *frame, uint64_t frame_generation) {
 godot::Dictionary VideoDecoder::diagnostics() const {
     godot::Dictionary values;
     values["codec"] = godot::String(codec_name.c_str());
+    values["source_bit_depth"] = source_bit_depth;
     values["hardware_device"] = hardware_active ? godot::String(hardware_device.c_str()) : godot::String("none");
 #ifdef _WIN32
     if (hardware_active && windows_device_type == 12) values["hardware_device"] = "d3d12va";

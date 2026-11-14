@@ -124,6 +124,7 @@ private:
     int hardware_format = -1;
     bool hardware_attempted = false;
     int source_width = 0;
+    int source_bit_depth = 0;
     int source_height = 0;
     int rotation = 0;
     bool audio = false;
