@@ -30,7 +30,7 @@ Windows and Linux AppImages use shared LGPL builds of FFmpeg and libmpv. jellyXR
 - Windows uses FFmpeg 8.1.3, revision `a35157abb9`, from [BtbN's LGPL shared build](https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-11-05-12-48). Its license is LGPL version 3.
 - Windows libmpv uses revision `cf764c61d195f64528df21887298bb616d49b426`, from [upstream build 40835379230](https://github.com/mpv-player/mpv/actions/runs/40835379230). It also contains FFmpeg revision `31ba826` and other statically linked dependencies.
 - Linux AppImages build FFmpeg 8.1.3 and libmpv 0.41.0 from pinned sources, with GPL and nonfree features disabled. They bundle the playback libraries, supporting libraries, and notices. The system-libraries archive uses the installed distribution libraries instead. Graphics drivers, VAAPI, OpenXR, and the C++ runtime come from the host.
-- The Linux playback dependency build adds the optional H.264 V4L2 DMA-BUF export to FFmpeg. The integration is in `tools/build-linux-playback-dependencies.sh` and `tools/ffmpeg-v4l2-dmabuf.h`, with the shared descriptor in `native/pc/v4l2_dmabuf.h`.
+- The Linux playback dependency build adds V4L2 DMA-BUF export for H.264 and HEVC Main to FFmpeg. The integration is in `tools/build-linux-playback-dependencies.sh` and `tools/ffmpeg-v4l2-dmabuf.h`, with the shared descriptor in `native/pc/v4l2_dmabuf.h`.
 - The PC plugin uses MIT-licensed [godot-cpp godot-4.5-stable](https://github.com/godotengine/godot-cpp/tree/godot-4.5-stable).
 
 The build scripts verify source or binary archive checksums and check the loaded library configurations. Android uses Media3 with the platform media decoders.
