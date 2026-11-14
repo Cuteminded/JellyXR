@@ -76,8 +76,9 @@ TreeSet<String> types = new TreeSet<>();
             return CodecProfileLevel.AVCProfileBaseline; case "main" : return CodecProfileLevel.AVCProfileMain;
             case "high" : return CodecProfileLevel.AVCProfileHigh; default: return 0; } } if (codec.equals("hevc")) { if
             (profile.equals("main") && depth==8) return CodecProfileLevel.HEVCProfileMain; if (profile.equals("main 10")
-            && depth==10) return CodecProfileLevel.HEVCProfileMain10; } if (codec.equals("vp9")) { if
-            (profile.equals("profile 0") && depth==8) return CodecProfileLevel.VP9Profile0; if (profile.equals("profile
-            2") && depth==10) return CodecProfileLevel.VP9Profile2; } if (codec.equals("av1") && profile.equals("main"))
+            && depth==10) return CodecProfileLevel.HEVCProfileMain10; } if (codec.equals("vp9")) {
+            if (profile.equals("profile 0") && depth == 8) return CodecProfileLevel.VP9Profile0;
+            if (profile.equals("profile 2") && depth == 10) return CodecProfileLevel.VP9Profile2;
+            } if (codec.equals("av1") && profile.equals("main"))
             { if (depth==8) return CodecProfileLevel.AV1ProfileMain8; if (depth==10) return
             CodecProfileLevel.AV1ProfileMain10; } return 0; } }
