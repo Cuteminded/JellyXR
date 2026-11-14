@@ -15,8 +15,13 @@ func _ready() -> void:
 	bridge.connect("prepared", func(): prepared.emit())
 	bridge.connect("completed", func(): ended.emit())
 	bridge.connect("failed", func(message: String): failed.emit(message))
-	bridge.connect("video_size", func(w: int, h: int): size_changed.emit(w, h))
+	bridge.connect("video_size", _update_video_size)
 	texture = ExternalTexture.new()
+
+func _update_video_size(width: int, height: int) -> void:
+	if material != null:
+		material.set_shader_parameter("video_frame_size", Vector2(width, height))
+	size_changed.emit(width, height)
 
 func available() -> bool:
 	return bridge != null
@@ -104,7 +109,9 @@ func open(url: String, authorization: String, start_ms: int) -> void:
 func _clear_frame() -> void:
 	stream_open = false
 	frame_visible = false
-	if material != null: material.set_shader_parameter("video_ready", false)
+	if material != null:
+		material.set_shader_parameter("video_ready", false)
+		material.set_shader_parameter("video_frame_size", Vector2.ZERO)
 
 func toggle_pause() -> void:
 	if available():
