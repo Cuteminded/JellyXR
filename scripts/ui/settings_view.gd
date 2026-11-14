@@ -170,6 +170,7 @@ func _build_controller_rebinding(parent: VBoxContainer) -> void:
 	parent.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	controller_controls = ControllerSettings.new()
 	controller_controls.bindings = settings.controller_bindings
+	controller_controls.controller_profiles = settings.controller_profiles
 	controller_controls.changed.connect(_save_controller_bindings)
 	parent.add_child(controller_controls)
 
@@ -270,9 +271,8 @@ func _refresh_decoder_summary(summary: String) -> void:
 	decoder_codecs.visible = decoder_codecs.get_child_count() > 0
 
 func _controller_name(tracker_name: StringName) -> String:
-	var tracker := XRServer.get_tracker(tracker_name) as XRPositionalTracker
-	if tracker == null: return "N/A"
-	var profile := tracker.get_tracker_profile().strip_edges()
+	var profile := ControllerBindings.active_profile(tracker_name)
+	if ControllerBindings.PROFILES.has(profile): return ControllerBindings.PROFILES[profile]["name"]
 	if profile.is_empty() or profile in ["none", "/interaction_profiles/none"]: return "N/A"
 	return profile.trim_prefix("/interaction_profiles/").replace("/", " ").capitalize()
 

@@ -8,12 +8,22 @@ script = ExtResource("1")
 texture = ExtResource("2")
 canvas_size = Vector2(1024, 1536)
 mirror_right = false
-hotspot_diameter = 16.0
+hotspot_diameter = 12.0
 button_positions = {
+"dpad_up": Vector2(336, 425),
+"dpad_down": Vector2(337, 615),
+"dpad_left": Vector2(236, 522),
+"dpad_right": Vector2(434, 522),
+"view_button": Vector2(508, 383),
 "primary_click": Vector2(653, 584),
 "grip_click": Vector2(689, 942)
 }
 button_labels = {
+"dpad_up": "D-pad up",
+"dpad_down": "D-pad down",
+"dpad_left": "D-pad left",
+"dpad_right": "D-pad right",
+"view_button": "View button",
 "primary_click": "Thumbstick click",
 "grip_click": "Grip"
 }

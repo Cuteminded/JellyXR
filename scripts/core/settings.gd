@@ -37,11 +37,18 @@ var subtitle_size := 48
 var subtitle_color := "White"
 var subtitle_height := 0.18
 var controller_bindings := ControllerBindings.new()
+var controller_profiles: Dictionary[String, ControllerBindings] = {}
+
+func _init() -> void:
+	for profile in ControllerBindings.PROFILES:
+		controller_profiles[profile] = ControllerBindings.new(profile)
 
 func load_settings(path: String = PATH) -> void:
 	var config := ConfigFile.new()
 	config.load(path)
 	controller_bindings.load_config(config)
+	for bindings in controller_profiles.values():
+		bindings.load_config(config)
 	width = clampf(config.get_value("screen", "width", width), 1.5, 7.0)
 	distance = clampf(config.get_value("screen", "distance", distance), 1.5, 8.0)
 	if config.has_section_key("screen", "height"):
@@ -89,6 +96,8 @@ func reset_screen() -> void:
 func save(path: String = PATH) -> Error:
 	var config := ConfigFile.new()
 	controller_bindings.save_config(config)
+	for bindings in controller_profiles.values():
+		bindings.save_config(config)
 	for key in SCREEN_KEYS:
 		config.set_value("screen", key, get(key))
 	config.set_value("screen", "height_origin", SCREEN_HEIGHT_ORIGIN)

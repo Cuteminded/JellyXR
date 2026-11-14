@@ -128,6 +128,13 @@ godot --path . --rendering-method gl_compatibility
 
 For VR, connect your headset and start its OpenXR runtime before launching. See [installation](INSTALLATION.md) for runtime setup and [usage](USAGE.md) for controls.
 
+## Add an OpenXR controller profile
+
+1. In Godot's OpenXR Action Map editor, add the controller's interaction profile. Bind its aim and grip poses, trigger value and thumbstick so pointer selection and scrolling work. Reuse existing actions where they fit and give any separately remappable buttons their own actions.
+2. Add a `ControllerDiagramModel` for each hand under `assets/controllers`. Use the OpenXR action names as the keys for button positions and labels.
+3. Register the profile path in `scripts/core/controller_bindings.gd` with a display name, a unique config section, both diagrams, the remappable `hand/action` keys, and any default shortcuts. JellyXR selects the profile for each hand from the active OpenXR tracker.
+4. On the headset, check Settings → Info for the profile name, then verify pointer navigation and the shortcuts in Settings → Controls.
+
 ## Run the core and HTTP tests
 
 Build the native plugin and import the project before running tests:

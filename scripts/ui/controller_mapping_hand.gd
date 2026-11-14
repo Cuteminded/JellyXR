@@ -17,8 +17,9 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(350, 360)
 	for action in model.button_positions:
 		var key: String = hand + "/" + action
-		if not ControllerBindings.BUTTONS.has(key): continue
+		if not bindings.buttons().has(key): continue
 		_build_button(key, model.button_labels.get(action, action))
+	custom_minimum_size.y = maxf(custom_minimum_size.y, binding_buttons.size() * 70.0)
 	resized.connect(_layout)
 	_layout()
 	refresh()

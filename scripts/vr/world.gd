@@ -106,7 +106,9 @@ func setup() -> void:
 		viewport.reparent(container)
 
 func _controller_button_pressed(action: String, hand: StringName) -> void:
-	match settings.controller_bindings.action_for(str(hand) + "/" + action):
+	var profile := ControllerBindings.active_profile(hand)
+	var bindings: ControllerBindings = settings.controller_profiles.get(profile, settings.controller_bindings)
+	match bindings.action_for(str(hand) + "/" + action):
 		"menu": menu_requested.emit()
 		"settings": settings_requested.emit()
 		"library": library_requested.emit()

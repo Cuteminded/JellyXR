@@ -31,6 +31,8 @@ func run_checks() -> void:
 	bindings.assign("left_hand/by_button", "pause")
 	bindings.assign("right_hand/by_button", "none")
 	bindings.assign("right_hand/grip_click", "recenter")
+	settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].assign("right_hand/grip_click", "pause")
+	settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].assign("left_hand/dpad_up", "library")
 	var path := "user://controller-bindings-test.cfg"
 	settings.device_id = "controller-test-device"
 	check(settings.save(path) == OK)
@@ -39,6 +41,8 @@ func run_checks() -> void:
 	check(restored.controller_bindings.action_for("left_hand/by_button") == "pause", "Remapping survives a restart")
 	check(restored.controller_bindings.action_for("right_hand/by_button") == "none", "Disabled shortcuts survive a restart")
 	check(restored.controller_bindings.action_for("right_hand/grip_click") == "recenter")
+	check(restored.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("right_hand/grip_click") == "pause", "Steam Frame shortcuts are saved separately")
+	check(restored.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("left_hand/dpad_up") == "library")
 	check(JellyXRSettings.new().controller_bindings.action_for("left_hand/by_button") == "settings", "Settings instances do not share overrides")
 	var config := ConfigFile.new()
 	check(config.load(path) == OK)
@@ -72,6 +76,13 @@ func run_checks() -> void:
 	check(received.is_empty(), "Disabled, reserved, select and touch inputs do not run shortcuts")
 	world._controller_button_pressed("menu_button", &"right_hand")
 	check(received == ["menu"], "The right Menu button keeps opening playback controls")
+	var frame_tracker := steam_frame_tracker(&"left_hand")
+	received.clear()
+	world._controller_button_pressed("dpad_up", &"left_hand")
+	world._controller_button_pressed("dpad_down", &"left_hand")
+	world._controller_button_pressed("by_button", &"left_hand")
+	check(received == ["library", "menu"], "The native profile dispatches independent D-pad shortcuts")
+	XRServer.remove_tracker(frame_tracker)
 	bindings.overrides.clear()
 	check(settings.save(path) == OK)
 	restored.load_settings(path)
@@ -129,6 +140,7 @@ func run_checks() -> void:
 	app.queue_free()
 	await process_frame
 	await check_diagram_models()
+	await check_steam_frame_models()
 	print("Controller binding checks: ", "PASS" if failures == 0 else "FAIL")
 	quit(0 if failures == 0 else 1)
 
@@ -167,5 +179,47 @@ func check_diagram_models() -> void:
 		for other_key in left.hotspots:
 			if key == other_key: continue
 			check(not target.get_rect().intersects(left.hotspots[other_key].get_rect()), "Generic diagram targets do not overlap")
+	controls.queue_free()
+	await process_frame
+
+func steam_frame_tracker(hand: StringName) -> XRPositionalTracker:
+	var tracker := XRPositionalTracker.new()
+	tracker.name = hand
+	tracker.type = XRServer.TRACKER_CONTROLLER
+	tracker.profile = ControllerBindings.STEAM_FRAME_PROFILE
+	XRServer.add_tracker(tracker)
+	return tracker
+
+func check_steam_frame_models() -> void:
+	var settings := JellyXRSettings.new()
+	var controls := ControllerSettings.new()
+	controls.bindings = settings.controller_bindings
+	controls.controller_profiles = settings.controller_profiles
+	controls.size = Vector2(1000, 900)
+	root.add_child(controls)
+	var left := steam_frame_tracker(&"left_hand")
+	var right := steam_frame_tracker(&"right_hand")
+	await process_frame
+	await process_frame
+	check(controls.hand_views[0].model == preload("res://assets/controllers/steam_frame_left.tres"))
+	check(controls.hand_views[1].model == preload("res://assets/controllers/steam_frame_right.tres"))
+	check(controls.binding_buttons.size() == ControllerBindings.STEAM_FRAME_BUTTONS.size())
+	for view in controls.hand_views:
+		for key in view.hotspots:
+			var target: Button = view.hotspots[key]
+			check(Rect2(Vector2.ZERO, view.size).encloses(target.get_rect()), "Steam Frame hotspots fit their diagram")
+			for other_key in view.hotspots:
+				if key == other_key: continue
+				check(not target.get_rect().intersects(view.hotspots[other_key].get_rect()), "Steam Frame hotspots do not overlap")
+	controls.binding_buttons["right_hand/x_button"].pressed.emit()
+	controls.action_buttons["pause"].pressed.emit()
+	controls.apply_button.pressed.emit()
+	check(settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("right_hand/x_button") == "pause")
+	check(settings.controller_bindings.overrides.is_empty())
+	XRServer.remove_tracker(left)
+	XRServer.remove_tracker(right)
+	await process_frame
+	await process_frame
+	check(controls.binding_buttons.has("left_hand/by_button"), "The generic controls return when the native profile disconnects")
 	controls.queue_free()
 	await process_frame

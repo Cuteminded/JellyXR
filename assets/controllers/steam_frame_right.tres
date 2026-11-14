@@ -13,11 +13,15 @@ button_positions = {
 "primary_click": Vector2(358, 580),
 "by_button": Vector2(791, 501),
 "ax_button": Vector2(692, 600),
+"x_button": Vector2(596, 500),
+"y_button": Vector2(694, 403),
 "grip_click": Vector2(319, 937)
 }
 button_labels = {
 "primary_click": "Thumbstick click",
 "by_button": "B button",
 "ax_button": "A button",
+"x_button": "X button",
+"y_button": "Y button",
 "grip_click": "Grip"
 }
