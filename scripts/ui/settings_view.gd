@@ -5,11 +5,15 @@ signal screen_changed
 signal screen_follow_changed
 signal environment_changed
 signal status(message: String)
+signal sign_out
 
 var subtitles: SubtitleTrack
 var subtitle_timing_enabled := false
 var subtitle_controls: SubtitleSettings
 var settings: JellyXRSettings
+var api: JellyfinClient
+var profile_icon: TextureRect
+var profile_artwork: ArtworkLoader
 var projection_mode := VideoProjection.Mode.SCREEN
 var passthrough_supported := false
 var sort_choices: GridContainer
@@ -35,7 +39,8 @@ var decoder_codecs: HFlowContainer
 var last_decoder_summary := ""
 var controller_controls: ControllerSettings
 
-const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles", "Controls", "Info"]
+const SECTION_TITLES := ["Library sorting", "Screen", "Environment", "Playback", "Subtitles", "Controls", "Info", "Account"]
+const ACCOUNT_SECTION := 7
 const SECTION_ICONS := [
 	preload("res://assets/icons/material/video_library.svg"),
 	preload("res://assets/icons/material/tv.svg"),
@@ -43,7 +48,8 @@ const SECTION_ICONS := [
 	preload("res://assets/icons/material/play_arrow.svg"),
 	preload("res://assets/icons/material/subtitles.svg"),
 	preload("res://assets/icons/material/controller.svg"),
-	preload("res://assets/icons/material/info.svg")
+	preload("res://assets/icons/material/info.svg"),
+	preload("res://assets/icons/material/account.svg")
 ]
 
 func _ready() -> void:
@@ -80,6 +86,7 @@ func _ready() -> void:
 	subtitle_controls.refresh()
 	_build_controller_rebinding(sections[5])
 	_build_info(sections[6])
+	_build_account(sections[ACCOUNT_SECTION])
 	resized.connect(_adapt_columns)
 	scroll.resized.connect(_adapt_columns)
 	_adapt_columns()
@@ -108,6 +115,7 @@ func _build_navigation() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_style_control(button)
 		navigation_buttons.append(button)
+	navigation.move_child(navigation_buttons[ACCOUNT_SECTION], 0)
 
 func _show_section(index: int) -> void:
 	for section_index in range(sections.size()):
@@ -116,6 +124,7 @@ func _show_section(index: int) -> void:
 	section_heading.text = SECTION_TITLES[index]
 	scroll.scroll_vertical = 0
 	if index == 6: _refresh_hardware_info()
+	if index == ACCOUNT_SECTION: _load_account_photo()
 
 func _card(parent: VBoxContainer, title: String = "") -> VBoxContainer:
 	var panel := PanelContainer.new()
@@ -179,6 +188,31 @@ func _save_controller_bindings() -> void:
 	controller_controls.show_save_result(result)
 	status.emit("Settings saved." if result == OK else "Could not save settings. Check available storage and try again.")
 
+func _build_account(parent: VBoxContainer) -> void:
+	var card := _card(parent, "Jellyfin account")
+	var profile_row := HBoxContainer.new()
+	profile_row.add_theme_constant_override("separation", 12)
+	card.add_child(profile_row)
+	profile_icon = TextureRect.new()
+	profile_icon.texture = SECTION_ICONS[ACCOUNT_SECTION]
+	profile_icon.custom_minimum_size = Vector2(48, 48)
+	profile_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	profile_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	profile_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	profile_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	profile_row.add_child(profile_icon)
+	var username := api.user_name if api != null and not api.user_name.is_empty() else "Unavailable"
+	_info_detail("Username", username, profile_row)
+	var button := Widgets.button("Sign out", func(): sign_out.emit(), card)
+	_style_control(button)
+
+func _load_account_photo() -> void:
+	if api == null or profile_artwork != null: return
+	profile_artwork = ArtworkLoader.new()
+	profile_artwork.api = api
+	add_child(profile_artwork)
+	profile_artwork.fetch_profile(profile_icon)
+
 func _build_info(parent: VBoxContainer) -> void:
 	var app_card := _card(parent, str(ProjectSettings.get_setting("application/config/name", "jellyXR")))
 	_info_detail("App version", str(ProjectSettings.get_setting("application/config/version", "Unknown")), app_card)
@@ -204,8 +238,9 @@ func _build_info(parent: VBoxContainer) -> void:
 	add_child(refresh)
 	refresh.start()
 
-func _info_detail(title: String, value: String, parent: VBoxContainer) -> Label:
+func _info_detail(title: String, value: String, parent: Container) -> Label:
 	var row := VBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", 4)
 	parent.add_child(row)
 	_hint(title, row)

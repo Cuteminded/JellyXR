@@ -135,7 +135,7 @@ func _setup_ui() -> void:
 	shell.navigate.connect(_open_library)
 	shell.screen_settings.connect(_screen_settings)
 	shell.return_from_settings.connect(_restore_browsing_page)
-	shell.sign_out.connect(_sign_out)
+	shell.exit_requested.connect(_exit_app)
 	keyboard = VRKeyboard.new()
 	viewport.add_child(keyboard)
 	keyboard.hide()
@@ -210,7 +210,11 @@ func _restore_session() -> void:
 	var check := await api.request("/Users/Me")
 	if generation != page_generation: return
 	_set_login_enabled(true)
+	api.user_name = ""
 	if check.ok:
+		if check.data is Dictionary:
+			var name: Variant = check.data.get("Name")
+			if name is String: api.user_name = name
 		_show_library()
 	else:
 		api.token = ""
@@ -646,6 +650,7 @@ func _screen_settings() -> void:
 	var view := SettingsView.new()
 	view.navigation_host = shell.settings_navigation
 	view.settings = settings
+	view.api = api
 	view.video_backend = video
 	view.subtitles = subtitles
 	view.subtitle_timing_enabled = playing and not photo_active
@@ -655,6 +660,7 @@ func _screen_settings() -> void:
 	view.screen_changed.connect(func(): _resize_screen(); _position_screen())
 	view.screen_follow_changed.connect(_update_screen_follow)
 	view.environment_changed.connect(_change_environment)
+	view.sign_out.connect(_sign_out)
 	view.status.connect(func(message: String): status.text = message)
 	page.add_child(view)
 	status.text = "Changes take effect as you make them."
@@ -926,6 +932,12 @@ func _error(message: String) -> void:
 	screen.hide()
 	if get_viewport().use_xr: panel.show()
 
+func _exit_app() -> void:
+	if shell.exit_button.disabled: return
+	shell.exit_button.disabled = true
+	await _stop(false)
+	get_tree().quit()
+
 func _sign_out() -> void:
 	library_generation += 1
 	libraries_loaded = false
@@ -935,6 +947,7 @@ func _sign_out() -> void:
 	if not api.token.is_empty(): await api.request("/Sessions/Logout", HTTPClient.METHOD_POST)
 	api.token = ""
 	api.user_id = ""
+	api.user_name = ""
 	api.random_library_ids.clear()
 	api.random_library_generation.clear()
 	_clear_saved_session()

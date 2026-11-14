@@ -88,6 +88,7 @@ func run_checks() -> void:
 	app.add_child(session)
 	app.api = api
 	api.token = "fixture"
+	api.user_name = "Jellyfin Viewer"
 	app.shell.set_signed_in(true)
 	app.video = video
 	app.session = session
@@ -181,8 +182,16 @@ func run_checks() -> void:
 		app._screen_settings()
 		check(app.shell.home.text == "Library", "Settings label the return button Library")
 		check(app.shell.settings_navigation.visible and not app.shell.libraries.visible, "Settings categories replace the library list")
-		check(app.shell.home.visible and not app.shell.settings_button.visible and not app.shell.logout.visible, "Library is the only regular navigation action shown in settings")
+		check(app.shell.home.visible and not app.shell.settings_button.visible and not app.shell.exit_button.visible, "Library is the only regular navigation action shown in settings")
 		check(app.shell.settings_navigation.get_child_count() == 1, "Reopening settings does not duplicate category buttons")
+		var view := app.page.get_child(0) as SettingsView
+		var first_category := view.navigation.get_child(0) as Button
+		check(first_category.text == "Account", "Account is the first settings category")
+		first_category.pressed.emit()
+		var account_section := view.sections[SettingsView.ACCOUNT_SECTION]
+		check(view.section_heading.text == "Account" and account_section.visible, "Account opens from the settings navigation")
+		var account_labels := account_section.find_children("*", "Label", true, false)
+		check(account_labels.any(func(label: Label): return label.text == "Jellyfin Viewer"), "Account shows the Jellyfin username")
 		app.shell.home.pressed.emit()
 		await settle()
 		check(app.page.get_child(0) == browsing and app.shell.libraries.visible, "Library returns to the same browsing page and restores the libraries")
@@ -190,7 +199,8 @@ func run_checks() -> void:
 		check(browsing.search == "Selected movie" and browsing.field.text == browsing.search and browsing.scroll.scroll_vertical == browsing_scroll, "Returning preserves the search and scroll position")
 		check(app.shell.home.text == "Home", "Normal browsing restores the Home button")
 		check(app.shell.buttons["movies"] == library_button, "Returning Home preserves the loaded library buttons")
-		check(app.shell.settings_navigation.get_child_count() == 0 and app.shell.settings_button.visible and app.shell.logout.visible, "Leaving settings clears categories and restores normal navigation")
+		check(app.shell.settings_navigation.get_child_count() == 0 and app.shell.settings_button.visible and app.shell.exit_button.visible, "Leaving settings clears categories and restores normal navigation")
+		check(app.shell.exit_button.text == "Exit", "Normal navigation offers Exit")
 
 	app.playing = true
 	app._show_playback()

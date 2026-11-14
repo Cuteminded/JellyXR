@@ -3,7 +3,7 @@ extends HBoxContainer
 
 signal navigate(id: String, title: String)
 signal screen_settings
-signal sign_out
+signal exit_requested
 signal return_from_settings
 var page: VBoxContainer
 var status: Label
@@ -12,7 +12,7 @@ var settings_navigation: VBoxContainer
 var navigation_heading: Label
 var home: Button
 var settings_button: Button
-var logout: Button
+var exit_button: Button
 var heading: Label
 var rail: PanelContainer
 var selected_id := ""
@@ -72,8 +72,8 @@ func _ready() -> void:
 	lists.add_child(settings_navigation)
 	settings_button = Widgets.button("Settings", func(): screen_settings.emit(), navigation)
 	_style_navigation_button(settings_button, preload("res://assets/icons/material/settings.svg"))
-	logout = Widgets.button("Sign out", func(): sign_out.emit(), navigation)
-	_style_navigation_button(logout, preload("res://assets/icons/material/logout.svg"))
+	exit_button = Widgets.button("Exit", func(): exit_requested.emit(), navigation)
+	_style_navigation_button(exit_button, preload("res://assets/icons/material/logout.svg"))
 	var main := PanelContainer.new()
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_background = Widgets.surface(Color("101624"), 24, 28)
@@ -117,7 +117,7 @@ func set_signed_in(value: bool) -> void:
 	rail.visible = value
 	home.disabled = not value
 	settings_button.disabled = not value
-	logout.visible = value
+	exit_button.visible = value
 	if not value:
 		heading.text = ""
 		clear_libraries()
@@ -131,7 +131,7 @@ func set_settings_mode(enabled: bool) -> void:
 	settings_navigation.visible = enabled
 	navigation_heading.text = "SETTINGS" if enabled else "LIBRARIES"
 	settings_button.visible = not enabled
-	logout.visible = signed_in and not enabled
+	exit_button.visible = signed_in and not enabled
 	if not enabled:
 		for child in settings_navigation.get_children():
 			settings_navigation.remove_child(child)

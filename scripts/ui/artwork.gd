@@ -11,7 +11,13 @@ func fetch(target: TextureRect, item: Dictionary, backdrop: bool = false) -> voi
 	var tags: Dictionary = item.get("ImageTags", {}) if item.get("ImageTags") else {}
 	if not backdrop and not tags.has("Primary"): return
 	if backdrop and not item.get("BackdropImageTags"): return
-	var url := api.image_url(item, backdrop)
+	_fetch_url(target, api.image_url(item, backdrop))
+
+func fetch_profile(target: TextureRect) -> void:
+	var url := api.profile_image_url()
+	if not url.is_empty(): _fetch_url(target, url)
+
+func _fetch_url(target: TextureRect, url: String) -> void:
 	if cache.has(url):
 		target.texture = cache[url]
 		return

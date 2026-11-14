@@ -4,6 +4,7 @@ var server := TCPServer.new()
 var peer: StreamPeerTCP
 var incoming := ""
 var payload := "{}"
+var image_payload := PackedByteArray()
 var code := 200
 var last_request := ""
 var queued_payloads: Array[String] = []
@@ -33,8 +34,10 @@ func _process(_delta: float) -> bool:
 	if incoming.substr(end + 4).to_utf8_buffer().size() < content_length: return false
 	last_request = incoming
 	if not queued_payloads.is_empty(): payload = queued_payloads.pop_front()
-	var response := "HTTP/1.1 %d Test\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s" % [code, payload.to_utf8_buffer().size(), payload]
-	peer.put_data(response.to_utf8_buffer())
+	var body := payload.to_utf8_buffer() if image_payload.is_empty() else image_payload
+	var content_type := "application/json" if image_payload.is_empty() else "image/png"
+	var response := "HTTP/1.1 %d Test\r\nContent-Type: %s\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % [code, content_type, body.size()]
+	peer.put_data(response.to_utf8_buffer() + body)
 	peer.disconnect_from_host()
 	peer = null
 	return false
@@ -50,6 +53,24 @@ func run_checks() -> void:
 	check(last_request.begins_with("POST /jellyfin/Users/AuthenticateByName "), "Login preserves the server base path")
 	var body: Dictionary = JSON.parse_string(last_request.split("\r\n\r\n", true, 1)[1])
 	check(body.Username == 'a"b' and body.Pw == "test-only-password", "Credentials are JSON encoded")
+	var artwork := ArtworkLoader.new()
+	artwork.api = api
+	root.add_child(artwork)
+	var avatar := TextureRect.new()
+	root.add_child(avatar)
+	var photo := Image.create_empty(8, 8, false, Image.FORMAT_RGBA8)
+	photo.fill(Color.CORNFLOWER_BLUE)
+	image_payload = photo.save_png_to_buffer()
+	artwork.fetch_profile(avatar)
+	var deadline := Time.get_ticks_msec() + 2000
+	while artwork.active > 0 and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(last_request.begins_with("GET /jellyfin/Users/fixture-user/Images/Primary?"), "The profile photo request targets the signed-in user")
+	check('Token="fixture-token"' in last_request, "The profile photo request is authenticated")
+	check(avatar.texture != null and avatar.texture.get_width() == 8, "The profile photo loads as a texture")
+	image_payload.clear()
+	artwork.queue_free()
+	avatar.queue_free()
 	payload = '{"Items":[],"TotalRecordCount":0}'
 	queued_payloads = [payload, '{"Items":[{"Id":"first","SeasonId":"season-one","UserData":{"Played":true}}]}']
 	result = await api.series_playback("finished show")

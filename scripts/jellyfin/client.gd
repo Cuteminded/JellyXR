@@ -6,6 +6,7 @@ const HeadsetName = preload("res://scripts/vr/headset_name.gd")
 var server := ""
 var token := ""
 var user_id := ""
+var user_name := ""
 var device_id := ""
 var library_sort_by := "SortName"
 var library_sort_order := "Ascending"
@@ -71,9 +72,13 @@ func accept_login(result: Dictionary) -> Dictionary:
 	if result.ok:
 		var data: Dictionary = result.data
 		token = data.get("AccessToken", "")
-		user_id = data.get("User", {}).get("Id", "")
+		var user: Dictionary = data.get("User", {})
+		user_id = user.get("Id", "")
+		user_name = ""
 		if token.is_empty() or user_id.is_empty():
 			return {"ok": false, "error": "The server returned an incomplete sign-in response."}
+		var name: Variant = user.get("Name")
+		if name is String: user_name = name
 	return result
 
 func query(values: Dictionary) -> String:
@@ -228,6 +233,10 @@ func image_url(item: Dictionary, backdrop: bool = false) -> String:
 	var primary: Dictionary = item.get("ImageTags", {}) if item.get("ImageTags") else {}
 	var tag: String = str(tags[0]) if backdrop and not tags.is_empty() else str(primary.get("Primary", ""))
 	return server + "/Items/%s/Images/%s" % [str(item.Id).uri_encode(), kind] + query({"maxWidth": 1280 if backdrop else 360, "quality": 85, "tag": tag})
+
+func profile_image_url() -> String:
+	if server.is_empty() or user_id.is_empty() or token.is_empty(): return ""
+	return server + "/Users/%s/Images/Primary" % user_id.uri_encode() + query({"maxWidth": 192, "maxHeight": 192, "format": "png"})
 
 func stream_url(path: String) -> String:
 	if path.is_empty() or path.begins_with("//") or "://" in path or "\\" in path or ".." in path.split("?")[0]:

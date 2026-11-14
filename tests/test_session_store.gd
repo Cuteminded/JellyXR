@@ -4,7 +4,7 @@ class FixtureSettings extends JellyXRSettings:
 	func save(_path: String = PATH) -> Error: return OK
 
 class FixtureApi extends JellyfinClient:
-	var response := {"ok": true, "data": {"Id": "test-user"}}
+	var response := {"ok": true, "data": {"Id": "test-user", "Name": "Saved Viewer"}}
 	var requests: Array[String] = []
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
 		requests.append(path)
@@ -66,6 +66,7 @@ func run_checks() -> void:
 	app.set_process(false)
 	await app._restore_session()
 	check(app.library_shown and api.token == data.token and api.requests == ["/Users/Me"], "Startup validates and restores the saved login.")
+	check(api.user_name == "Saved Viewer", "Session restore reads the Jellyfin username.")
 	app.library_shown = false
 	api.response = {"ok": false, "error": "Offline"}
 	await app._restore_session()
@@ -80,13 +81,14 @@ func run_checks() -> void:
 	check(api.requests.is_empty() and api.token.is_empty(), "Tokens are not restored for a different server.")
 	app.settings.server = data.server
 	api.server = data.server
-	api.token = data.token
-	api.user_id = data.user_id
+	api.accept_login({"ok": true, "data": {"AccessToken": data.token, "User": {"Id": data.user_id, "Name": "New Viewer"}}})
+	check(api.user_name == "New Viewer", "Sign-in reads the Jellyfin username.")
 	store.clear_session()
 	app._signed_in()
 	check(store.load_session() == data, "Successful sign-in saves the PC session.")
 	await app._sign_out()
 	check(store.load_session().is_empty() and api.token.is_empty() and app.login_shown, "Sign-out removes the local session and returns to login.")
+	check(api.user_name.is_empty(), "Sign-out clears the Jellyfin username.")
 	check(store.clear_session() == OK, "Clearing an absent session succeeds.")
 	app.queue_free()
 	await process_frame
