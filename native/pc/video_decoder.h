@@ -69,6 +69,7 @@ public:
     int error() const { return decode_error; }
     bool has_audio() const { return audio; }
     bool uses_hardware_decoding() const { return hardware_active.load(); }
+    bool hardware_open_rejected() const { return v4l2_open_rejected; }
     int width() const { return source_width; }
     int height() const { return source_height; }
     int64_t duration_ms() const { return duration; }
@@ -129,6 +130,7 @@ private:
     int rotation = 0;
     bool audio = false;
     std::string codec_name;
+    bool v4l2_open_rejected = false;
     std::string hardware_device;
     std::string vaapi_device;
 #ifdef _WIN32

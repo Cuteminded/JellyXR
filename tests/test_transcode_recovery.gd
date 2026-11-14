@@ -13,9 +13,14 @@ class FixtureApi extends JellyfinClient:
 class FixtureVideo extends VideoBackend:
 	var position := 0
 	var opened_at := -1
+	var decode_rejected := false
 	func available() -> bool: return true
 	func position_ms() -> int: return position
-	func stop() -> void: position = 0
+	func active_decode_support() -> DecodeSupport:
+		return DecodeSupport.UNSUPPORTED if decode_rejected else DecodeSupport.UNKNOWN
+	func stop() -> void:
+		position = 0
+		decode_rejected = false
 	func open(_url: String, _authorization: String, start_ms: int) -> void:
 		opened_at = start_ms
 		position = 0
@@ -60,7 +65,11 @@ func run_checks() -> void:
 		app.playing = true
 		app.decoder_ready = sample[0]
 		video.position = sample[1]
-		await app._video_failed("Fixture decoder failure")
+		if sample[0]:
+			await app._video_failed("Fixture decoder failure")
+		else:
+			video.decode_rejected = true
+			app._process(0.25)
 		var request: Dictionary = api.reports.back()
 		check(request.path.ends_with("/PlaybackInfo") and request.body.StartTimeTicks == sample[3], "Fallback requests the current position, including when progress runs during the stopped report")
 		check(video.opened_at == int(sample[3] / 10000), "The replacement HLS decoder resumes at the saved position")

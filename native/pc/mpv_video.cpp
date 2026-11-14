@@ -235,7 +235,9 @@ int JellyXRMpv::decode_support(String codec, String profile, int depth, int widt
 }
 
 int JellyXRMpv::active_decode_support() const {
-    if (!active || texture.is_null()) return 0;
+    if (!active) return 0;
+    if (vulkan_renderer.is_valid() && vulkan_renderer->hardware_open_rejected()) return 2;
+    if (texture.is_null()) return 0;
     if (vulkan_renderer.is_valid()) {
         return vulkan_renderer->uses_hardware_decoding() ? 1 : 2;
     }

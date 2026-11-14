@@ -936,7 +936,7 @@ func _process(delta: float) -> void:
 	timeline_elapsed += delta
 	if timeline_elapsed >= 0.25:
 		timeline_elapsed = 0.0
-		if decoder_ready and not photo_active and session.active_playback_mode == "auto" and session.method != "Transcode" \
+		if not photo_active and session.active_playback_mode == "auto" and session.method != "Transcode" \
 				and video.active_decode_support() == VideoBackend.DecodeSupport.UNSUPPORTED:
 			_video_failed("Switching to a hardware-decodable stream.")
 			return

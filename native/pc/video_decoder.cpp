@@ -120,6 +120,7 @@ int VideoDecoder::open(const std::string &url, const std::string &authorization)
                     v4l2_active = true;
                     return read_geometry();
                 }
+                v4l2_open_rejected = true;
                 break;
             }
         }
@@ -194,6 +195,7 @@ int VideoDecoder::read_geometry() {
 int VideoDecoder::start(const std::string &url, const std::string &authorization, int64_t start_ms) {
     stop();
     stopping = false;
+    v4l2_open_rejected = false;
     source_bit_depth = 0;
     decode_error = 0;
     hardware_active = false;

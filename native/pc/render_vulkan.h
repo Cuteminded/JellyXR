@@ -25,6 +25,7 @@ public:
     int error() const;
     bool has_audio() const { return decoder.has_audio(); }
     bool uses_hardware_decoding() const { return decoder.uses_hardware_decoding(); }
+    bool hardware_open_rejected() const { return decoder.hardware_open_rejected(); }
     int width() const { return presented_size.x > 0 ? presented_size.x : decoder.width(); }
     int height() const { return presented_size.y > 0 ? presented_size.y : decoder.height(); }
     int64_t duration_ms() const { return decoder.duration_ms(); }
