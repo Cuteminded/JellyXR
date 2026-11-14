@@ -136,12 +136,15 @@ func check_environment_switching() -> void:
 	var reset: Button = view.reset_screen_button
 	reset.pressed.emit()
 	check(app.cinema.visible and app.settings.environment == "Cinema", "Screen reset preserves the separate environment choice.")
+	var last_view: Transform3D = app.camera.global_transform
+	app.camera.position += Vector3(0.4, 0.1, 0.2)
+	app.camera.rotate_y(0.5)
 	var void_choice: CheckBox = view.environment_buttons["Void"]
 	void_choice.button_pressed = true
 	void_choice.pressed.emit()
 	check(not app.cinema.visible and app.settings.environment == "Void", "The Environment page can return to Void.")
-	var floating_position: Vector3 = app.camera.global_position - app.screen.global_basis.z * 3.0 - app.screen.global_basis.y * 0.2
-	check(app.screen.global_position.is_equal_approx(floating_position), "Void restores the default floating screen distance and lowered height reference.")
+	var floating_position := last_view.origin - last_view.basis.z * 3.0 - last_view.basis.y * 0.2
+	check(app.screen.global_transform.is_equal_approx(Transform3D(last_view.basis, floating_position)), "Returning to Void restores the floating screen relative to the last recenter.")
 	app.queue_free()
 	await process_frame
 	await process_frame

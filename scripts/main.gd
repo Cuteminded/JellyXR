@@ -6,6 +6,7 @@ var api := JellyfinClient.new()
 var session := PlaybackSession.new()
 var video: VideoBackend = AndroidVideo.new() if OS.get_name() == "Android" else PcVideo.new()
 var camera: Camera3D
+var recentered_view := Transform3D.IDENTITY
 var panel: MeshInstance3D
 var screen: MeshInstance3D
 var viewport: SubViewport
@@ -709,9 +710,14 @@ func _select_stereo(value: int) -> void:
 	_resize_screen()
 
 func _change_environment() -> void:
+	var was_in_cinema := cinema.visible
 	world.apply_environment()
-	if not cinema.visible: screen.global_basis = camera.global_basis
-	_position_screen()
+	if projection_mode == VideoProjection.Mode.SCREEN:
+		if cinema.visible:
+			screen.global_transform = cinema.projection_transform()
+		elif was_in_cinema:
+			screen.global_basis = recentered_view.basis
+			_position_floating_screen(recentered_view.origin)
 	_resize_screen()
 
 func _recenter() -> void:
@@ -720,6 +726,7 @@ func _recenter() -> void:
 	_recenter_video()
 
 func _recenter_video() -> void:
+	recentered_view = camera.global_transform
 	screen.global_basis = camera.global_basis
 	cinema.recenter(camera.global_transform)
 	world.panorama.global_position = camera.global_position
@@ -733,7 +740,10 @@ func _position_screen() -> void:
 	elif settings.is_cinema():
 		screen.global_transform = cinema.projection_transform()
 	else:
-		screen.global_position = camera.global_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.screen_height_offset()
+		_position_floating_screen(camera.global_position)
+
+func _position_floating_screen(viewer_position: Vector3) -> void:
+	screen.global_position = viewer_position - screen.global_basis.z * settings.distance + screen.global_basis.y * settings.screen_height_offset()
 
 func _update_screen_follow() -> void:
 	if not settings.follow_screen or settings.environment not in ["Void", "Passthrough"]: return
