@@ -6,6 +6,11 @@ class FixtureApi extends JellyfinClient:
 	var empty_next := false
 	var total := 72
 	var batch_size := 24
+	var favourite_requests: Array[String] = []
+
+	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, _body: Dictionary = {}) -> Dictionary:
+		favourite_requests.append(path)
+		return {"ok": true, "data": {"Items": [{"Id": "saved", "Name": "Saved movie"}], "TotalRecordCount": 1}}
 
 	func library(term: String = "", start: int = 0, _parent: String = "") -> Dictionary:
 		calls.append([term, start])
@@ -101,5 +106,16 @@ func run_checks() -> void:
 	await settle()
 	var only_hero: LibraryHero = library.content.get_child(0)
 	check(only_hero.item.Id == "0", "A single-title library must still display its hero.")
+	library.favourites_only = true
+	library.library_id = UiShell.FAVOURITES_ID
+	library.library_name = UiShell.FAVOURITES_TITLE
+	library.refresh("Saved movie")
+	await settle()
+	check(api.favourite_requests.size() == 1, "The favourites view fetches a single page for a single result.")
+	if not api.favourite_requests.is_empty():
+		var path: String = api.favourite_requests.front()
+		check(path.begins_with("/Items?") and "IsFavorite=true" in path and "SearchTerm=Saved%20movie" in path, "Favourites search uses Jellyfin's favourite filter and search term.")
+		check("ParentId=" not in path, "Favourites span all libraries.")
+	check(library.grid.get_child_count() == 1 and library.grid.get_child(0).item.Id == "saved", "Favourites render in the library grid.")
 	print("Library pagination failures: ", failures)
 	quit(1 if failures else 0)

@@ -17,6 +17,7 @@ var play_button: Button
 var play_from_start_button: Button
 var version_button: Button
 var watched_control: VBoxContainer
+var favourite_control: VBoxContainer
 var resume_label: Label
 var back_button: Button
 var title_label: Label
@@ -135,6 +136,11 @@ func _build_header() -> void:
 	var taglines: Array = item.get("Taglines", []) if item.get("Taglines") else []
 	if not taglines.is_empty(): _wrapped(str(taglines[0]), summary, 24)
 	_build_playback(summary)
+	if item.get("Type", "") in ["Movie", "Series", "Video", "MusicVideo"]:
+		favourite_control = preload("res://scripts/ui/favourite_control.gd").new()
+		favourite_control.api = api
+		favourite_control.item = item
+		summary.add_child(favourite_control)
 
 func _build_playback(parent: VBoxContainer) -> void:
 	var is_series: bool = item.get("Type", "") == "Series"

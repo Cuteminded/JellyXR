@@ -88,8 +88,17 @@ func query(values: Dictionary) -> String:
 	return "?" + "&".join(pairs)
 
 func library(search: String = "", offset: int = 0, parent_id: String = "") -> Dictionary:
+	return await _browse_titles(search, offset, parent_id, false)
+
+func favourites(search: String, offset: int) -> Dictionary:
+	return await _browse_titles(search, offset, "", true)
+
+func _browse_titles(search: String, offset: int, parent_id: String, favourites_only: bool) -> Dictionary:
 	var values := {"UserId": user_id, "Recursive": "true", "IncludeItemTypes": "Movie,Series,Video,MusicVideo,Photo", "Fields": "Overview,UserData", "Limit": 25, "StartIndex": offset, "SortBy": library_sort_by, "SortOrder": library_sort_order}
-	if search.is_empty() and parent_id.is_empty():
+	if favourites_only:
+		values["IsFavorite"] = "true"
+		values["IncludeItemTypes"] = "Movie,Series,Video,MusicVideo"
+	elif search.is_empty() and parent_id.is_empty():
 		values["SortBy"] = "DateCreated"
 		values["SortOrder"] = "Descending"
 	if not search.is_empty(): values["SearchTerm"] = search
@@ -237,6 +246,10 @@ func image_url(item: Dictionary, backdrop: bool = false) -> String:
 func profile_image_url() -> String:
 	if server.is_empty() or user_id.is_empty() or token.is_empty(): return ""
 	return server + "/Users/%s/Images/Primary" % user_id.uri_encode() + query({"maxWidth": 192, "maxHeight": 192, "format": "png"})
+
+func set_favourite(id: String, favourite: bool) -> Dictionary:
+	var path := "/UserFavoriteItems/" + id.uri_encode() + query({"userId": user_id})
+	return await request(path, HTTPClient.METHOD_POST if favourite else HTTPClient.METHOD_DELETE)
 
 func stream_url(path: String) -> String:
 	if path.is_empty() or path.begins_with("//") or "://" in path or "\\" in path or ".." in path.split("?")[0]:

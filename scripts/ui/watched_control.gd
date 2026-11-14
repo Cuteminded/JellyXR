@@ -39,8 +39,10 @@ func _toggle() -> void:
 	if not result.data is Dictionary or not result.data.get("Played") is bool:
 		status.text = "Could not confirm watched status. Reopen the item to refresh it."
 		return
-	var updated := user.duplicate(true)
-	updated.merge(result.data, true)
+	var updated: Dictionary = item.get("UserData", {}) if item.get("UserData") else {}
+	var watched_data: Dictionary = result.data.duplicate()
+	if updated.has("IsFavorite"): watched_data.erase("IsFavorite")
+	updated.merge(watched_data, true)
 	item["UserData"] = updated
 	status.hide()
 	_refresh()

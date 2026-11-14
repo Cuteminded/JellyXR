@@ -284,6 +284,7 @@ func _quick_connect() -> void:
 
 func _show_library() -> void:
 	var title := "Home"
+	if shell.selected_id == UiShell.FAVOURITES_ID: title = UiShell.FAVOURITES_TITLE
 	if shell.buttons.has(shell.selected_id): title = shell.buttons[shell.selected_id].text
 	_open_library(shell.selected_id, title, library_folder_path.duplicate(true), library_navigation_states)
 
@@ -313,6 +314,7 @@ func _open_library(id: String, title: String, folder_path: Array = [], navigatio
 	library.api = api
 	library.library_id = id
 	library.library_name = title
+	library.favourites_only = id == UiShell.FAVOURITES_ID
 	library.folder_mode = shell.library_types.get(id, "") in ["homevideos", "musicvideos", "photos"]
 	library_folder_path = folder_path.duplicate(true)
 	library.folder_path = library_folder_path.duplicate(true)

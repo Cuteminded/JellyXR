@@ -4,12 +4,22 @@ class FixtureApi extends JellyfinClient:
 	var calls: Array = []
 	var fail := false
 	var malformed := false
+	var favourite_calls: Array = []
+
+	func extras(_id: String) -> Dictionary:
+		return {"ok": true, "data": {"Items": []}}
+
+	func set_favourite(id: String, favourite: bool) -> Dictionary:
+		favourite_calls.append([id, favourite])
+		await get_tree().process_frame
+		if fail: return {"ok": false, "error": "Cannot reach the server."}
+		return {"ok": true, "data": {"IsFavorite": favourite}}
 
 	func set_watched(id: String, watched: bool) -> Dictionary:
 		calls.append([id, watched])
 		await get_tree().process_frame
 		if fail: return {"ok": false, "error": "Cannot reach the server."}
-		return {"ok": true, "data": {} if malformed else {"Played": watched, "PlaybackPositionTicks": 0, "PlayCount": 1 if watched else 0}}
+		return {"ok": true, "data": {} if malformed else {"Played": watched, "PlaybackPositionTicks": 0, "PlayCount": 1 if watched else 0, "IsFavorite": true}}
 
 var failures := 0
 
@@ -55,6 +65,22 @@ func run_checks() -> void:
 	await settle()
 	check(not view.item.UserData.Played and control.status.visible, "Incomplete responses do not claim a saved change")
 	api.malformed = false
+	var favourite = view.favourite_control
+	check(favourite.button.text == "Remove from favourites", "Details show the server's favourite state")
+	favourite.button.pressed.emit()
+	favourite.button.pressed.emit()
+	control.button.pressed.emit()
+	check(favourite.button.disabled and api.favourite_calls == [["movie", false]], "Saving prevents duplicate favourite requests")
+	await settle()
+	check(view.item.UserData.Played and not view.item.UserData.IsFavorite, "Overlapping watched and favourite requests preserve both changes")
+	api.fail = true
+	favourite.button.pressed.emit()
+	await settle()
+	check(not view.item.UserData.IsFavorite and favourite.status.visible and not favourite.button.disabled, "Failed favourite updates can be retried")
+	api.fail = false
+	favourite.button.pressed.emit()
+	await settle()
+	check(view.item.UserData.IsFavorite and favourite.button.text == "Remove from favourites", "A successful retry adds the favourite")
 	var episode := EpisodeCard.new()
 	episode.api = api
 	episode.artwork = view.artwork

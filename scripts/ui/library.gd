@@ -8,6 +8,7 @@ signal loading_changed(loading: bool)
 var api: JellyfinClient
 var library_id := ""
 var library_name := "Home"
+var favourites_only := false
 var folder_mode := false
 var folder_path: Array = []
 var folder_navigation: HBoxContainer
@@ -142,7 +143,7 @@ func _more(current: int) -> void:
 	if busy or current != generation: return
 	busy = true
 	has_more = false
-	var result := await api.folder_items(search, offset, parent_id()) if folder_mode else await api.library(search, offset, library_id)
+	var result := await _fetch_page()
 	if current != generation: return
 	if not result.ok:
 		busy = false
@@ -156,7 +157,7 @@ func _more(current: int) -> void:
 		return
 	var items: Array = result.data.get("Items", [])
 	if offset == 0:
-		if not folder_mode and search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
+		if not favourites_only and not folder_mode and search.is_empty() and items.any(func(item: Dictionary): return item.get("Type", "") != "Photo"):
 			var hero := LibraryHero.new()
 			hero.item = _choose_hero(items.filter(func(item: Dictionary): return item.get("Type", "") != "Photo"))
 			hero.artwork = artwork
@@ -169,7 +170,8 @@ func _more(current: int) -> void:
 	if offset == 0 and restore_scroll < 0: loading_changed.emit(false)
 	offset += items.size()
 	var noun := "items" if folder_mode else "titles"
-	status.emit("%d %s loaded" % [offset, noun] if offset > 0 else "No matching %s." % noun)
+	var empty := "No favourites yet." if favourites_only and search.is_empty() else "No matching %s." % noun
+	status.emit("%d %s loaded" % [offset, noun] if offset > 0 else empty)
 	has_more = not items.is_empty() and offset < int(result.data.get("TotalRecordCount", offset))
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -187,6 +189,11 @@ func _more(current: int) -> void:
 		restore_count = 0
 	busy = false
 	_check_more.call_deferred()
+
+func _fetch_page() -> Dictionary:
+	if favourites_only: return await api.favourites(search, offset)
+	if folder_mode: return await api.folder_items(search, offset, parent_id())
+	return await api.library(search, offset, library_id)
 
 func _choose_hero(items: Array) -> Dictionary:
 	var previous_id := str(previous_hero_ids.get(library_id, ""))

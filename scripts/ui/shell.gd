@@ -5,12 +5,17 @@ signal navigate(id: String, title: String)
 signal screen_settings
 signal exit_requested
 signal return_from_settings
+
+const FAVOURITES_ID := "favourites"
+const FAVOURITES_TITLE := "Favourites"
+
 var page: VBoxContainer
 var status: Label
 var libraries: VBoxContainer
 var settings_navigation: VBoxContainer
 var navigation_heading: Label
 var home: Button
+var favourites: Button
 var settings_button: Button
 var exit_button: Button
 var heading: Label
@@ -53,6 +58,8 @@ func _ready() -> void:
 	navigation.add_child(logo)
 	home = Widgets.button("Home", _home_pressed, navigation)
 	_style_navigation_button(home, preload("res://assets/icons/material/home.svg"))
+	favourites = Widgets.button(FAVOURITES_TITLE, func(): navigate.emit(FAVOURITES_ID, FAVOURITES_TITLE), navigation)
+	_style_navigation_button(favourites, preload("res://assets/icons/favourite.svg"))
 	navigation_heading = Widgets.label("LIBRARIES", navigation, 14)
 	navigation_heading.add_theme_color_override("font_color", Color("a4aec0"))
 	var scroll := ScrollContainer.new()
@@ -116,6 +123,7 @@ func set_signed_in(value: bool) -> void:
 	signed_in = value
 	rail.visible = value
 	home.disabled = not value
+	favourites.disabled = not value
 	settings_button.disabled = not value
 	exit_button.visible = value
 	if not value:
@@ -128,6 +136,7 @@ func set_settings_mode(enabled: bool) -> void:
 	home.text = "Library" if enabled else "Home"
 	home.icon = preload("res://assets/icons/material/video_library.svg") if enabled else preload("res://assets/icons/material/home.svg")
 	libraries.visible = not enabled
+	favourites.visible = not enabled
 	settings_navigation.visible = enabled
 	navigation_heading.text = "SETTINGS" if enabled else "LIBRARIES"
 	settings_button.visible = not enabled
@@ -189,6 +198,7 @@ func select(id: String, title: String) -> void:
 	heading.text = title
 	var all := buttons.duplicate()
 	all[""] = home
+	all[FAVOURITES_ID] = favourites
 	for key in all:
 		var button: Button = all[key]
 		button.add_theme_stylebox_override("normal", Widgets.surface(Color("2b4b50") if key == id else Color("182234"), 12, 16))

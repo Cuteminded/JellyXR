@@ -24,7 +24,7 @@ Implementation does not mean a feature has been tested on every headset.
 ## Libraries and discovery
 
 - [ ] Filter by watched status, genre, year, or other metadata.
-- [ ] Add, remove, and browse favourites.
+- [x] Add, remove, and browse favourites.
 - [ ] Browse collections.
 - [ ] Browse, create, and play playlists or a user-managed playback queue.
 - [ ] Show recommendations and similar titles.
