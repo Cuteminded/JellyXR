@@ -23,6 +23,7 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 - [Licence and attribution](LICENSING.md)
 
 ## Hardware status
+> Untested / unlisted hardware may still work, but it has not been verified
 
 ### Standalone headsets
 | Device | Status | Build | Tested version | Notes |
