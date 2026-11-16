@@ -28,14 +28,14 @@ If we think jellyXR is ready for a wider release, then yes. I'd be happy to put 
 | Device | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
 | [Quest 1](https://www.meta.com/quest) | Working | Quest 1 | 0.2.1 | Testing depends on access to a borrowed headset. |
-| [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.1 ||
-| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 beta | video decoding not yet fully supported [Details](hardware_status/SteamFrame.md) |
+| [Quest 3](https://www.meta.com/quest) | Working  | Android | 0.2.2 ||
+| [Steam Frame](https://store.steampowered.com/hardware/steamframe) | Partially working | Linux ARM64 | 0.2.2 | video decoding not yet fully supported [Details](hardware_status/SteamFrame.md) |
 
 ### SteamVR
 | Runtime | Status | Build | Tested version | Notes |
 |---|---|---|---|---|
-| [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.2.1 | Tested on a Steam Machine.|
-| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.2.1 ||
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Linux x64 | 0.2.2 | Tested on a Steam Machine.|
+| [SteamVR](https://store.steampowered.com/steamvr) | Working | Windows X64 | 0.2.2 ||
 
 #### Hardware through SteamVR
 | Device | Status | Build | Tested version | Notes |
