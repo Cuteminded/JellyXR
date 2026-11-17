@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=JellyXR
+GenericName=JellyXR
+Comment=Watch your Jellyfin movies and shows on a virtual screen in VR
+Comment[en_US]=Watch your Jellyfin movies and shows on a virtual screen in VR
+Exec="jellyxr" # TODO: Replace with the actual executable path for JellyXR
+Icon=jellyxr # TODO: Replace with the actual icon path for JellyXR
+Terminal=false
+Categories=AudioVideo;
