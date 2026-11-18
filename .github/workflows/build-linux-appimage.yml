@@ -2,6 +2,16 @@ name: Build Linux AppImage
 
 on:
   workflow_dispatch:
+    inputs:
+      architecture:
+        description: Architecture to build
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - x64
+          - arm64
   workflow_call:
 
 permissions:
@@ -17,21 +27,15 @@ env:
 jobs:
   build:
     name: Linux AppImage ${{ matrix.arch }} build
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-            preset: Linux x64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            preset: Linux ARM64
+        arch: ${{ fromJSON(inputs.architecture == 'x64' && '["x86_64"]' || inputs.architecture == 'arm64' && '["arm64"]' || '["x86_64", "arm64"]') }}
     env:
       ARCH: ${{ matrix.arch }}
-      EXPORT_PRESET: ${{ matrix.preset }}
+      EXPORT_PRESET: ${{ matrix.arch == 'arm64' && 'Linux ARM64' || 'Linux x64' }}
     defaults:
       run:
         shell: bash
