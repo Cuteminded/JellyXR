@@ -144,7 +144,7 @@ func check_playback_reports(api: JellyfinClient) -> void:
 	var session := PlaybackSession.new()
 	session.api = api
 	session.item = {"Id": "fixture-item"}
-	session.source = JSON.parse_string('{"Id":"fixture-source","DefaultAudioStreamIndex":1}')
+	session.source = JSON.parse_string('{"Id":"fixture-source","DefaultAudioStreamIndex":1,"MediaStreams":[{"Type":"Audio","Index":1}]}')
 	session.session_id = "fixture-session"
 	root.add_child(session)
 	code = 204
@@ -154,8 +154,9 @@ func check_playback_reports(api: JellyfinClient) -> void:
 		var body := last_request.split("\r\n\r\n", true, 1)[1]
 		check('"AudioStreamIndex":1,' in body, "%s sends the parsed server audio index as a JSON integer, not 1.0" % event)
 	session.source["DefaultAudioStreamIndex"] = null
+	session.source["MediaStreams"] = []
 	await session.report("Playing")
-	check('"AudioStreamIndex"' not in last_request, "Sources without a default audio track omit the optional index")
+	check('"AudioStreamIndex"' not in last_request, "Sources without audio tracks omit the optional index")
 	session.audio_index = 3
 	await session.report("Progress")
 	check('"AudioStreamIndex":3,' in last_request, "Explicit audio selection is reported as an integer")
