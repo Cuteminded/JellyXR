@@ -640,6 +640,7 @@ func _show_playback() -> void:
 	player_overlay.set_photo_mode(photo_active)
 	if photo_active: player_overlay.set_photo_navigation(photo_sequence.index > 0, photo_sequence.can_next())
 	player_overlay.set_media(photo_item if photo_active else session.item)
+	world.position_playback_controls()
 	player_overlay.show()
 	_update_timeline()
 
@@ -806,6 +807,7 @@ func _recenter_video() -> void:
 	world.panorama.global_rotation = Vector3(0.0, camera.global_rotation.y, 0.0)
 	_position_screen()
 	_resize_screen()
+	world.position_playback_controls()
 
 func _position_screen() -> void:
 	if projection_mode != VideoProjection.Mode.SCREEN:

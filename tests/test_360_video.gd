@@ -106,6 +106,7 @@ func run_checks() -> void:
 	check(app.material.get_shader_parameter("stereo") == true and app.material.get_shader_parameter("top_bottom") == true, "Half top-bottom enables per-eye vertical sampling")
 	check(is_equal_approx(app.screen.mesh.get_aabb().size.x / app.screen.mesh.get_aabb().size.y, 16.0 / 9.0), "Half top-bottom keeps the intended screen aspect")
 	await check_180_playback(app)
+	check_panoramic_controls(app)
 	app.playing = false
 	app.queue_free()
 	await process_frame
@@ -127,6 +128,35 @@ func check_projection_window_position(app: Node) -> void:
 	app.camera.global_transform = viewer_transform
 	app._recenter()
 	app.projection_overridden = false
+
+func check_panoramic_controls(app: Node) -> void:
+	for projection in [VideoProjection.Mode.EQUIRECTANGULAR_180, VideoProjection.Mode.EQUIRECTANGULAR]:
+		app._select_projection(projection)
+		var screen_transform: Transform3D = app.screen.global_transform
+		var panorama_basis: Basis = app.world.panorama.global_basis
+		for rotation in [Vector3(0.3, PI, 0.4), Vector3(-0.6, -1.8, -0.5), Vector3(PI / 2.0, 0.5, 0.0)]:
+			app.player_overlay.hide()
+			app.camera.position += Vector3(0.2, 0.1, -0.3)
+			app.camera.rotation = rotation
+			app._show_playback()
+			var anchor: Transform3D = app.world.panoramic_controls.global_transform
+			check(anchor.origin.is_equal_approx(app.camera.global_position - app.camera.global_basis.z * 3.0), "Panoramic controls reopen in the current viewing direction")
+			check(is_zero_approx(app.player_overlay.global_basis.x.y), "The playback bar stays horizontal when the head tilts")
+			check(app.player_overlay.global_basis.determinant() > 0.99, "The controls retain a valid orientation when looking vertically")
+			check(app.screen.global_transform.is_equal_approx(screen_transform), "Opening panoramic controls preserves the screen placement")
+			check(app.world.panorama.global_basis.is_equal_approx(panorama_basis), "Opening controls does not rotate the video")
+			app.camera.rotate_y(0.2)
+			app.world._process(0.0)
+			check(app.world.panoramic_controls.global_transform.is_equal_approx(anchor), "Open controls stay still for pointer interaction")
+			app.player_overlay.show_menu("audio")
+			check(app.world.panoramic_controls.global_transform.is_equal_approx(anchor), "Expanding the playback menu preserves its anchor")
+		app.screen.hide()
+		app.world._process(0.0)
+		check(not app.player_overlay.is_visible_in_tree(), "Hiding the video also hides panoramic controls")
+		app.screen.show()
+	app._select_projection(VideoProjection.Mode.SCREEN)
+	check(app.player_overlay.get_parent() == app.screen, "Screen mode restores controls attached to the screen")
+	check(app.player_overlay.basis.is_equal_approx(Basis.IDENTITY), "Screen controls retain their local orientation")
 
 func check_180_playback(app: Node) -> void:
 	await app._play_stream("", {"Path": "Beach.VR180.FSBS.mp4"}, 0)

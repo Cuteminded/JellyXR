@@ -19,6 +19,7 @@ var material: ShaderMaterial
 var cinema: CinemaEnvironment
 var passthrough := PassthroughEnvironment.new()
 var player_overlay: PlayerOverlay
+var panoramic_controls: Node3D
 var player_loading: PlayerLoading
 var player_skip_popup: PlayerSkipPopup
 var skip_screen_size := Vector3(4.0, 16.0 / 9.0, 0.0)
@@ -81,6 +82,8 @@ func setup() -> void:
 	add_child(panorama)
 	player_overlay = PlayerOverlay.new()
 	screen.add_child(player_overlay)
+	panoramic_controls = Node3D.new()
+	add_child(panoramic_controls)
 	player_loading = PlayerLoading.new()
 	screen.add_child(player_loading)
 	player_skip_popup = PlayerSkipPopup.new()
@@ -158,6 +161,7 @@ func _update_screen_move() -> void:
 func _process(_delta: float) -> void:
 	_update_screen_move()
 	if not player_overlay: return
+	panoramic_controls.visible = panoramic and screen.is_visible_in_tree()
 	var show_panorama := panoramic and screen.visible
 	if panorama.visible != show_panorama:
 		panorama.visible = show_panorama
@@ -213,6 +217,11 @@ func apply_environment() -> void:
 
 func set_panoramic(enabled: bool, horizontal_angle: float = TAU) -> void:
 	panoramic = enabled
+	panoramic_controls.visible = enabled and screen.is_visible_in_tree()
+	var controls_parent: Node3D = panoramic_controls if enabled else screen
+	if player_overlay.get_parent() != controls_parent:
+		player_overlay.reparent(controls_parent, false)
+	if enabled: position_playback_controls()
 	if enabled and (panorama.mesh == null or not is_equal_approx(panorama_angle, horizontal_angle)):
 		panorama.mesh = VideoProjection.sphere(50.0, horizontal_angle)
 		panorama_angle = horizontal_angle
@@ -220,6 +229,19 @@ func set_panoramic(enabled: bool, horizontal_angle: float = TAU) -> void:
 	if enabled:
 		panorama.global_position = camera.global_position
 	apply_environment()
+
+func position_playback_controls() -> void:
+	if not panoramic: return
+	panoramic_controls.visible = screen.is_visible_in_tree()
+	var backward := camera.global_basis.z.normalized()
+	var right := Vector3.UP.cross(backward)
+	if right.length_squared() < 0.00000001:
+		right = camera.global_basis.x
+		right.y = 0.0
+	right = right.normalized()
+	var up := backward.cross(right).normalized()
+	var orientation := Basis(right, up, backward).orthonormalized()
+	panoramic_controls.global_transform = Transform3D(orientation, camera.global_position - backward * 3.0)
 
 func _exit_tree() -> void:
 	if passthrough.viewport != null: passthrough.apply(false)
