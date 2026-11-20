@@ -4,6 +4,7 @@ extends VBoxContainer
 signal screen_changed
 signal screen_follow_changed
 signal environment_changed
+signal playback_changed
 signal status(message: String)
 signal sign_out
 
@@ -11,6 +12,7 @@ var subtitles: SubtitleTrack
 var subtitle_timing_enabled := false
 var subtitle_controls: SubtitleSettings
 var settings: JellyXRSettings
+var original_playback_available := true
 var api: JellyfinClient
 var profile_icon: TextureRect
 var profile_artwork: ArtworkLoader
@@ -313,7 +315,8 @@ func _controller_name(tracker_name: StringName) -> String:
 
 func _build_playback(parent: VBoxContainer) -> void:
 	parent = _card(parent, "Playback quality")
-	_hint("Choose the video quality. Your choice applies to the next video you start.", parent)
+	if not original_playback_available:
+		_hint("Turn off picture subtitles to use Original during playback.", parent)
 	playback_choices = VBoxContainer.new()
 	playback_choices.add_theme_constant_override("separation", 12)
 	parent.add_child(playback_choices)
@@ -325,13 +328,19 @@ func _build_playback(parent: VBoxContainer) -> void:
 	]:
 		var row := VBoxContainer.new()
 		playback_choices.add_child(row)
-		_choice(option[0], option[1] == settings.playback_mode, group, row,
+		var choice := _choice(option[0], option[1] == settings.playback_mode, group, row,
 			func(): _select_playback_mode(option[1]))
+		choice.disabled = option[1] == "original" and not original_playback_available
 		_hint(option[2], row)
 
 func _select_playback_mode(value: String) -> void:
+	if value == "original" and not original_playback_available: return
 	settings.playback_mode = value
+	_save_playback()
+
+func _save_playback() -> void:
 	_save()
+	playback_changed.emit()
 
 func _build_transcode_options(parent: VBoxContainer) -> void:
 	parent = _card(parent, "Transcoded resolution")
@@ -340,7 +349,7 @@ func _build_transcode_options(parent: VBoxContainer) -> void:
 	for resolution in JellyXRSettings.TRANSCODE_PRESETS:
 		var preset: Dictionary = JellyXRSettings.TRANSCODE_PRESETS[resolution]
 		_choice(preset.label, settings.transcode_resolution == resolution, group, transcode_choices,
-			func(): settings.transcode_resolution = resolution; _save())
+			func(): settings.transcode_resolution = resolution; _save_playback())
 	_hint("Sets the maximum resolution when Automatic or Transcoded converts the video. Smaller videos keep their size.", parent)
 
 func _build_transcode_fps(parent: VBoxContainer) -> void:
@@ -349,7 +358,7 @@ func _build_transcode_fps(parent: VBoxContainer) -> void:
 	var group := ButtonGroup.new()
 	for fps in JellyXRSettings.TRANSCODE_MAX_FPS_OPTIONS:
 		_choice("%d fps" % fps, settings.transcode_max_fps == fps, group, transcode_fps_choices,
-			func(): settings.transcode_max_fps = fps; _save())
+			func(): settings.transcode_max_fps = fps; _save_playback())
 	_hint("Applies when Automatic or Transcoded converts the video.", parent)
 
 func _playback_choice_row(parent: VBoxContainer) -> HFlowContainer:

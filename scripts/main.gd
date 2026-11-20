@@ -43,6 +43,7 @@ var countdown_generation := 0
 var autoplay_pending := false
 var seeking := false
 var seek_paused := false
+var playback_quality_pending := false
 var timeline_elapsed := 0.0
 var decoder_ready := false
 var media_segments := MediaSegments.new()
@@ -628,6 +629,7 @@ func _video_prepared() -> void:
 	if get_viewport().use_xr and not seeking and not panel.visible:
 		player_overlay.hide()
 	seeking = false
+	if playback_quality_pending: _apply_playback_settings.call_deferred()
 	player_overlay.quick_access.refresh_tracks()
 	_update_timeline()
 
@@ -711,6 +713,8 @@ func _screen_settings() -> void:
 	var view := SettingsView.new()
 	view.navigation_host = shell.settings_navigation
 	view.settings = settings
+	view.original_playback_available = not (playing and session.burn_subtitles)
+	view.playback_changed.connect(_playback_settings_changed)
 	view.api = api
 	view.video_backend = video
 	view.subtitles = subtitles
@@ -890,6 +894,7 @@ func _seek_to(milliseconds: int) -> void:
 	await session.open(session.item, session.method == "Transcode", true)
 
 func _stop(show_details: bool = true, completed: bool = false) -> void:
+	playback_quality_pending = false
 	var was_photo := photo_active
 	session.cancel_pending()
 	subtitles.clear()
@@ -977,6 +982,7 @@ func _video_failed(message: String) -> void:
 		await session.retry_transcode()
 
 func _error(message: String) -> void:
+	playback_quality_pending = false
 	subtitles.clear()
 	subtitle_overlay.text = ""
 	media_segments.clear()
@@ -1059,16 +1065,39 @@ func _select_subtitle(index: int) -> void:
 		subtitles.changed.emit()
 	else:
 		subtitles.select(api, str(session.item.Id), session.media_source_id, index)
-	if restart: await _restart_tracks()
+	if restart: await _restart_stream()
 	else: session.report("Progress", video.paused)
 	player_overlay.quick_access.refresh_tracks()
 
 func _select_audio(index: int) -> void:
 	if not playing or seeking: return
 	session.audio_index = index
-	await _restart_tracks()
+	await _restart_stream()
 
-func _restart_tracks() -> void:
+func _playback_settings_changed() -> void:
+	if not playing or photo_active: return
+	playback_quality_pending = true
+	_apply_playback_settings()
+
+func _apply_playback_settings() -> void:
+	if not playback_quality_pending or not playing or seeking or not decoder_ready: return
+	playback_quality_pending = false
+	await _select_quality(settings.playback_mode, settings.transcode_resolution, settings.transcode_max_fps)
+
+func _select_quality(playback_mode: String, resolution: int, max_fps: int) -> void:
+	if not playing or photo_active or seeking or not decoder_ready: return
+	if playback_mode not in JellyXRSettings.PLAYBACK_MODES or not JellyXRSettings.TRANSCODE_PRESETS.has(resolution): return
+	if max_fps not in JellyXRSettings.TRANSCODE_MAX_FPS_OPTIONS: return
+	if playback_mode == "original" and session.burn_subtitles: return
+	if playback_mode == session.active_playback_mode and resolution == session.active_transcode_resolution and max_fps == session.active_transcode_max_fps: return
+	var keep_transcoding := playback_mode == "auto" and session.active_playback_mode == "auto" and session.method == "Transcode"
+	session.active_playback_mode = playback_mode
+	session.active_transcode_resolution = resolution
+	session.active_transcode_max_fps = max_fps
+	session.fallback_attempted = false
+	await _restart_stream(keep_transcoding)
+
+func _restart_stream(force_transcode: bool = false) -> void:
 	seeking = true
 	player_overlay.quick_access.refresh_tracks()
 	seek_paused = video.paused
@@ -1078,5 +1107,5 @@ func _restart_tracks() -> void:
 	video.stop()
 	await session.report("Stopped")
 	if current != countdown_generation: return
-	await session.open(session.item, false, true)
+	await session.open(session.item, force_transcode, true)
 	if current == countdown_generation and playing: player_overlay.quick_access.refresh_tracks()

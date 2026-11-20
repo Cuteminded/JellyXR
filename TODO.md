@@ -58,10 +58,9 @@ Implementation does not mean a feature has been tested on every headset.
 ## Video playback
 
 - [ ] Browse chapters and jump to a selected chapter.
-- [ ] Change playback speed.
-- [ ] Change playback quality during an active session.
 - [ ] Automatically hide playback controls after inactivity.
 - [ ] Download media for offline playback.
+- [x] Change playback quality during an active session.
 - [x] Play supported original video streams through Direct Play.
 - [x] Request server transcoding and play HLS streams.
 - [x] Retry with transcoding after a playback failure in Automatic mode.
@@ -76,6 +75,7 @@ Implementation does not mean a feature has been tested on every headset.
 - [x] Select audio tracks and languages through server streaming.
 - [x] Select embedded or external text subtitles, or use server burn-in for picture subtitles.
 - [x] Adjust text subtitle size, color, vertical position, and timing.
+- <del>[ ] Change playback speed.</del>
 
 ## Other Jellyfin features
 

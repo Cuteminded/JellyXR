@@ -172,7 +172,7 @@ jellyXR can recognize some 180° and 360° videos automatically, but you can cha
 
 ## Change playback quality
 
-Open **Settings > Playback**. The choice applies to the next video you start.
+Open **Settings > Playback**. Changes apply to the current video and are saved for future videos. During playback, the stream briefly reloads at the same position and stays paused if you paused it.
 
 - **Automatic** lets Jellyfin choose how to play the video on your device. Start with this option if you are unsure.
 - **Original full resolution** keeps the original video quality. Your headset or PC must be able to play the file.
