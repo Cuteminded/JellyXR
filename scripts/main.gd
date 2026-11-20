@@ -1064,7 +1064,7 @@ func _select_subtitle(index: int) -> void:
 	player_overlay.quick_access.refresh_tracks()
 
 func _select_audio(index: int) -> void:
-	if not playing or seeking or session.active_playback_mode == "original": return
+	if not playing or seeking: return
 	session.audio_index = index
 	await _restart_tracks()
 

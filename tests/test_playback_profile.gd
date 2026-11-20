@@ -80,6 +80,9 @@ func check_hardware_profile(session: PlaybackSession, api: FixtureClient) -> voi
 	await session.open({"Id": "fixture", "MediaSources": [media_source]})
 	var request: Dictionary = api.bodies.back()
 	assert(not request.EnableDirectPlay and not request.AllowVideoStreamCopy, "Unsupported video is converted before opening the player")
+	session.audio_index = 2
+	await session.open(session.item, false, true)
+	assert(not api.bodies.back().AllowVideoStreamCopy and session.method == "Transcode", "Changing audio still converts video when the decoder cannot play it")
 	var output: Array = request.DeviceProfile.TranscodingProfiles[0].Conditions
 	assert(output[1].Value == "1080" and output[2].Value == "30", "Automatic conversion chooses a hardware-decodable output")
 	await session.open({"Id": "fixture"})
@@ -165,6 +168,9 @@ func check_playback_choices(session: PlaybackSession, api: FixtureClient, stream
 	await session.open({"Id": "fixture", "UserData": {"PlaybackPositionTicks": 450000000}})
 	assert(session.method == "Transcode" and not api.bodies.back().EnableDirectPlay, "Transcoded playback bypasses a supported original stream")
 	assert(not api.bodies.back().AllowVideoStreamCopy, "Transcoded playback requests actual video conversion")
+	session.audio_index = 2
+	await session.open(session.item, false, true)
+	assert(session.method == "Transcode" and not api.bodies.back().AllowVideoStreamCopy, "Audio changes respect explicitly selected video transcoding")
 	assert(api.bodies.back().StartTimeTicks == 450000000 and streams.back()[1] == 45000, "Forced HLS conversion preserves the resume position in the decoder")
 	session.settings.playback_mode = "original"
 	session.position_ticks = 900000000

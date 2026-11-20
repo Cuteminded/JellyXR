@@ -51,13 +51,15 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 	if not use_transcode and not original:
 		use_transcode = _decode_support(video_stream) == VideoBackend.DecodeSupport.UNSUPPORTED
 	var profile := _device_profile(use_transcode, original, str(video_stream.get("Codec", "")))
+	var remux_audio := audio_index >= 0 and not use_transcode
+	if remux_audio: _configure_audio_remux(profile, original, video_stream, _selected_source(continuing))
 	if use_transcode and profile.TranscodingProfiles.is_empty():
 		failed.emit("This device reported no supported H.264 conversion target for the selected playback limits.")
 		return
 	var body := {
 		"UserId": api.user_id, "StartTimeTicks": position_ticks, "IsPlayback": true,
-		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode and audio_index < 0, "EnableDirectStream": not use_transcode and not original,
-		"EnableTranscoding": not original, "AllowVideoStreamCopy": not use_transcode,
+		"AutoOpenLiveStream": true, "EnableDirectPlay": not use_transcode and audio_index < 0, "EnableDirectStream": not use_transcode and (not original or remux_audio),
+		"EnableTranscoding": not original or remux_audio, "AllowVideoStreamCopy": not use_transcode, "AllowAudioStreamCopy": true,
 		"DeviceProfile": profile, "MaxStreamingBitrate": profile.MaxStreamingBitrate
 	}
 	body["SubtitleStreamIndex"] = subtitle_index if burn_subtitles else -1
@@ -82,6 +84,11 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 		failed.emit("The selected version is no longer available. Reopen the item and choose another version.")
 		return
 	media_source_id = str(source.Id)
+	var initial_audio := selected_audio_index()
+	if audio_index < 0 and initial_audio >= 0 and _audio_streams().size() > 1:
+		audio_index = initial_audio
+		await open(item, transcode, true)
+		return
 	var resolved_video := _source_video(source)
 	if not use_transcode and not original and resolved_video != video_stream \
 			and _decode_support(resolved_video) == VideoBackend.DecodeSupport.UNSUPPORTED:
@@ -97,7 +104,7 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 	session_id = result.data.get("PlaySessionId", "")
 	var url: String
 	var start_ms := int(position_ticks / 10000)
-	if original and not source.get("SupportsDirectPlay", false):
+	if original and not remux_audio and not source.get("SupportsDirectPlay", false):
 		failed.emit("Jellyfin cannot provide the original video. Choose Transcoded in Settings > Playback.")
 		return
 	if source.get("SupportsDirectPlay", false) and not use_transcode and audio_index < 0:
@@ -109,6 +116,11 @@ func open(selected: Dictionary, transcode: bool = false, continuing: bool = fals
 		if path.is_empty():
 			failed.emit("Jellyfin needs to convert this video but did not provide a stream.")
 			return
+		if remux_audio:
+			path = _audio_remux_path(path, original)
+			if path.is_empty():
+				failed.emit("Jellyfin requires conversion for this stream. Audio switching without conversion is unavailable.")
+				return
 		if not use_transcode and (source.get("SupportsDirectStream", false) or _copies_video(path)):
 			method = "DirectStream"
 		url = api.stream_url(path)
@@ -123,6 +135,19 @@ func is_hls() -> bool:
 	var protocol := str(source.get("TranscodingSubProtocol", "")).to_lower()
 	var path := str(source.get("TranscodingUrl", "")).get_slice("?", 0).to_lower()
 	return protocol == "hls" or path.ends_with(".m3u8")
+
+func _audio_streams() -> Array:
+	return source.get("MediaStreams", []).filter(func(stream: Dictionary): return stream.get("Type") == "Audio")
+
+func selected_audio_index() -> int:
+	if audio_index >= 0: return audio_index
+	var streams := _audio_streams()
+	var preferred: Variant = source.get("DefaultAudioStreamIndex")
+	for stream in streams:
+		if preferred != null and int(stream.get("Index", -1)) == int(preferred): return int(preferred)
+	for stream in streams:
+		if stream.get("IsDefault", false): return int(stream.get("Index", -1))
+	return int(streams[0].get("Index", -1)) if not streams.is_empty() else -1
 
 func _selected_source(continuing: bool) -> Dictionary:
 	if continuing and not source.is_empty(): return source
@@ -192,6 +217,33 @@ func _device_profile(transcode: bool, original: bool = false, selected_codec: St
 func _uses_native_pc_decoder() -> bool:
 	return OS.get_name() in ["Windows", "Linux"] and ClassDB.class_exists("JellyXRMpv")
 
+func _configure_audio_remux(profile: Dictionary, original: bool, video_stream: Dictionary, selected_source: Dictionary) -> void:
+	var audio_codecs := PC_AUDIO_CODECS if _uses_native_pc_decoder() else "aac,mp3,opus,vorbis"
+	if original:
+		for stream in selected_source.get("MediaStreams", []):
+			if stream.get("Type") == "Audio" and int(stream.get("Index", -1)) == audio_index:
+				audio_codecs = str(stream.get("Codec", ""))
+	profile.CodecProfiles = []
+	profile.MaxStreamingBitrate = 2147483647
+	profile.TranscodingProfiles = [{
+		"Container": "mp4", "Type": "Video", "Protocol": "hls", "Context": "Streaming",
+		"VideoCodec": str(video_stream.get("Codec", PC_VIDEO_CODECS)), "AudioCodec": audio_codecs,
+		"MinSegments": 2, "BreakOnNonKeyFrames": true
+	}]
+
+func _audio_remux_path(path: String, copy_audio: bool) -> String:
+	var parameters := PackedStringArray()
+	for pair in path.get_slice("?", 1).split("&", false):
+		var key := pair.get_slice("=", 0).uri_decode().to_lower()
+		var value := pair.get_slice("=", 1).uri_decode().to_lower()
+		if key == "allowvideostreamcopy" or (copy_audio and key == "allowaudiostreamcopy"):
+			if value == "false": return ""
+		if key == "videocodec" or (copy_audio and key == "audiocodec"): continue
+		parameters.append(pair)
+	parameters.append("VideoCodec=copy")
+	if copy_audio: parameters.append("AudioCodec=copy")
+	return path.get_slice("?", 0) + "?" + "&".join(parameters)
+
 func retry_transcode() -> void:
 	if active_playback_mode == "original":
 		failed.emit("The original video failed to play. Choose Transcoded in Settings > Playback.")
@@ -210,10 +262,8 @@ func report(event: String, paused: bool = false) -> void:
 	if not started: return
 	var path := "/Sessions/Playing" + ("/" + event if event != "Playing" else "")
 	var body := {"ItemId": item.Id, "MediaSourceId": source.Id, "PlaySessionId": session_id, "PositionTicks": position_ticks, "IsPaused": paused, "CanSeek": true, "PlayMethod": method, "SubtitleStreamIndex": subtitle_index}
-	if audio_index >= 0:
-		body["AudioStreamIndex"] = audio_index
-	elif source.get("DefaultAudioStreamIndex") != null:
-		body["AudioStreamIndex"] = int(source.DefaultAudioStreamIndex)
+	var selected_audio := selected_audio_index()
+	if selected_audio >= 0: body["AudioStreamIndex"] = selected_audio
 	var result := await api.request(path, HTTPClient.METHOD_POST, body)
 	if not result.ok:
 		var message := "Jellyfin playback report (%s) failed: %s" % [event, result.get("error", "Unknown error.")]

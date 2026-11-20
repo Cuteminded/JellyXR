@@ -83,9 +83,11 @@ Press **A** to open the playback controls, then select **Audio and subtitles**.
 
 Under **Audio**, select the language or version you want to hear. The choices depend on the video. Some videos also include commentary.
 
+Playback starts with Jellyfin's preferred audio track.
+
 The video briefly reloads when you change the audio, then continues from the same point. If you paused it first, it stays paused.
 
-If the choices are unavailable, select **Use Automatic for this video**. This lets Jellyfin prepare the video for your chosen audio or subtitles. It does not change your saved playback preference.
+Changing audio keeps the original video stream when video conversion is unnecessary. Automatic playback can convert the audio if your device needs it. Original full resolution allows audio changes only when Jellyfin can copy both video and audio without conversion.
 
 Select **Back to video** to continue watching, or press **B** to open your library.
 
@@ -196,6 +198,6 @@ Home always shows the newest additions first. The sort order does not affect Ran
 - If the scene surrounds you when you wanted a normal screen, select Screen under Video projection.
 - If the video pauses with a loading message, it is waiting for more video data. Give it a moment. If this keeps happening, try Automatic or Transcoded under Settings > Playback, then start the video again.
 - If subtitles appear too early or too late, adjust Delay under Audio and subtitles.
-- If audio or subtitle choices are unavailable, select Use Automatic for this video on that page.
+- If picture subtitle choices are unavailable, select Use Automatic for this video on that page.
 
 For setup problems, see [Install and start jellyXR](INSTALLATION.md).

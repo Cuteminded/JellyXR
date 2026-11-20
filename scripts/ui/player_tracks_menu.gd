@@ -33,11 +33,9 @@ func refresh() -> void:
 	var busy: bool = state.get("busy", false)
 	var original := session.active_playback_mode == "original"
 	var group := ButtonGroup.new()
-	var selected := subtitles.index if kind == "Subtitle" else session.audio_index
-	if kind == "Audio" and selected < 0:
-		selected = int(session.source.get("DefaultAudioStreamIndex", -1))
-	if original:
-		_hint("Select Automatic to change audio tracks or use picture subtitles.")
+	var selected := subtitles.index if kind == "Subtitle" else session.selected_audio_index()
+	if original and kind == "Subtitle":
+		_hint("Select Automatic to use picture subtitles.")
 		automatic_button = _button("Use Automatic for this video", func():
 			session.active_playback_mode = "auto"
 			refresh())
@@ -51,7 +49,7 @@ func refresh() -> void:
 		var label := str(stream.get("DisplayTitle", stream.get("Language", "Track %d" % index)))
 		var supported := kind == "Audio" or SubtitleTrack.supported(stream)
 		if not supported: label += "\nJellyfin converts the video."
-		_track_button(label, index, selected, group, busy or (original and (kind == "Audio" or not supported)))
+		_track_button(label, index, selected, group, busy or (original and not supported))
 	if count == 0: _hint("No %s tracks." % kind.to_lower())
 	custom_minimum_size.y = minf(maximum_height, body.get_combined_minimum_size().y)
 	set_deferred("scroll_vertical", scroll_position)

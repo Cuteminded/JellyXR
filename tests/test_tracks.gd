@@ -4,11 +4,15 @@ class FixtureApi extends JellyfinClient:
 	var bodies: Array[Dictionary] = []
 	var paths: Array[String] = []
 	var wait_for_frame := false
+	var stream_path := "/video/master.m3u8?VideoCodec=copy&AudioCodec=copy"
+	var extra_audio := false
 	func request(path: String, _method: HTTPClient.Method = HTTPClient.METHOD_GET, body: Dictionary = {}) -> Dictionary:
 		bodies.append(body)
 		paths.append(path)
 		if wait_for_frame: await get_tree().process_frame
-		return {"ok": true, "data": {"PlaySessionId": "test-session", "MediaSources": [{"Id": "source", "SupportsDirectPlay": true, "TranscodingSubProtocol": "hls", "TranscodingUrl": "/video/master.m3u8?VideoCodec=copy", "MediaStreams": [{"Type": "Audio", "Index": 2}, {"Type": "Subtitle", "Index": 5, "Codec": "pgssub"}]}]}}
+		var media_streams: Array = [{"Type": "Video", "Codec": "hevc"}, {"Type": "Audio", "Index": 2, "Codec": "aac", "IsDefault": true}, {"Type": "Subtitle", "Index": 5, "Codec": "pgssub"}]
+		if extra_audio: media_streams.append({"Type": "Audio", "Index": 7, "Codec": "aac"})
+		return {"ok": true, "data": {"PlaySessionId": "test-session", "MediaSources": [{"Id": "source", "SupportsDirectPlay": true, "DefaultAudioStreamIndex": 7 if extra_audio else 2, "TranscodingSubProtocol": "hls", "TranscodingUrl": stream_path, "MediaStreams": media_streams}]}}
 
 class FixtureVideo extends VideoBackend:
 	var position := 42000
@@ -61,6 +65,30 @@ func run_checks() -> void:
 	await session.open(session.item, false, true)
 	check(api.bodies.back().AudioStreamIndex == 2 and not api.bodies.back().EnableDirectPlay, "Audio selection requests a server stream with the chosen index")
 	check(session.method == "DirectStream" and session.is_hls() and streams.back()[1] == 42000, "Remuxed HLS retains the absolute resume position")
+	var remux_profile: Dictionary = api.bodies.back().DeviceProfile
+	check(remux_profile.TranscodingProfiles[0].VideoCodec == "hevc" and remux_profile.TranscodingProfiles[0].Container == "mp4", "Audio changes advertise the source video codec with fragmented MP4 HLS")
+	check(not remux_profile.TranscodingProfiles[0].has("Conditions") and remux_profile.CodecProfiles.is_empty(), "Audio changes do not apply video conversion limits or SDR requirements")
+	var errors: Array[String] = []
+	session.failed.connect(func(message: String): errors.append(message))
+	var opened := streams.size()
+	api.stream_path = "/video/master.m3u8?VideoCodec=h264&AudioCodec=aac&AllowVideoStreamCopy=false"
+	await session.open(session.item, false, true)
+	check(streams.size() == opened and errors.size() == 1, "Audio changes respect a server requirement to convert video")
+	api.stream_path = "/video/master.m3u8?VideoCodec=hevc&AudioCodec=aac&AudioStreamIndex=2&PlaySessionId=test-session"
+	await session.open(session.item, false, true)
+	check(streams.size() == opened + 1 and "VideoCodec=copy" in streams.back()[0] and "VideoCodec=hevc" not in streams.back()[0] and "AudioCodec=aac" in streams.back()[0], "Automatic playback explicitly copies video and permits audio-only conversion")
+	check("AudioStreamIndex=2" in streams.back()[0] and "PlaySessionId=test-session" in streams.back()[0], "Stream copying preserves track selection and server session parameters")
+	session.active_playback_mode = "original"
+	opened = streams.size()
+	api.stream_path += "&AllowAudioStreamCopy=false"
+	await session.open(session.item, false, true)
+	check(streams.size() == opened and errors.size() == 2, "Original playback respects a server requirement to convert audio")
+	api.stream_path = "/video/master.m3u8?VideoCodec=hevc&AudioCodec=aac"
+	await session.open(session.item, false, true)
+	check(session.method == "DirectStream" and streams.size() == opened + 1, "Original playback allows audio switching with both streams copied")
+	check("VideoCodec=copy" in streams.back()[0] and "AudioCodec=copy" in streams.back()[0] and "AudioCodec=aac" not in streams.back()[0], "Original playback explicitly copies both codecs in the stream URL")
+	check(api.bodies.back().DeviceProfile.TranscodingProfiles[0].AudioCodec == "aac", "Original playback negotiates the selected audio codec")
+	session.active_playback_mode = "auto"
 	await session.report("Playing")
 	await session.report("Stopped")
 	check(api.paths.back().begins_with("/Videos/ActiveEncodings"), "Stopping a remux closes its server encoding session")
@@ -88,23 +116,66 @@ func run_checks() -> void:
 	check(view.buttons[2].button_pressed, "The audio submenu selects the server's default track")
 	session.active_playback_mode = "original"
 	view.refresh()
-	check(view.buttons[2].disabled, "Original playback disables audio conversion")
-	view.automatic_button.pressed.emit()
-	check(session.active_playback_mode == "auto" and not view.buttons[2].disabled, "Automatic playback enables audio selection")
+	check(not view.buttons[2].disabled and view.automatic_button == null, "Original playback allows audio selection without switching to Automatic")
 	view.kind = "Subtitle"
 	view.refresh()
 	check(view.buttons[-1].button_pressed and view.buttons.has(5), "The subtitle submenu includes Off and picture subtitles")
 	session.active_playback_mode = "original"
 	view.refresh()
 	check(view.buttons[5].disabled and not view.buttons[-1].disabled, "Original playback keeps Off available and disables picture burn-in")
+	view.automatic_button.pressed.emit()
+	check(session.active_playback_mode == "auto" and not view.buttons[5].disabled, "Automatic playback enables picture subtitle selection")
 	view.queue_free()
 	session.queue_free()
 	api.queue_free()
 	track.queue_free()
 	await process_frame
+	await check_initial_audio()
 	await check_app_switching()
 	print("Track checks: ", "PASS" if failures == 0 else str(failures) + " failures")
 	quit(1 if failures else 0)
+
+func check_initial_audio() -> void:
+	var api := FixtureApi.new()
+	api.server = "https://fixture.invalid"
+	api.extra_audio = true
+	root.add_child(api)
+	var session := PlaybackSession.new()
+	session.api = api
+	session.settings = JellyXRSettings.new()
+	root.add_child(session)
+	var streams: Array[String] = []
+	session.stream_ready.connect(func(url: String, _source: Dictionary, _start: int): streams.append(url))
+	for mode in ["auto", "original"]:
+		session.settings.playback_mode = mode
+		var count := api.bodies.size()
+		await session.open({"Id": "initial-audio"})
+		check(api.bodies.size() == count + 2 and api.bodies.back().AudioStreamIndex == 7, "Initial playback explicitly requests Jellyfin's preferred audio in " + mode)
+		check(session.audio_index == 7 and session.selected_audio_index() == 7 and session.method == "DirectStream", "The selected track matches the initial server stream in " + mode)
+		check("VideoCodec=copy" in streams.back(), "Initial audio selection preserves the original video in " + mode)
+	var track := SubtitleTrack.new()
+	root.add_child(track)
+	var view := PlayerTracksMenu.new()
+	view.state_provider = func(): return {"session": session, "subtitles": track, "busy": false}
+	root.add_child(view)
+	view.kind = "Audio"
+	view.refresh()
+	check(view.buttons[7].button_pressed and not view.buttons[2].button_pressed, "The initial menu selects Jellyfin's preferred track instead of the file's default track")
+	session.audio_index = 2
+	await session.open(session.item, false, true)
+	view.refresh()
+	check(view.buttons[2].button_pressed and not view.buttons[7].button_pressed, "An explicit audio choice takes precedence over the server default")
+	session.audio_index = -1
+	session.source = {"MediaStreams": [{"Type": "Audio", "Index": 4}]}
+	view.refresh()
+	check(view.buttons[4].button_pressed, "A single audio track is selected even without a server default")
+	session.source = {"DefaultAudioStreamIndex": null, "MediaStreams": [{"Type": "Audio", "Index": 4}, {"Type": "Audio", "Index": 9, "IsDefault": true}]}
+	check(session.selected_audio_index() == 9, "Missing server preferences fall back to the file default")
+	view.queue_free()
+	track.queue_free()
+	session.queue_free()
+	api.queue_free()
+	await process_frame
 
 func check_app_switching() -> void:
 	var app: Node = load("res://scenes/main.tscn").instantiate()
@@ -131,6 +202,10 @@ func check_app_switching() -> void:
 	check(video.paused and video.position == 42000, "Changing audio preserves pause state and the current position")
 	check(app.player_overlay.quick_access.tracks_menu.visible and not app.panel.visible, "Audio switching keeps Quick Access open without rebuilding the library")
 	check(app.session.audio_index == 2 and not app.seeking, "A prepared replacement stream completes the track change")
+	app.session.active_playback_mode = "original"
+	await app._select_audio(2)
+	check(api.bodies.back().AudioStreamIndex == 2 and app.session.method == "DirectStream" and video.paused, "Original audio switching preserves the playback mode and pause state")
+	app.session.active_playback_mode = "auto"
 	await app._select_subtitle(5)
 	check(app.session.burn_subtitles and app.subtitles.index == 5 and video.paused, "Picture subtitle selection restarts playback and preserves pause")
 	await app._select_subtitle(-1)
