@@ -6,6 +6,7 @@ signal settings_requested
 signal library_requested
 signal pause_requested
 signal recenter_requested
+signal screen_move_started
 var settings: JellyXRSettings
 var camera: Camera3D
 var viewport: SubViewport
@@ -23,6 +24,9 @@ var player_skip_popup: PlayerSkipPopup
 var skip_screen_size := Vector3(4.0, 16.0 / 9.0, 0.0)
 var pointers: Array[LaserPointer] = []
 var controller_models: OpenXRRenderModelManager
+var moving_controller: XRController3D
+var move_button := ""
+var screen_controller_offset := Transform3D.IDENTITY
 
 func setup() -> void:
 	var xr := XRServer.find_interface("OpenXR")
@@ -93,6 +97,7 @@ func setup() -> void:
 			pointer.panel = panel
 			pointer.viewport = viewport
 			pointer.button_pressed.connect(_controller_button_pressed.bind(pointer.tracker))
+			pointer.button_released.connect(_controller_button_released.bind(pointer.tracker))
 			origin.add_child(pointer)
 			pointers.append(pointer)
 	else:
@@ -114,8 +119,44 @@ func _controller_button_pressed(action: String, hand: StringName) -> void:
 		"library": library_requested.emit()
 		"pause": pause_requested.emit()
 		"recenter": recenter_requested.emit()
+		"move_screen": _start_screen_move(action, hand)
+
+func _controller_button_released(action: String, hand: StringName) -> void:
+	if is_instance_valid(moving_controller) and moving_controller.tracker == hand and move_button == action:
+		stop_screen_move()
+
+func _can_move_screen() -> bool:
+	return screen != null and screen.is_visible_in_tree() and not panoramic and settings.environment in ["Void", "Passthrough"]
+
+func _controller_has_pose(controller: XRController3D) -> bool:
+	var tracker := XRServer.get_tracker(controller.tracker) as XRPositionalTracker
+	if tracker == null: return false
+	var pose := tracker.get_pose(controller.pose)
+	return pose != null and pose.has_tracking_data
+
+func _start_screen_move(action: String, hand: StringName) -> void:
+	if not _can_move_screen() or is_instance_valid(moving_controller): return
+	for pointer in pointers:
+		if pointer.tracker != hand or not pointer.get_is_active() or not _controller_has_pose(pointer): continue
+		moving_controller = pointer
+		move_button = action
+		screen_controller_offset = pointer.global_transform.affine_inverse() * screen.global_transform
+		screen_move_started.emit()
+		return
+
+func stop_screen_move() -> void:
+	moving_controller = null
+	move_button = ""
+
+func _update_screen_move() -> void:
+	if not is_instance_valid(moving_controller): return
+	if not _can_move_screen() or not moving_controller.get_is_active() or not _controller_has_pose(moving_controller) or not moving_controller.is_button_pressed(move_button):
+		stop_screen_move()
+		return
+	screen.global_transform = moving_controller.global_transform * screen_controller_offset
 
 func _process(_delta: float) -> void:
+	_update_screen_move()
 	if not player_overlay: return
 	var show_panorama := panoramic and screen.visible
 	if panorama.visible != show_panorama:

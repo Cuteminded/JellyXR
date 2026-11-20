@@ -9,7 +9,8 @@ const ACTIONS := {
 	"settings": "Settings",
 	"library": "Library",
 	"pause": "Play / pause",
-	"recenter": "Recenter"
+	"recenter": "Recenter",
+	"move_screen": "Move screen (hold)"
 }
 const BUTTONS := {
 	"left_hand/ax_button": "X button",

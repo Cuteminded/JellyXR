@@ -103,6 +103,7 @@ func _setup_world() -> void:
 	world.library_requested.connect(_toggle_controller_library)
 	world.pause_requested.connect(_controller_pause)
 	world.recenter_requested.connect(_recenter)
+	world.screen_move_started.connect(_screen_move_started)
 	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
 	if xr:
 		xr.pose_recentered.connect(_recenter, CONNECT_DEFERRED)
@@ -797,6 +798,7 @@ func _recenter() -> void:
 	_recenter_video()
 
 func _recenter_video() -> void:
+	world.stop_screen_move()
 	recentered_view = camera.global_transform
 	screen.global_basis = camera.global_basis
 	cinema.recenter(camera.global_transform)
@@ -821,6 +823,14 @@ func _update_screen_follow() -> void:
 	if projection_mode != VideoProjection.Mode.SCREEN: return
 	screen.global_basis = camera.global_basis
 	_position_screen()
+
+func _screen_move_started() -> void:
+	if not settings.follow_screen: return
+	settings.follow_screen = false
+	settings.save()
+	for child in page.get_children():
+		if child is SettingsView and is_instance_valid(child.follow_switch):
+			child.follow_switch.set_pressed_no_signal(false)
 
 func _toggle_menu() -> void:
 	if not get_viewport().use_xr: return
