@@ -10,8 +10,9 @@ $dependencyRoot = Join-Path $buildRoot 'deps'
 New-Item -ItemType Directory -Force $dependencyRoot | Out-Null
 New-Item -ItemType File -Force (Join-Path $projectRoot 'build/.gdignore') | Out-Null
 
-function Get-Dependency([string]$Name, [string]$Url, [string]$Hash, [string]$Directory) {
-    $archive = Join-Path $dependencyRoot $Name
+function Get-Dependency([string]$Name, [string]$Url, [string]$Hash, [string]$Directory, [string]$CacheRoot = $dependencyRoot) {
+    New-Item -ItemType Directory -Force $CacheRoot | Out-Null
+    $archive = Join-Path $CacheRoot $Name
     if (-not (Test-Path -LiteralPath $archive)) {
         Write-Host "Downloading $Name from $Url"
         try {
@@ -23,17 +24,34 @@ function Get-Dependency([string]$Name, [string]$Url, [string]$Hash, [string]$Dir
     if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $Hash) {
         throw "Checksum mismatch for $Name. Remove the cached archive and retry."
     }
-    $destination = Join-Path $dependencyRoot $Directory
+    $destination = Join-Path $CacheRoot $Directory
     if (-not (Test-Path -LiteralPath $destination)) {
         if ($Directory -eq 'mpv-lgpl') {
             New-Item -ItemType Directory $destination | Out-Null
             & tar -xf $archive -C $destination
         } else {
-            & tar -xf $archive -C $dependencyRoot
+            & tar -xf $archive -C $CacheRoot
         }
         if ($LASTEXITCODE -ne 0) { throw "Could not extract $Name." }
     }
     return $destination
+}
+
+function Get-FFmpegDependency {
+    $releaseUrl = 'https://api.github.com/repos/FFmpeg-Builds/FFmpeg-Builds/releases/tags/latest'
+    $release = Invoke-RestMethod -Uri $releaseUrl -Headers @{ Accept = 'application/vnd.github+json' }
+    $assets = @($release.assets | Where-Object { $_.name -cmatch '^ffmpeg-n8\.1[^/]*-win64-lgpl-shared-8\.1\.zip$' })
+    if ($assets.Count -ne 1) {
+        throw "Expected one Windows x64 LGPL shared FFmpeg 8.1 archive at $releaseUrl, found $($assets.Count)."
+    }
+    $asset = $assets[0]
+    if ($asset.digest -cnotmatch '^sha256:([a-fA-F0-9]{64})$') {
+        throw "Missing or invalid SHA256 digest for $($asset.name)."
+    }
+    $hash = $Matches[1]
+    $cacheRoot = Join-Path $dependencyRoot "ffmpeg/$hash"
+    $directory = [System.IO.Path]::GetFileNameWithoutExtension($asset.name)
+    return Get-Dependency $asset.name $asset.browser_download_url $hash $directory $cacheRoot
 }
 
 $cmakeRoot = Get-Dependency 'cmake.zip' `
@@ -51,9 +69,7 @@ $vulkanRoot = Get-Dependency 'vulkan-headers-1.4.321.zip' `
 $mpvRoot = Get-Dependency 'mpv-lgpl.zip' `
     'https://nightly.link/mpv-player/mpv/actions/runs/40835379230/libmpv-v0.41.0-dev-gcf764c61d-40835379230-x86_64-w64-mingw32-lgpl.zip' `
     '4AB059D0C6CE2FCCC239F14F54087F9411C60B680D40B7DCCA8CDA44EA6E8366' 'mpv-lgpl'
-$ffmpegRoot = Get-Dependency 'ffmpeg-lgpl-2026-11-05.zip' `
-    'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-05-12-48/ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1.zip' `
-    '49A2EC2D75366A65D2977E9AE4C3DE49F98EAB1C049F5A055DFBEF86175118BA' 'ffmpeg-n8.1.3-34-ga35157abb9-win64-lgpl-shared-8.1'
+$ffmpegRoot = Get-FFmpegDependency
 
 $cmake = Join-Path $cmakeRoot 'bin/cmake.exe'
 $originalPath = $env:PATH
