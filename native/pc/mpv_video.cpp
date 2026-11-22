@@ -76,6 +76,7 @@ String JellyXRMpv::initialize(int64_t start_ms) {
         {"sid", "no"}, {"sub-auto", "no"}, {"audio-file-auto", "no"}, {"keep-open", "no"},
         {"idle", "yes"}, {"tls-verify", "yes"},
         {"cache", "yes"}, {"cache-secs", "30"}, {"demuxer-max-bytes", "256MiB"},
+        {"demuxer-max-back-bytes", "96MiB"},
         {"user-agent", JELLYXR_STREAM_USER_AGENT}
     };
     for (const auto &option : options) {

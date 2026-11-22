@@ -38,6 +38,7 @@ final class BufferedPlayback {
             .setDefaultRequestProperties(Collections.singletonMap("Authorization", authorization));
         DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
             .setBufferDurationsMs(15000, 30000, 6000, 6000)
+            .setBackBuffer(15000, true)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build();
         player = new ExoPlayer.Builder(context)

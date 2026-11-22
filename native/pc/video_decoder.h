@@ -4,6 +4,9 @@
 
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+extern "C" {
+#include <libavutil/rational.h>
+}
 #include <array>
 #include <atomic>
 #include <condition_variable>
@@ -96,6 +99,8 @@ private:
     static constexpr int64_t max_buffer_ms = 30000;
     static constexpr uint64_t max_buffer_bytes = 256 * 1048576;
     static constexpr size_t max_buffer_packets = 4096;
+    static constexpr int64_t back_buffer_ms = 15000;
+    static constexpr uint64_t max_history_bytes = 96 * 1048576;
     static int interrupt(void *owner);
     void configure_hardware(const struct AVCodec *decoder);
 #ifdef __linux__
@@ -112,6 +117,8 @@ private:
     void read_loop();
     bool read_packet(AVPacket *packet, uint64_t &packet_generation, bool &flush, int &error);
     void clear_packets();
+    void trim_packet_history();
+    bool seek_buffered(int64_t milliseconds);
     void update_buffer_size();
     bool publish(AVFrame *frame, uint64_t frame_generation);
     bool convert(AVFrame *frame, VideoPlanes &output);
@@ -147,10 +154,12 @@ private:
     std::atomic<uint64_t> download_us{0}, conversion_us{0};
     std::atomic<uint64_t> vaapi_export_us{0}, vaapi_export_frames{0};
     std::atomic<uint64_t> read_us{0}, decode_us{0}, read_bytes{0};
+    std::atomic<uint64_t> buffered_seeks{0};
     std::atomic<int64_t> buffered_ms{0};
     std::atomic<uint64_t> buffered_bytes{0};
     std::atomic<size_t> buffered_packets{0};
     std::atomic<bool> reader_ended{false}, seek_interrupt{false};
+    AVRational stream_time_base{0, 1};
     int64_t origin_us = 0;
     int64_t duration = 0;
     std::atomic<bool> end_of_stream{false};
@@ -163,11 +172,14 @@ private:
     std::condition_variable wake;
     struct QueuedPacket {
         AVPacket *packet = nullptr;
-        uint64_t generation = 0;
         bool flush = false;
         int error = 0;
     };
     std::deque<QueuedPacket> packets;
+    size_t next_packet = 0;
+    uint64_t history_bytes = 0;
+    bool buffered_seek_pending = false;
+    uint64_t demux_generation = 0;
     VideoPlanes pending;
     VideoPlanes staging;
     bool frame_ready = false;

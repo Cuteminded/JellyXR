@@ -47,6 +47,10 @@ func run_checks() -> void:
 	video.paused = true
 	await app._seek_to(10000)
 	assert(video.last_seek == 10000 and video.paused, "HLS can seek backward while preserving pause")
+	session.method = "DirectStream"
+	await app._seek_to(20000)
+	assert(video.last_seek == 20000 and session.opened_at == -1 and session.stopped_at == -1, "DirectStream HLS seeks in the active decoder")
+	session.method = "Transcode"
 	session.source.erase("TranscodingUrl")
 	app.transcode_offset = 6000000000
 	video.paused = true

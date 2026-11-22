@@ -90,6 +90,10 @@ func run_checks() -> void:
 	check(await wait_until(func(): return not decoder.is_buffering()), "Seek completion clears the loading state")
 	if expected_renderer == "vulkan":
 		check(await wait_until(func(): return absi(int(decoder.playback_diagnostics().get("video_position_ms", -10000)) - 3000) < 250), "Paused seeking presents the target video frame")
+		var buffered_seeks := int(decoder.playback_diagnostics().get("buffered_seeks", 0))
+		decoder.seek_to(2000)
+		check(int(decoder.playback_diagnostics().get("buffered_seeks", 0)) == buffered_seeks + 1, "Rewinding reuses buffered video packets")
+		check(await wait_until(func(): return absi(int(decoder.playback_diagnostics().get("video_position_ms", -10000)) - 2000) < 250), "The buffered rewind presents the target video frame")
 	decoder.set_paused(false)
 	check(await wait_until(func(): return decoder.position_ms() > 3400), "Playback continues after seeking")
 	decoder.seek_to(decoder.duration_ms() - 500)

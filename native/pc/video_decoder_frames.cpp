@@ -162,6 +162,7 @@ godot::Dictionary VideoDecoder::diagnostics() const {
     values["decode_error"] = decode_error.load();
     values["decoded_timestamp_ms"] = decoded_timestamp.load();
     values["read_ahead_ms"] = buffered_ms.load();
+    values["buffered_seeks"] = buffered_seeks.load();
     values["read_ahead_mb"] = double(buffered_bytes.load()) / 1048576.0;
     values["read_mb"] = double(read_bytes.load()) / 1048576.0;
     values["read_seconds"] = double(read_us.load()) / 1000000.0;

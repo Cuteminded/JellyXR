@@ -186,6 +186,7 @@ int VideoDecoder::read_geometry() {
     if (rotation % 2) std::swap(source_width, source_height);
     if (source_width <= 0 || source_height <= 0 || source_width > 8192 || source_height > 8192 ||
             int64_t(source_width) * source_height > 33554432) return AVERROR(ENOSYS);
+    stream_time_base = input->streams[stream_index]->time_base;
     origin_us = input->start_time == AV_NOPTS_VALUE ? 0 : input->start_time;
     duration = input->duration == AV_NOPTS_VALUE ? 0 : input->duration / 1000;
     io_deadline = 0;
@@ -212,6 +213,7 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     download_us = conversion_us = 0;
     vaapi_export_us = vaapi_export_frames = 0;
     read_us = decode_us = read_bytes = 0;
+    buffered_seeks = 0;
     buffered_ms = buffered_bytes = 0;
     reader_ended = seek_interrupt = false;
     end_of_stream = false;
@@ -221,6 +223,7 @@ int VideoDecoder::start(const std::string &url, const std::string &authorization
     last_publish_us = 0;
     decoded_timestamp = 0;
     generation = 0;
+    demux_generation = 0;
     awaiting_first_frame = true;
     rotation = 0;
     std::promise<int> initialized;
@@ -266,14 +269,17 @@ void VideoDecoder::set_clock(int64_t milliseconds) {
 void VideoDecoder::seek(int64_t milliseconds) {
     {
         std::lock_guard<std::mutex> lock(mutex);
-        seek_target = std::max<int64_t>(0, milliseconds);
-        clock = seek_target;
-        discard_before = seek_target - 100;
+        clock = std::max<int64_t>(0, milliseconds);
+        discard_before = clock - 100;
         last_publish_us = 0;
         ++generation;
-        seek_interrupt = true;
-        clear_packets();
-        reader_ended = false;
+        if (!seek_buffered(clock)) {
+            seek_target = clock;
+            ++demux_generation;
+            seek_interrupt = true;
+            clear_packets();
+            reader_ended = false;
+        }
         end_of_stream = false;
         frame_ready = false;
         awaiting_first_frame = true;
