@@ -9,6 +9,8 @@ const ACTIONS := {
 	"settings": "Settings",
 	"library": "Library",
 	"pause": "Play / pause",
+	"back": "Back 10 seconds",
+	"forward": "Forward 30 seconds",
 	"recenter": "Recenter",
 	"move_screen": "Move screen (hold)"
 }

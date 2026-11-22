@@ -4,7 +4,7 @@ extends Node3D
 signal menu_requested
 signal settings_requested
 signal library_requested
-signal pause_requested
+signal playback_action_requested(action: String)
 signal recenter_requested
 signal screen_move_started
 var settings: JellyXRSettings
@@ -120,11 +120,12 @@ func setup() -> void:
 func _controller_button_pressed(action: String, hand: StringName) -> void:
 	var profile := ControllerBindings.active_profile(hand)
 	var bindings: ControllerBindings = settings.controller_profiles.get(profile, settings.controller_bindings)
-	match bindings.action_for(str(hand) + "/" + action):
+	var shortcut := bindings.action_for(str(hand) + "/" + action)
+	match shortcut:
 		"menu": menu_requested.emit()
 		"settings": settings_requested.emit()
 		"library": library_requested.emit()
-		"pause": pause_requested.emit()
+		"pause", "back", "forward": playback_action_requested.emit(shortcut)
 		"recenter": recenter_requested.emit()
 		"move_screen": _start_screen_move(action, hand)
 

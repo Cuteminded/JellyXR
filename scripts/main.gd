@@ -101,7 +101,7 @@ func _setup_world() -> void:
 	world.menu_requested.connect(_toggle_menu)
 	world.settings_requested.connect(_toggle_settings)
 	world.library_requested.connect(_toggle_controller_library)
-	world.pause_requested.connect(_controller_pause)
+	world.playback_action_requested.connect(_controller_playback_action)
 	world.recenter_requested.connect(_recenter)
 	world.screen_move_started.connect(_screen_move_started)
 	var xr := XRServer.find_interface("OpenXR") as OpenXRInterface
@@ -644,9 +644,9 @@ func _show_playback() -> void:
 	player_overlay.show()
 	_update_timeline()
 
-func _controller_pause() -> void:
+func _controller_playback_action(action: String) -> void:
 	if playing and decoder_ready and not seeking and not photo_active:
-		_player_action("pause")
+		_player_action(action)
 
 func _player_action(action: String) -> void:
 	if photo_active and action in ["pause", "back", "forward", "skip_segment"]: return

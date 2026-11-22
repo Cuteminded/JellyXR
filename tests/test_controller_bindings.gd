@@ -1,7 +1,15 @@
 extends SceneTree
 
 class FixtureVideo extends VideoBackend:
+	var position := 45000
+	var seek_targets: Array[int] = []
+
 	func toggle_pause() -> void: paused = not paused
+	func position_ms() -> int: return position
+	func duration_ms() -> int: return 120000
+	func seek(milliseconds: int) -> void:
+		seek_targets.append(milliseconds)
+		position = milliseconds
 
 class FixtureSession extends PlaybackSession:
 	func report(_event: String, _paused: bool = false) -> void: pass
@@ -32,8 +40,10 @@ func run_checks() -> void:
 	bindings.assign("right_hand/by_button", "none")
 	bindings.assign("right_hand/grip_click", "recenter")
 	bindings.assign("left_hand/grip_click", "move_screen")
+	bindings.assign("left_hand/ax_button", "back")
 	settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].assign("right_hand/grip_click", "pause")
 	settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].assign("left_hand/dpad_up", "library")
+	settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].assign("left_hand/dpad_right", "forward")
 	var path := "user://controller-bindings-test.cfg"
 	settings.device_id = "controller-test-device"
 	check(settings.save(path) == OK)
@@ -43,8 +53,10 @@ func run_checks() -> void:
 	check(restored.controller_bindings.action_for("right_hand/by_button") == "none", "Disabled shortcuts survive a restart")
 	check(restored.controller_bindings.action_for("right_hand/grip_click") == "recenter")
 	check(restored.controller_bindings.action_for("left_hand/grip_click") == "move_screen", "The hold action survives a restart")
+	check(restored.controller_bindings.action_for("left_hand/ax_button") == "back", "The back shortcut survives a restart")
 	check(restored.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("right_hand/grip_click") == "pause", "Steam Frame shortcuts are saved separately")
 	check(restored.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("left_hand/dpad_up") == "library")
+	check(restored.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("left_hand/dpad_right") == "forward", "The Steam Frame forward shortcut survives a restart")
 	check(JellyXRSettings.new().controller_bindings.action_for("left_hand/by_button") == "settings", "Settings instances do not share overrides")
 	var config := ConfigFile.new()
 	check(config.load(path) == OK)
@@ -63,7 +75,7 @@ func run_checks() -> void:
 	world.menu_requested.connect(func(): received.append("menu"))
 	world.settings_requested.connect(func(): received.append("settings"))
 	world.library_requested.connect(func(): received.append("library"))
-	world.pause_requested.connect(func(): received.append("pause"))
+	world.playback_action_requested.connect(func(action: String): received.append(action))
 	world.recenter_requested.connect(func(): received.append("recenter"))
 	for action in ControllerBindings.ACTIONS:
 		received.clear()
@@ -82,8 +94,9 @@ func run_checks() -> void:
 	received.clear()
 	world._controller_button_pressed("dpad_up", &"left_hand")
 	world._controller_button_pressed("dpad_down", &"left_hand")
+	world._controller_button_pressed("dpad_right", &"left_hand")
 	world._controller_button_pressed("by_button", &"left_hand")
-	check(received == ["library", "menu"], "The native profile dispatches independent D-pad shortcuts")
+	check(received == ["library", "menu", "forward"], "The native profile dispatches independent D-pad shortcuts")
 	XRServer.remove_tracker(frame_tracker)
 	bindings.overrides.clear()
 	check(settings.save(path) == OK)
@@ -123,6 +136,7 @@ func run_checks() -> void:
 	var previous_position: Vector3 = app.panel.global_position
 	app.world._controller_button_pressed("grip_click", &"right_hand")
 	check(not app.panel.global_position.is_equal_approx(previous_position), "Remapped recenter moves the menu with the viewer")
+	check_seek_shortcuts(app)
 	app.viewport.get_parent().stretch = false
 	app.viewport.size = Vector2i(1536, 960)
 	app.api.token = "fixture"
@@ -138,13 +152,35 @@ func run_checks() -> void:
 	for frame in range(2): await process_frame
 	var popup_rect := controls.editor.panel.get_rect()
 	check(Rect2(Vector2.ZERO, Vector2(1536, 960)).encloses(popup_rect), "The first popup opening fits inside the VR viewport")
-	check(popup_rect.size.y < 600, "The first popup opening fits its contents without excess height")
+	check(is_equal_approx(popup_rect.size.y, controls.editor.panel.get_combined_minimum_size().y), "The first popup opening fits its contents without excess height")
+	check(controls.action_buttons["back"].text == "Back 10 seconds")
+	check(controls.action_buttons["forward"].text == "Forward 30 seconds")
 	app.queue_free()
 	await process_frame
 	await check_diagram_models()
 	await check_steam_frame_models()
 	print("Controller binding checks: ", "PASS" if failures == 0 else "FAIL")
 	quit(0 if failures == 0 else 1)
+
+func check_seek_shortcuts(app: Node) -> void:
+	var video: FixtureVideo = app.video
+	app.settings.controller_bindings.assign("left_hand/grip_click", "back")
+	app.settings.controller_bindings.assign("right_hand/grip_click", "forward")
+	app.player_overlay.hide()
+	app.world._controller_button_pressed("grip_click", &"left_hand")
+	app.world._controller_button_pressed("grip_click", &"right_hand")
+	check(video.seek_targets == [35000, 65000], "Controller shortcuts seek back 10 seconds and forward 30 seconds")
+	check(not app.player_overlay.visible, "Seeking with a controller keeps the playback controls hidden")
+	app.seeking = true
+	app.world._controller_button_pressed("grip_click", &"right_hand")
+	app.seeking = false
+	app.photo_active = true
+	app.world._controller_button_pressed("grip_click", &"left_hand")
+	app.photo_active = false
+	app.playing = false
+	app.world._controller_button_pressed("grip_click", &"right_hand")
+	app.playing = true
+	check(video.seek_targets == [35000, 65000], "Controller shortcuts ignore pending seeks, photos, and inactive playback")
 
 func check_diagram_models() -> void:
 	var generic: ControllerDiagramModel = load("res://assets/controllers/generic.tres")
@@ -214,9 +250,9 @@ func check_steam_frame_models() -> void:
 				if key == other_key: continue
 				check(not target.get_rect().intersects(view.hotspots[other_key].get_rect()), "Steam Frame hotspots do not overlap")
 	controls.binding_buttons["right_hand/x_button"].pressed.emit()
-	controls.action_buttons["pause"].pressed.emit()
+	controls.action_buttons["forward"].pressed.emit()
 	controls.apply_button.pressed.emit()
-	check(settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("right_hand/x_button") == "pause")
+	check(settings.controller_profiles[ControllerBindings.STEAM_FRAME_PROFILE].action_for("right_hand/x_button") == "forward")
 	check(settings.controller_bindings.overrides.is_empty())
 	XRServer.remove_tracker(left)
 	XRServer.remove_tracker(right)
