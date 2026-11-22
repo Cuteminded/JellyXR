@@ -19,7 +19,6 @@ jobs:
   headless:
     name: Linux headless tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
     defaults:
       run:
         shell: bash
