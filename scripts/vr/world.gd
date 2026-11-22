@@ -45,7 +45,8 @@ func setup() -> void:
 	add_child(origin)
 	if immersive:
 		get_viewport().use_xr = true
-		if RenderingServer.get_rendering_device() != null:
+		var foveation_level: int = ProjectSettings.get_setting_with_override("xr/openxr/foveation_level")
+		if foveation_level > 0 and RenderingServer.get_rendering_device() != null:
 			get_viewport().vrs_mode = Viewport.VRS_XR
 			xr.vrs_min_radius = 30.0
 			xr.vrs_strength = 0.5

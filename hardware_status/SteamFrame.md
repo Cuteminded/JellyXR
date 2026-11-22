@@ -1,4 +1,6 @@
-# Steam Frame video decoding
+# Steam Frame
+
+## Video decoding
 
 | Format | Status | Support on Steam Frame | |
 | --- | --- | --- | --- |
@@ -9,3 +11,10 @@
 | AV1 | Software only | The reported SteamOS driver does not expose AV1 decoding through V4L2. | [SteamOS issue #2954](https://github.com/ValveSoftware/SteamOS/issues/2954) |
 
 If a video stutters in Direct Play, use **Transcoded** playback in JellyXR so Jellyfin can send H.264 instead.
+
+## Image warping with foveated rendering
+
+On the native frame version of the app, menus and video can warp when you move your head. The build after the v0.2.3 update includes foveated rendering. 
+Godot reproduced similar warping on Steam Frame with foveated subsampling enabled. [Godot issue #124520](https://github.com/godotengine/godot/issues/124520)
+
+The frame version disables foveated rendering by default as a workaround.

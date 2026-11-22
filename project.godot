@@ -58,6 +58,7 @@ rendering_device/staging_buffer/texture_upload_region_size_px.linux=512
 openxr/enabled=true
 openxr/extensions/eye_gaze_interaction=true
 openxr/foveation_level=1
+openxr/foveation_level.linux_arm64=0
 openxr/foveation_eye_tracked=true
 openxr/extensions/render_model=true
 shaders/enabled=true
